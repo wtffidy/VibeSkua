@@ -32,7 +32,7 @@ public partial class MainWindow : Window
         _themeService = Ioc.Default.GetService<IThemeService>() as AvaloniaThemeService;
         if (_themeService != null)
         {
-            TitleBar.UseAccentBackground = _themeService.UseAccentOnMainTitleBar;
+            TitleBar.UseAccentBackground = _themeService.UseAccentOnManagerTitleBar;
             _themeService.ThemeChanged += OnThemeChanged;
         }
 
