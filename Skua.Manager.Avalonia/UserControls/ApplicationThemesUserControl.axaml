@@ -53,11 +53,11 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- Main title bar accent setting -->
+                    <!-- Manager title bar accent setting -->
                     <StackPanel Spacing="3" Margin="0,2,0,0">
                         <CheckBox Content="Use theme accent on the manager title bar"
-                                  IsChecked="{Binding UseAccentOnMainTitleBar, Mode=TwoWay}" />
-                        <TextBlock Text="When enabled, the manager title bar follows the active built-in or custom theme. Turn it off to keep the normal title bar surface color."
+                                  IsChecked="{Binding ThemeService.UseAccentOnManagerTitleBar, Mode=TwoWay}" />
+                        <TextBlock Text="When enabled, the manager title bar follows the active theme. Turn it off to keep the normal title bar surface color. This setting is independent of the main client title bar."
                                    FontSize="11"
                                    Opacity="0.8"
                                    TextWrapping="Wrap" />
