@@ -2,6 +2,9 @@ using Avalonia.Controls;
 using CommunityToolkit.Mvvm.DependencyInjection;
 using CommunityToolkit.Mvvm.Messaging;
 using Skua.Core.Messaging;
+using Skua.Core.Interfaces;
+using Skua.Shared.Avalonia.Services;
+using Avalonia.Threading;
 using Skua.Manager.Avalonia.ViewModels;
 using System;
 using System.Runtime.InteropServices;
@@ -11,6 +14,7 @@ namespace Skua.Manager.Avalonia.Views;
 public partial class MainWindow : Window
 {
     private readonly ManagerMainViewModel _viewModel;
+    private readonly AvaloniaThemeService? _themeService;
     private bool _allowClose;
 
     [DllImport("user32.dll")]
@@ -24,6 +28,13 @@ public partial class MainWindow : Window
         InitializeComponent();
         _viewModel = Ioc.Default.GetRequiredService<ManagerMainViewModel>();
         DataContext = _viewModel;
+
+        _themeService = Ioc.Default.GetService<IThemeService>() as AvaloniaThemeService;
+        if (_themeService != null)
+        {
+            TitleBar.UseAccentBackground = _themeService.UseAccentOnMainTitleBar;
+            _themeService.ThemeChanged += OnThemeChanged;
+        }
 
         StrongReferenceMessenger.Default.Register<MainWindow, ShowMainWindowMessage>(this, ShowManager);
         StrongReferenceMessenger.Default.Register<MainWindow, ExitManagerMessage>(this, AllowClose);
@@ -59,8 +70,19 @@ public partial class MainWindow : Window
         }
 
         _viewModel.IsActive = false;
+        if (_themeService != null)
+            _themeService.ThemeChanged -= OnThemeChanged;
         StrongReferenceMessenger.Default.UnregisterAll(this);
         base.OnClosing(e);
+    }
+
+    private void OnThemeChanged(object? theme)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_themeService != null)
+                TitleBar.UseAccentBackground = _themeService.UseAccentOnMainTitleBar;
+        });
     }
 
     private void ShowManager(MainWindow recipient, ShowMainWindowMessage message)
