@@ -45,23 +45,23 @@ public class AdvancedSkillContainer : ObservableRecipient, IAdvancedSkillContain
         try
         {
             IGetScriptsService getScripts = Ioc.Default.GetRequiredService<IGetScriptsService>();
-            if (!await getScripts.UpdateSkillSetsFile().ConfigureAwait(false) || !File.Exists(_defaultSkillsSetsPath))
+            if (!await getScripts.UpdateSkillSetsFile() || !File.Exists(_defaultSkillsSetsPath))
                 return;
 
-            string defaultJson = await File.ReadAllTextAsync(_defaultSkillsSetsPath).ConfigureAwait(false);
+            string defaultJson = await File.ReadAllTextAsync(_defaultSkillsSetsPath);
             if (!File.Exists(_userSkillsSetsPath))
             {
                 string? directory = Path.GetDirectoryName(_userSkillsSetsPath);
                 if (!string.IsNullOrEmpty(directory))
                     Directory.CreateDirectory(directory);
 
-                await File.WriteAllTextAsync(_userSkillsSetsPath, defaultJson).ConfigureAwait(false);
+                await File.WriteAllTextAsync(_userSkillsSetsPath, defaultJson);
             }
             else
             {
                 JsonObject defaults = JsonNode.Parse(defaultJson) as JsonObject
                     ?? throw new JsonException("AdvancedSkills.json did not contain a JSON object.");
-                string userJson = await File.ReadAllTextAsync(_userSkillsSetsPath).ConfigureAwait(false);
+                string userJson = await File.ReadAllTextAsync(_userSkillsSetsPath);
                 JsonObject user = JsonNode.Parse(userJson) as JsonObject
                     ?? throw new JsonException("UserAdvancedSkills.json did not contain a JSON object.");
 
@@ -85,7 +85,7 @@ public class AdvancedSkillContainer : ObservableRecipient, IAdvancedSkillContain
                 }
 
                 string mergedJson = user.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
-                await File.WriteAllTextAsync(_userSkillsSetsPath, mergedJson).ConfigureAwait(false);
+                await File.WriteAllTextAsync(_userSkillsSetsPath, mergedJson);
             }
 
             LoadSkills();
