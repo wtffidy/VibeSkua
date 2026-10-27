@@ -44,6 +44,11 @@ public class AdvancedSkillContainer : ObservableRecipient, IAdvancedSkillContain
     {
         try
         {
+            ISettingsService settings = Ioc.Default.GetRequiredService<ISettingsService>();
+            if (!settings.Get<bool>("CheckAdvanceSkillSetsUpdates", false) ||
+                !settings.Get<bool>("AutoUpdateAdvanceSkillSetsUpdates", false))
+                return;
+
             IGetScriptsService getScripts = Ioc.Default.GetRequiredService<IGetScriptsService>();
             if (!await getScripts.UpdateSkillSetsFile() || !File.Exists(_defaultSkillsSetsPath))
                 return;
