@@ -205,7 +205,7 @@ public partial class GrabberListViewModel : ObservableRecipient
         {
             Quest q => $"[{q.ID}] {q.Name}" + (q.Slot > 0 ? $" (Slot: {q.Slot})" : "") + (q.Upgrade ? " [Member]" : ""),
             InventoryItem inv => $"[{inv.ID}] {inv.Name} x{inv.Quantity} | Category: {inv.Category}" + (inv.Coins ? " [AC]" : "") + (inv.Upgrade ? " [Member]" : ""),
-            ShopItem s => $"[{s.ID}] {s.Name} | Cost: {s.Cost:N0} {(s.Coins ? "AC" : "Gold")}" + (s.Upgrade ? " [Member]" : ""),
+            ShopItem s => $"[{s.ID}] {s.Name} | Cost: {s.Cost:N0} {(s.Coins ? "AC" : "Gold")}" + (s.Upgrade ? " [Member]" : "") + (s.Requirements?.Count > 0 ? $" Requirements: {string.Join(", ", s.Requirements.Select(r => $"[{r.ID}] {r.Name} x{r.Quantity}"))}" : ""),
             Monster m => $"[{m.ID}] {m.Name} | Cell: {m.Cell} | HP: {m.HP}/{m.MaxHP}",
             MapItem mi => $"[{mi.ID}] Map Item (Quest: {mi.QuestID})",
             ShopInfo info => $"[{info.ID}] {info.Name}",
