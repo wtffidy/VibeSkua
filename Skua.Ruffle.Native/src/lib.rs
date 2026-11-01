@@ -321,10 +321,9 @@ impl RuffleSession {
 
         let result = self.local_set.block_on(&self.runtime, async move {
             let mut player = player.lock().map_err(|_| "Ruffle player mutex poisoned.".to_string())?;
-            Ok::<Option<ExternalValue>, String>(player.call_internal_interface(function_name, &arguments))
+            Ok::<ExternalValue, String>(player.call_internal_interface(function_name, arguments))
         })?;
 
-        let result = result.unwrap_or(ExternalValue::Undefined);
         serde_json::to_string(&external_value_to_json(&result))
             .map_err(|error| format!("Could not serialize the Ruffle return value: {error}"))
     }
@@ -607,7 +606,7 @@ fn json_to_external_value(value: serde_json::Value) -> ExternalValue {
         serde_json::Value::Number(value) => ExternalValue::Number(value.as_f64().unwrap_or_default()),
         serde_json::Value::String(value) => ExternalValue::String(value),
         serde_json::Value::Array(value) => ExternalValue::List(value.into_iter().map(json_to_external_value).collect()),
-        serde_json::Value::Object(mut value) => {
+        serde_json::Value::Object(value) => {
             if value.len() == 1 && value.get("$ruffle").and_then(serde_json::Value::as_str) == Some("undefined") {
                 return ExternalValue::Undefined;
             }
