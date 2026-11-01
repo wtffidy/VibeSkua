@@ -1,16 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
+    <OutputType>Exe</OutputType>
+    <OutputType Condition="'$(OS)' == 'Windows_NT'">WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifiers>win-x64;win-x86;osx-arm64;osx-x64</RuntimeIdentifiers>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
-    <DefaultItemExcludes>$(DefaultItemExcludes);obj_run\**</DefaultItemExcludes>
-    <ApplicationIcon>../Skua.Shared.Avalonia/Assets/SkuaIcon.ico</ApplicationIcon>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj_run/**</DefaultItemExcludes>
     <AssemblyName>VibeSkua.Manager</AssemblyName>
     <AssemblyTitle>VibeSkua Manager</AssemblyTitle>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <ApplicationIcon>../Skua.Shared.Avalonia/Assets/SkuaIcon.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,20 +35,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Skua.Core\Skua.Core.csproj" />
-    <ProjectReference Include="..\Skua.Core.Interfaces\Skua.Core.Interfaces.csproj" />
-    <ProjectReference Include="..\Skua.Core.Models\Skua.Core.Models.csproj" />
-    <ProjectReference Include="..\Skua.Shared.Avalonia\Skua.Shared.Avalonia.csproj" />
+    <ProjectReference Include="../Skua.Core/Skua.Core.csproj" />
+    <ProjectReference Include="../Skua.Core.Interfaces/Skua.Core.Interfaces.csproj" />
+    <ProjectReference Include="../Skua.Core.Models/Skua.Core.Models.csproj" />
+    <ProjectReference Include="../Skua.Shared.Avalonia/Skua.Shared.Avalonia.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
     <None Update="app.manifest">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <_DeploymentManifestIconFile Remove="Assets\SkuaIcon.ico" />
+    <_DeploymentManifestIconFile Remove="Assets/SkuaIcon.ico" />
   </ItemGroup>
 
 </Project>
