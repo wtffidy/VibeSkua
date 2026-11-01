@@ -1,4 +1,7 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Text;
 using System.Text.Json;
 using Skua.Core.Models;
@@ -158,6 +161,100 @@ try
             Marshal.FreeHGlobal(callbackBuffer);
         }
 
+        using TcpListener listener = new(IPAddress.Loopback, 0);
+        listener.Start();
+        int localPort = ((IPEndPoint)listener.LocalEndpoint).Port;
+        Task<TcpClient> acceptTask = listener.AcceptTcpClientAsync();
+        Require(allowSocket(bridgeSession, IPAddress.Loopback.ToString(), checked((ushort)localPort)), "loopback XMLSocket permission");
+
+        string socketArguments = JsonSerializer.Serialize(new object[] { IPAddress.Loopback.ToString(), localPort });
+        nint socketCallBuffer = Marshal.AllocHGlobal(4096);
+        try
+        {
+            nuint socketCallLength = callActionScript(bridgeSession, "connectLocalSocket", socketArguments, socketCallBuffer, 4096);
+            string socketCallJson = ReadUtf8Result(socketCallBuffer, socketCallLength);
+            string? socketCallResult = JsonSerializer.Deserialize<string>(socketCallJson);
+            if (socketCallResult != "connecting")
+                throw new InvalidOperationException($"XMLSocket connect callback returned an unexpected result: {socketCallJson}");
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(socketCallBuffer);
+        }
+
+        for (int frame = 0; frame < 240 && !acceptTask.IsCompleted; frame++)
+        {
+            TickFrames(tick, bridgeSession, 1);
+            Thread.Sleep(5);
+        }
+
+        if (!acceptTask.IsCompleted)
+            throw new TimeoutException("Ruffle XMLSocket did not establish a loopback TCP connection.");
+
+        using TcpClient connectedClient = acceptTask.GetAwaiter().GetResult();
+        using NetworkStream stream = connectedClient.GetStream();
+        List<byte> receivedMessage = new();
+        byte[] receiveBuffer = new byte[256];
+
+        for (int frame = 0; frame < 240 && !receivedMessage.Contains((byte)0); frame++)
+        {
+            if (stream.DataAvailable)
+            {
+                int bytesRead = stream.Read(receiveBuffer, 0, receiveBuffer.Length);
+                if (bytesRead == 0)
+                    break;
+
+                for (int index = 0; index < bytesRead; index++)
+                    receivedMessage.Add(receiveBuffer[index]);
+            }
+            else
+            {
+                TickFrames(tick, bridgeSession, 1);
+                Thread.Sleep(5);
+            }
+        }
+
+        if (receivedMessage.Count == 0 || receivedMessage[^1] != 0)
+            throw new InvalidOperationException("Ruffle XMLSocket did not send a null-terminated message.");
+
+        string sentMessage = Encoding.UTF8.GetString(receivedMessage.ToArray(), 0, receivedMessage.Count - 1);
+        if (sentMessage != "VibeSkua Ruffle TCP smoke")
+            throw new InvalidOperationException($"Ruffle XMLSocket sent an unexpected message: '{sentMessage}'.");
+
+        byte[] response = Encoding.UTF8.GetBytes("VibeSkua Ruffle TCP response\0");
+        stream.Write(response, 0, response.Length);
+        stream.Flush();
+
+        for (int frame = 0; frame < 120; frame++)
+        {
+            TickFrames(tick, bridgeSession, 1);
+            Thread.Sleep(5);
+        }
+
+        nint socketCallbackBuffer = Marshal.AllocHGlobal(64 * 1024);
+        try
+        {
+            nuint socketCallbackLength = drainCallbacks(bridgeSession, socketCallbackBuffer, 64 * 1024);
+            string socketCallbackJson = ReadUtf8Result(socketCallbackBuffer, socketCallbackLength);
+            using JsonDocument socketCallbacks = JsonDocument.Parse(socketCallbackJson);
+            JsonElement callbackArray = socketCallbacks.RootElement;
+
+            if (HasCallback(callbackArray, "socketError"))
+                throw new InvalidOperationException($"Ruffle XMLSocket reported an error: {socketCallbackJson}");
+
+            if (!HasCallback(callbackArray, "socketConnected"))
+                throw new InvalidOperationException($"Ruffle did not deliver the XMLSocket connect event: {socketCallbackJson}");
+
+            if (!HasCallback(callbackArray, "socketData", "VibeSkua Ruffle TCP response"))
+                throw new InvalidOperationException($"Ruffle did not deliver the XMLSocket data event: {socketCallbackJson}");
+
+            Console.WriteLine("Verified bidirectional XMLSocket TCP traffic, null-terminated framing, connect, and data events.");
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(socketCallbackBuffer);
+        }
+
     }
     finally
     {
@@ -202,6 +299,23 @@ static string ReadUtf8Result(IntPtr buffer, nuint length)
         throw new InvalidOperationException("Ruffle returned an invalid UTF-8 result buffer length.");
 
     return Marshal.PtrToStringUTF8(buffer, checked((int)length - 1)) ?? string.Empty;
+}
+
+static bool HasCallback(JsonElement callbacks, string functionName, string? expectedArgument = null)
+{
+    if (callbacks.ValueKind != JsonValueKind.Array)
+        return false;
+
+    return callbacks.EnumerateArray().Any(item =>
+        item.TryGetProperty("function", out JsonElement function) &&
+        function.ValueKind == JsonValueKind.String &&
+        function.GetString() == functionName &&
+        (expectedArgument is null ||
+            (item.TryGetProperty("arguments", out JsonElement arguments) &&
+             arguments.ValueKind == JsonValueKind.Array &&
+             arguments.GetArrayLength() > 0 &&
+             arguments[0].ValueKind == JsonValueKind.String &&
+             arguments[0].GetString() == expectedArgument)));
 }
 
 static void Require(bool succeeded, string operation)
