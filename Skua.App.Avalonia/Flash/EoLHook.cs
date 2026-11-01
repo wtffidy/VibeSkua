@@ -1,3 +1,4 @@
+#if IS_WINDOWS
 using CoreHook;
 using System;
 using System.Runtime.InteropServices;
@@ -48,3 +49,4 @@ public class EoLHook
         public ushort wMilliseconds;
     }
 }
+#endif
