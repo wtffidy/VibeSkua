@@ -43,6 +43,27 @@ internal static class ProcessCloser
     /// </summary>
     public static bool RequestClose(Process process)
     {
+        if (OperatingSystem.IsMacOS() || OperatingSystem.IsLinux())
+        {
+            try
+            {
+                ProcessStartInfo signalInfo = new("/bin/kill")
+                {
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                signalInfo.ArgumentList.Add("-TERM");
+                signalInfo.ArgumentList.Add(process.Id.ToString());
+                using Process? signalProcess = Process.Start(signalInfo);
+                signalProcess?.WaitForExit();
+                return signalProcess?.ExitCode == 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         if (!OperatingSystem.IsWindows())
         {
             try
