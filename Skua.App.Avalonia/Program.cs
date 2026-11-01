@@ -145,14 +145,13 @@ internal static class Program
     public static AppBuilder BuildAvaloniaApp()
     {
         AppBuilder builder = AppBuilder.Configure<App>().UsePlatformDetect();
-        if (OperatingSystem.IsWindows())
+#if IS_WINDOWS
+        builder = builder.With(new Win32PlatformOptions
         {
-            builder = builder.With(new Win32PlatformOptions
-            {
-                RenderingMode = new[] { Win32RenderingMode.AngleEgl, Win32RenderingMode.Software },
-                CompositionMode = new[] { Win32CompositionMode.WinUIComposition, Win32CompositionMode.RedirectionSurface }
-            });
-        }
+            RenderingMode = new[] { Win32RenderingMode.AngleEgl, Win32RenderingMode.Software },
+            CompositionMode = new[] { Win32CompositionMode.WinUIComposition, Win32CompositionMode.RedirectionSurface }
+        });
+#endif
 #if DEBUG
         builder = builder.WithDeveloperTools();
 #endif
