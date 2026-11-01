@@ -38,11 +38,23 @@ internal static class ProcessCloser
     private static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
     /// <summary>
-    /// Posts WM_CLOSE to the process's visible, unowned, titled top-level windows (the tab host's
-    /// main window). Returns false when the process has no such window.
+    /// Requests a graceful close using the platform's available main-window mechanism.
+    /// Returns false when the process has no closable main window.
     /// </summary>
     public static bool RequestClose(Process process)
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            try
+            {
+                return process.CloseMainWindow();
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         uint pid = (uint)process.Id;
         bool posted = false;
         EnumWindows((hWnd, _) =>
