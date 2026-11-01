@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
+using Avalonia.Media.Imaging;
 using Skua.Core.Interfaces;
 using System;
 using System.IO;
@@ -15,11 +16,7 @@ namespace Skua.App.Avalonia.Services;
 
 public class ScreenshotService : IScreenshotService
 {
-#if IS_WINDOWS
     public async Task<byte[]> TakeScreenshotAsync()
-#else
-    public Task<byte[]> TakeScreenshotAsync()
-#endif
     {
 #if IS_WINDOWS
         return await Dispatcher.UIThread.InvokeAsync(async () =>
@@ -74,7 +71,24 @@ public class ScreenshotService : IScreenshotService
             }
         });
 #else
-        return Task.FromResult(Array.Empty<byte>());
+        return await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop || desktop.MainWindow is null)
+                return Array.Empty<byte>();
+
+            global::Avalonia.Controls.Window mainWindow = desktop.MainWindow;
+            double scaling = mainWindow.RenderScaling;
+            int width = (int)Math.Max(1, Math.Ceiling(mainWindow.Bounds.Width * scaling));
+            int height = (int)Math.Max(1, Math.Ceiling(mainWindow.Bounds.Height * scaling));
+            PixelSize pixelSize = new(width, height);
+
+            using RenderTargetBitmap bitmap = new(pixelSize, new Vector(96 * scaling, 96 * scaling));
+            bitmap.Render(mainWindow);
+
+            using MemoryStream stream = new();
+            bitmap.Save(stream);
+            return stream.ToArray();
+        });
 #endif
     }
 }
