@@ -193,3 +193,24 @@ Preferred sequence:
 2. Prove AQW login and sustained gameplay with no packet inspection.
 3. If Skua packet inspection is required, extract the packet framing/interception logic into a reusable stream interceptor with explicit destination routing and per-connection state.
 4. Keep the current CaptureProxy behavior working for Windows while the shared interceptor is validated.
+
+
+## Follow-up: Ruffle player and async task thread affinity
+
+The current upstream types impose an important host design constraint.
+
+- Ruffle's ExternalInterface stores its provider through Rc, and the navigator implementation uses Rc-owned state. The Player must therefore be treated as thread-affine; do not assume it can be moved freely between .NET threads.
+- Ruffle's FutureSpawner abstraction accepts an OwnedFuture that is not declared Send.
+- The upstream native navigator uses Tokio TCP streams and timers, while frontend-utils exposes a FutureSpawner seam for scheduling those tasks.
+
+**Revised host design:** Create and own each Player on a dedicated Rust thread, with a current-thread Tokio runtime and LocalSet for non-Send Ruffle futures. Route managed commands to that thread through a thread-safe command channel. Do not expose Player pointers to arbitrary .NET threads.
+
+This gives each client session a clear owner for:
+- Player tick/render and viewport changes.
+- Native socket and HTTP task scheduling.
+- ActionScript callback invocation.
+- Disposal and socket shutdown.
+
+The C ABI needs a deliberate callback/reentrancy contract. A Rust-to-.NET callback may execute while the Rust owner thread is inside an AVM call. If the .NET callback synchronously calls back into the same session, a naive command queue can deadlock. The spike must either support reentrant owner-thread calls safely or design the ExternalInterface dispatch so callbacks are marshalled without re-entering a blocked owner thread.
+
+Rendering is the other boundary: an offscreen frame can be copied to a managed buffer, but the owner-thread design must avoid blocking the UI thread while rendering or waiting on network tasks.
