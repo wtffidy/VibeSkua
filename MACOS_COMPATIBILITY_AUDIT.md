@@ -255,3 +255,72 @@ A second pass followed the multi-client and network paths beyond the initial pro
 | C# runtime compiler | Low–Medium | Roslyn and collectible AssemblyLoadContext are cross-platform APIs; runtime dependencies still need validation |
 | Core TCP capture proxy | Low–Medium | Uses portable .NET sockets; end-to-end runtime behavior remains unproven |
 | Avalonia UI | Medium | Framework is cross-platform, but native hosting, chrome, shortcuts, dialogs, and window management need platform review |
+
+
+## Additional pass: Avalonia service and packaging dependencies
+
+Inspected the client, manager, and shared Avalonia project files plus their platform-facing services.
+
+### 11. Client project has Windows-only build identity and native assets
+
+The client project currently:
+- Targets net10.0-windows and publishes only win-x64 / win-x86.
+- Uses WinExe, a Windows application icon, and an application manifest.
+- Adds WinForms only when the build host is Windows.
+- Adds ActiveX COM interop assemblies only on Windows.
+- References CoreHook unconditionally.
+- Copies CoreHook/CoreLoad x86 and x64 Windows DLLs as content.
+- Includes a Windows-only Flash host and Windows-specific EoL hook behind IS_WINDOWS compilation.
+
+**Required work**
+- Retarget the client to net10.0 and define runtime identifiers per publish target.
+- Make output type, application icon, manifest, CoreHook package, COM references, and native DLL content conditional on Windows.
+- Keep IS_WINDOWS defined only for Windows builds; introduce a separate platform abstraction rather than scattering new IS_MACOS checks through shared code.
+- Add a macOS app bundle and bundle identifier, and ensure native Ruffle dylibs are included in the app bundle with correct architecture slices.
+
+### 12. Hotkeys and file dialogs already have partial platform separation
+
+**Files inspected**
+- Skua.App.Avalonia/Services/HotKeyService.cs
+- Skua.App.Avalonia/Services/FileDialogService.cs
+- Skua.App.Avalonia/Services/ScreenshotService.cs
+- Skua.App.Avalonia/Services/ClipboardService.cs
+
+**Findings**
+- HotKeyService already uses Avalonia key gesture routing and compiles its low-level global keyboard hook only under IS_WINDOWS. The Windows hook is used for host/global behavior and cannot be assumed to have a macOS equivalent.
+- FileDialogService has a Windows Forms implementation and a separate non-Windows path. This is a useful pattern to retain, but the non-Windows implementation must be validated on macOS.
+- ScreenshotService has platform-specific branches.
+- ClipboardService uses Avalonia's clipboard abstraction and is a good example of a shared implementation.
+
+**Required work**
+- Keep Avalonia-local hotkeys shared.
+- Decide explicitly whether macOS global hotkeys are needed; if so, implement them through a macOS-specific native service with appropriate permissions, not a Windows hook port.
+- Test the non-Windows file-dialog path on macOS, including security-scoped file access where applicable.
+- Retain Avalonia clipboard unless real platform testing exposes a limitation.
+
+### 13. Manager process and executable discovery are Windows-specific
+
+**Files inspected**
+- Skua.Manager.Avalonia/Services/ProcessCloser.cs
+- Skua.Manager.Avalonia/Services/SkuaExecutableLocator.cs
+- Skua.Shared.Avalonia/Utils/AppShortcutHelper.cs
+- Skua.Shared.Avalonia/Services/WindowPlacementHelper.cs
+
+**Findings**
+- ProcessCloser posts WM_CLOSE to enumerated top-level HWND windows using user32.dll.
+- SkuaExecutableLocator searches only for VibeSkua.exe / Skua.exe and hardcodes net10.0-windows build output paths.
+- AppShortcutHelper is already guarded by OperatingSystem.IsWindows() and uses Windows .lnk shortcut creation. This is safe as a Windows-only feature, but macOS needs its own packaging/shortcut strategy if desired.
+- WindowPlacementHelper contains user32 imports, but the relevant native behavior is guarded by Windows OS checks. This is a better model than unconditional native calls.
+
+**Required work**
+- Replace executable discovery with an OS-aware application locator that understands macOS app bundles and executable paths.
+- Replace ProcessCloser with a process lifecycle abstraction. On macOS, use Process APIs / explicit shutdown IPC rather than trying to post WM_CLOSE.
+- Keep Windows shortcut creation isolated; macOS app bundle registration and Dock behavior should be handled by packaging or native macOS integration.
+
+### 14. Cross-platform manager is closer than the client, but not ready
+
+The manager targets generic net10.0 and uses Avalonia, but it depends on the client executable locator, process closing, Windows-oriented app manifest/icon configuration, and client launch assumptions. Its UI may compile on macOS before its launcher and lifecycle features work.
+
+**Implication**
+- Treat manager UI portability and manager-to-client lifecycle portability as separate acceptance gates.
+- First get the client process launching and communicating on macOS, then complete manager account launch, stop, update, and multi-client workflows.
