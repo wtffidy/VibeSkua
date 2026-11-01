@@ -214,3 +214,30 @@ This gives each client session a clear owner for:
 The C ABI needs a deliberate callback/reentrancy contract. A Rust-to-.NET callback may execute while the Rust owner thread is inside an AVM call. If the .NET callback synchronously calls back into the same session, a naive command queue can deadlock. The spike must either support reentrant owner-thread calls safely or design the ExternalInterface dispatch so callbacks are marshalled without re-entering a blocked owner thread.
 
 Rendering is the other boundary: an offscreen frame can be copied to a managed buffer, but the owner-thread design must avoid blocking the UI thread while rendering or waiting on network tasks.
+
+
+## Follow-up: mapping the existing Skua IFlashUtil contract
+
+Inspected the actual Skua interfaces and Externalizer.as.
+
+The compatibility layer is more specific than a generic ExternalInterface bridge:
+
+- IFlashUtil.Call(function, args) invokes a named ActionScript callback and expects a converted return value.
+- IFlashUtil.FlashCall is a void event raised when ActionScript calls a host function.
+- CreateFlashObject, FlashObject, and FlashArray are wrappers over the RemoteRegistry callbacks.
+- The Externalizer registers the RemoteRegistry family (lnkCreate, lnkDestroy, lnkGetChild, lnkDeleteChild, lnkGetValue, lnkSetValue, lnkCall, lnkGetArray, lnkSetArray) plus the Function Call Registry and the game-facing callbacks.
+- The AS3 Externalizer.call method uses ExternalInterface.call, which maps to Ruffle's ExternalInterfaceProvider.call_method.
+- Every Externalizer.addCallback registration maps to Ruffle's on_callback_available notification and can be invoked from .NET through Player::call_internal_interface.
+
+**Compatibility decision:** Keep IFlashUtil, IFlashObject<T>, IFlashArray<T>, and the current AS3 callback names intact. Implement a Ruffle-backed IFlashUtil adapter that translates between .NET values and Ruffle ExternalValue. This avoids rewriting Skua.Core and the script-facing API.
+
+**Value conversion tests required:**
+- null, undefined, true, false
+- integer, float, and large numeric values
+- strings requiring XML escaping
+- arrays with nested arrays/objects
+- objects with numeric and string properties
+- missing callback names and callback exceptions
+- return values from RemoteRegistry and game callbacks
+
+The current FlashUtil XML parser has legacy behavior (for example, number conversion to int/float and default values on failures). Match observed Windows behavior before attempting to improve it, because existing scripts may rely on those conversions.
