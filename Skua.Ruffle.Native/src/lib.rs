@@ -52,7 +52,11 @@ impl SkuaNavigatorInterface {
 
     fn allow_socket(&self, host: &str, port: u16) {
         if let Ok(mut allowed_sockets) = self.allowed_sockets.write() {
-            allowed_sockets.insert(format!("{}:{port}", host.to_ascii_lowercase()));
+            let host = host.to_ascii_lowercase();
+            allowed_sockets.insert(format!("{host}:{port}"));
+            if port != 843 {
+                allowed_sockets.insert(format!("{host}:843"));
+            }
         }
     }
 }
