@@ -258,3 +258,19 @@ Ruffle's current flash.system.Security.loadPolicyFile implementation is a stub. 
 2. Run the same SWF in native Ruffle with its normal socket policy and observe whether the game can connect without policy requests.
 3. If AQW requires the request, implement xmlsocket:// policy retrieval in a custom navigator/host extension or upstream Ruffle contribution.
 4. If it does not, document the intentional security-model difference and make sure Skua's host-level socket allow-list is restrictive and explicit.
+
+
+## Follow-up: Ruffle already provides a native offscreen WGPU renderer
+
+The first rendering plan assumed we would need to implement a custom RenderBackend or adapt the desktop swap chain. A deeper source read found that Ruffle already exposes an offscreen target:
+
+- ruffle_render_wgpu::backend::WgpuRenderBackend::for_offscreen(size, backends, power_preference)
+- WgpuRenderBackend::capture_frame() -> Option<image::RgbaImage>
+
+The offscreen constructor creates a native WGPU instance/device and a TextureTarget without a window surface. On macOS we can request the Metal backend. The returned WgpuRenderBackend implements Ruffle's RenderBackend trait and can be passed directly to PlayerBuilder::with_renderer.
+
+**Architecture improvement:** Do not implement RenderBackend for the first spike. Use Ruffle's own offscreen WGPU renderer, capture the RGBA image, and copy it through the C ABI into a managed Avalonia bitmap.
+
+The native crate now depends on the pinned ruffle_render_wgpu package and includes a compile-time API probe for this offscreen constructor. The probe does not initialize a GPU; it only type-checks the API.
+
+This makes the first Ruffle player host significantly smaller. It does not yet prove that capture_frame has acceptable latency or throughput. Measure frame readback cost, CPU usage, GPU usage, and frame pacing before deciding whether to keep CPU pixel copies or later integrate a native Metal surface.
