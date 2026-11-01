@@ -21,6 +21,13 @@ if [[ -z "$MXMLC" && -n "${FLEX_HOME:-}" && -x "$FLEX_HOME/bin/mxmlc" ]]; then
     MXMLC="$FLEX_HOME/bin/mxmlc"
 fi
 
+if [[ -n "$MXMLC" && ! -x "$MXMLC" ]]; then
+    RESOLVED_MXMLC="$(command -v "$MXMLC" || true)"
+    if [[ -n "$RESOLVED_MXMLC" ]]; then
+        MXMLC="$RESOLVED_MXMLC"
+    fi
+fi
+
 if [[ -z "$MXMLC" || ! -x "$MXMLC" ]]; then
     echo "Flex mxmlc was not found. Add mxmlc to PATH, set FLEX_HOME, or set MXMLC_PATH." >&2
     exit 1
