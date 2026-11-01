@@ -329,46 +329,334 @@ public class FlashUtil : IFlashUtil
     }
 }
 #else
+using Avalonia.Threading;
+using CommunityToolkit.Mvvm.Messaging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Skua.Core.Flash;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Dynamic;
+using System.Globalization;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading;
+
 public class FlashUtil : IFlashUtil
 {
+    private const int CallBufferSize = 4 * 1024 * 1024;
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate void NativeFlashCallCallback(IntPtr userData, IntPtr functionName, IntPtr argumentsJson);
+
+    private static readonly NativeFlashCallCallback NativeCallback = HandleNativeFlashCall;
+
+    [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_create", CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr SessionCreate([In] byte[] swfData, nuint swfLength, [MarshalAs(UnmanagedType.LPUTF8Str)] string swfPath, uint width, uint height, NativeFlashCallCallback callback, IntPtr userData, [Out] StringBuilder errorBuffer, nuint errorCapacity);
+
+    [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_tick", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int SessionTick(IntPtr session, double elapsedMilliseconds);
+
+    [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_render", CallingConvention = CallingConvention.Cdecl)]
+    private static extern nuint SessionRender(IntPtr session, IntPtr output, nuint capacity);
+
+    [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_call", CallingConvention = CallingConvention.Cdecl)]
+    private static extern nuint SessionCall(IntPtr session, [MarshalAs(UnmanagedType.LPUTF8Str)] string functionName, [MarshalAs(UnmanagedType.LPUTF8Str)] string argumentsJson, IntPtr output, nuint capacity);
+
+    [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_allow_socket", CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool SessionAllowSocket(IntPtr session, [MarshalAs(UnmanagedType.LPUTF8Str)] string host, ushort port);
+
+    [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_resize", CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool SessionResize(IntPtr session, uint width, uint height, double scaleFactor);
+
+    [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_get_size", CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool SessionGetSize(IntPtr session, out uint width, out uint height);
+
+    [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_destroy", CallingConvention = CallingConvention.Cdecl)]
+    private static extern void SessionDestroy(IntPtr session);
+
+    private readonly IMessenger _messenger;
+    private readonly Lazy<IScriptManager> _lazyManager;
+    private GCHandle _selfHandle;
+    private IntPtr _session;
+    private IntPtr _callBuffer;
+
+    public FlashUtil(IMessenger messenger, Lazy<IScriptManager> manager)
+    {
+        _messenger = messenger;
+        _lazyManager = manager;
+    }
+
+    public event FlashCallHandler? FlashCall;
+
     public static void PreloadSwf()
     {
     }
 
-    public void Dispose()
-    {
-        throw new NotImplementedException();
-    }
+    public bool IsInitialized => _session != IntPtr.Zero;
 
-    public event FlashCallHandler? FlashCall;
     public void InitializeFlash()
     {
-        throw new NotImplementedException();
+        if (_session != IntPtr.Zero)
+            return;
+
+        string swfPath = Path.Combine(AppContext.BaseDirectory, "skua.swf");
+        if (!File.Exists(swfPath))
+            throw new FileNotFoundException("Missing skua.swf. Build the AS3 client content before launching VibeSkua.", swfPath);
+
+        byte[] swfData = File.ReadAllBytes(swfPath);
+        StringBuilder errorBuffer = new(2048);
+        _selfHandle = GCHandle.Alloc(this, GCHandleType.Normal);
+
+        try
+        {
+            _session = SessionCreate(
+                swfData,
+                (nuint)swfData.Length,
+                swfPath,
+                960,
+                540,
+                NativeCallback,
+                GCHandle.ToIntPtr(_selfHandle),
+                errorBuffer,
+                (nuint)errorBuffer.Capacity);
+
+            if (_session == IntPtr.Zero)
+                throw new InvalidOperationException($"Ruffle initialization failed: {errorBuffer}");
+
+            _callBuffer = Marshal.AllocHGlobal(CallBufferSize);
+        }
+        catch
+        {
+            if (_selfHandle.IsAllocated)
+                _selfHandle.Free();
+            throw;
+        }
+    }
+
+    public void Tick(double elapsedMilliseconds)
+    {
+        if (_session == IntPtr.Zero)
+            return;
+
+        InvokeOnUiThread(() =>
+        {
+            int result = SessionTick(_session, elapsedMilliseconds);
+            if (result != 0)
+                throw new InvalidOperationException("Ruffle failed while advancing the player.");
+            return true;
+        });
+    }
+
+    public byte[]? RenderFrame()
+    {
+        if (_session == IntPtr.Zero)
+            return null;
+
+        return InvokeOnUiThread(() =>
+        {
+            if (!SessionGetSize(_session, out uint width, out uint height))
+                return null;
+
+            int frameLength = checked((int)(width * height * 4));
+            byte[] frame = new byte[frameLength];
+            nuint written = SessionRender(_session, _callBuffer, (nuint)CallBufferSize);
+            if (written == nuint.MaxValue || written > (nuint)frameLength)
+                throw new InvalidOperationException("Ruffle returned an invalid frame buffer size.");
+
+            Marshal.Copy(_callBuffer, frame, 0, (int)written);
+            return frame;
+        });
+    }
+
+    public void Resize(uint width, uint height, double scaleFactor)
+    {
+        if (_session == IntPtr.Zero || width == 0 || height == 0)
+            return;
+
+        InvokeOnUiThread(() =>
+        {
+            if (!SessionResize(_session, width, height, scaleFactor))
+                throw new InvalidOperationException("Ruffle could not resize the player viewport.");
+            return true;
+        });
+    }
+
+    public void AuthorizeSocket(string host, int port)
+    {
+        if (_session == IntPtr.Zero || string.IsNullOrWhiteSpace(host) || port is <= 0 or > ushort.MaxValue)
+            return;
+
+        InvokeOnUiThread(() => SessionAllowSocket(_session, host, (ushort)port));
     }
 
     public string? Call(string function, params object[] args)
     {
-        throw new NotImplementedException();
+        return Call<string>(function, args);
     }
 
     public T? Call<T>(string function, params object[] args)
     {
-        throw new NotImplementedException();
+        object? result = Call(function, typeof(T), args);
+        return result is T typed ? typed : default;
     }
 
     public object? Call(string function, Type type, params object[] args)
     {
-        throw new NotImplementedException();
+        if (_session == IntPtr.Zero)
+            return type.IsValueType ? Activator.CreateInstance(type) : null;
+
+        if (_lazyManager.Value.ShouldExit && Thread.CurrentThread.Name == "Script Thread")
+            _lazyManager.Value.ScriptCts?.Token.ThrowIfCancellationRequested();
+
+        try
+        {
+            return InvokeOnUiThread(() =>
+            {
+                string argumentsJson = JsonConvert.SerializeObject(args);
+                nuint written = SessionCall(_session, function, argumentsJson, _callBuffer, (nuint)CallBufferSize);
+                if (written == nuint.MaxValue || written == 0 || written > CallBufferSize)
+                    throw new InvalidOperationException($"Ruffle call '{function}' failed or exceeded the native result buffer.");
+
+                byte[] resultBytes = new byte[(int)written - 1];
+                Marshal.Copy(_callBuffer, resultBytes, 0, resultBytes.Length);
+                string resultJson = Encoding.UTF8.GetString(resultBytes);
+                if (type == typeof(object))
+                    return ConvertJsonToken(JToken.Parse(resultJson));
+
+                return JsonConvert.DeserializeObject(resultJson, type);
+            });
+        }
+        catch (Exception ex)
+        {
+            if (function != "isKicked")
+                _messenger.Send<FlashErrorMessage>(new(ex, function, args));
+            return type.IsValueType ? Activator.CreateInstance(type) : null;
+        }
     }
 
-    public object FromFlashXml(XElement el)
+    public object FromFlashXml(XElement element)
     {
-        throw new NotImplementedException();
+        return element.Name.ToString() switch
+        {
+            "number" => int.TryParse(element.Value, out int intValue) ? intValue : float.TryParse(element.Value, out float floatValue) ? floatValue : 0,
+            "true" => true,
+            "false" => false,
+            "null" => null!,
+            "array" => element.Elements().Select(FromFlashXml).ToArray(),
+            "object" => ConvertFlashObject(element),
+            _ => element.Value
+        };
+    }
+
+    private object ConvertFlashObject(XElement element)
+    {
+        IDictionary<string, object> values = new ExpandoObject();
+        foreach (XElement property in element.Elements())
+        {
+            string? name = property.Attribute("id")?.Value;
+            XElement? value = property.Elements().FirstOrDefault();
+            if (name != null && value != null)
+                values[name] = FromFlashXml(value);
+        }
+        return (ExpandoObject)values;
     }
 
     public IFlashObject<T> CreateFlashObject<T>(string path)
     {
-        throw new NotImplementedException();
+        return new FlashObject<T>(Call<int>("lnkCreate", path), this);
+    }
+
+    private static object? ConvertJsonToken(JToken token)
+    {
+        if (token is JObject jsonObject)
+        {
+            if (jsonObject.Count == 1 && (string?)jsonObject["$ruffle"] == "undefined")
+                return string.Empty;
+
+            IDictionary<string, object> values = new ExpandoObject();
+            foreach (JProperty property in jsonObject.Properties())
+                values[property.Name] = ConvertJsonToken(property.Value)!;
+            return (ExpandoObject)values;
+        }
+
+        if (token is JArray jsonArray)
+            return jsonArray.Select(ConvertJsonToken).ToArray();
+
+        if (token is JValue value)
+        {
+            return value.Type switch
+            {
+                JTokenType.Integer => value.Value<long>() is long number && number is >= int.MinValue and <= int.MaxValue ? (object)(int)number : number,
+                JTokenType.Float => value.Value<double>(),
+                JTokenType.Boolean => value.Value<bool>(),
+                JTokenType.String => value.Value<string>(),
+                JTokenType.Null or JTokenType.Undefined => null,
+                _ => value.Value
+            };
+        }
+
+        return null;
+    }
+
+    private static void HandleNativeFlashCall(IntPtr userData, IntPtr functionName, IntPtr argumentsJson)
+    {
+        try
+        {
+            GCHandle handle = GCHandle.FromIntPtr(userData);
+            if (handle.Target is not FlashUtil flashUtil)
+                return;
+
+            string function = Marshal.PtrToStringUTF8(functionName) ?? string.Empty;
+            string json = Marshal.PtrToStringUTF8(argumentsJson) ?? "[]";
+            JArray arguments = JArray.Parse(json);
+            object[] args = arguments.Select(token => ConvertJsonToken(token)!).ToArray();
+            flashUtil.FlashCall?.Invoke(function, args);
+        }
+        catch (Exception ex)
+        {
+            Trace.WriteLine($"Ruffle ExternalInterface callback failed: {ex}");
+        }
+    }
+
+    private static T InvokeOnUiThread<T>(Func<T> action)
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+            return action();
+
+        return Dispatcher.UIThread.InvokeAsync(action).GetAwaiter().GetResult();
+    }
+
+    public void Dispose()
+    {
+        if (_session != IntPtr.Zero)
+        {
+            try
+            {
+                InvokeOnUiThread(() =>
+                {
+                    SessionDestroy(_session);
+                    _session = IntPtr.Zero;
+                    return true;
+                });
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Could not dispose Ruffle session cleanly: {ex}");
+            }
+        }
+
+        if (_callBuffer != IntPtr.Zero)
+        {
+            Marshal.FreeHGlobal(_callBuffer);
+            _callBuffer = IntPtr.Zero;
+        }
+
+        if (_selfHandle.IsAllocated)
+            _selfHandle.Free();
     }
 }
 #endif
