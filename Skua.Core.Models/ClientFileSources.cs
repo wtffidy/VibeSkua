@@ -54,7 +54,8 @@ public static class ClientFileSources
 
                 if (!isAlreadyMigrated)
                 {
-                    using var migrationMutex = new Mutex(false, @"Global\VibeSkua.Migration.Init");
+                    string mutexName = OperatingSystem.IsWindows() ? @"Global\VibeSkua.Migration.Init" : "VibeSkua.Migration.Init";
+                    using var migrationMutex = new Mutex(false, mutexName);
                     bool hasHandle = false;
                     try
                     {
