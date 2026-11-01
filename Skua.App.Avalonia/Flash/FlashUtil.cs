@@ -334,7 +334,10 @@ using CommunityToolkit.Mvvm.Messaging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Skua.Core.Flash;
+using Skua.Core.Messaging;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Diagnostics;
 using System.Dynamic;
 using System.Globalization;
@@ -352,7 +355,7 @@ public class FlashUtil : IFlashUtil
     private static readonly NativeFlashCallCallback NativeCallback = HandleNativeFlashCall;
 
     [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_create", CallingConvention = CallingConvention.Cdecl)]
-    private static extern IntPtr SessionCreate([In] byte[] swfData, nuint swfLength, [MarshalAs(UnmanagedType.LPUTF8Str)] string swfPath, uint width, uint height, NativeFlashCallCallback callback, IntPtr userData, [Out] StringBuilder errorBuffer, nuint errorCapacity);
+    private static extern IntPtr SessionCreate([In] byte[] swfData, nuint swfLength, [MarshalAs(UnmanagedType.LPUTF8Str)] string swfPath, uint width, uint height, NativeFlashCallCallback callback, IntPtr userData, [Out] byte[] errorBuffer, nuint errorCapacity);
 
     [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_tick", CallingConvention = CallingConvention.Cdecl)]
     private static extern int SessionTick(IntPtr session, double elapsedMilliseconds);
@@ -408,7 +411,7 @@ public class FlashUtil : IFlashUtil
             throw new FileNotFoundException("Missing skua.swf. Build the AS3 client content before launching VibeSkua.", swfPath);
 
         byte[] swfData = File.ReadAllBytes(swfPath);
-        StringBuilder errorBuffer = new(2048);
+        byte[] errorBuffer = new byte[2048];
         _selfHandle = GCHandle.Alloc(this, GCHandleType.Normal);
 
         try
@@ -422,10 +425,13 @@ public class FlashUtil : IFlashUtil
                 NativeCallback,
                 GCHandle.ToIntPtr(_selfHandle),
                 errorBuffer,
-                (nuint)errorBuffer.Capacity);
+                (nuint)errorBuffer.Length);
 
             if (_session == IntPtr.Zero)
-                throw new InvalidOperationException($"Ruffle initialization failed: {errorBuffer}");
+            {
+                string error = Encoding.UTF8.GetString(errorBuffer).TrimEnd('\0');
+                throw new InvalidOperationException($"Ruffle initialization failed: {error}");
+            }
 
             _callBuffer = Marshal.AllocHGlobal(CallBufferSize);
         }
@@ -524,8 +530,9 @@ public class FlashUtil : IFlashUtil
                 byte[] resultBytes = new byte[(int)written - 1];
                 Marshal.Copy(_callBuffer, resultBytes, 0, resultBytes.Length);
                 string resultJson = Encoding.UTF8.GetString(resultBytes);
-                if (type == typeof(object))
-                    return ConvertJsonToken(JToken.Parse(resultJson));
+                object? converted = ConvertJsonToken(JToken.Parse(resultJson));
+                if (type == typeof(object) || converted == null || type.IsInstanceOfType(converted))
+                    return converted;
 
                 return JsonConvert.DeserializeObject(resultJson, type);
             });
