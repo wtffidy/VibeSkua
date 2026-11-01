@@ -18,12 +18,12 @@ using Skua.Core.AppStartup;
 using Skua.Core.Interfaces;
 using Skua.Core.Utils;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 #if IS_WINDOWS
 using CommunityToolkit.Mvvm.Input;
-using System.Collections.Generic;
 using WinForms = System.Windows.Forms;
 #endif
 
