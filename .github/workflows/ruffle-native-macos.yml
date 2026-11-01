@@ -38,6 +38,8 @@ permissions:
 
 jobs:
   dotnet-build:
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '14.0'
     name: .NET build (${{ matrix.target }})
     runs-on: ${{ matrix.runner }}
     strategy:
@@ -104,6 +106,8 @@ jobs:
         run: dotnet build Skua.AS3/Skua.AS3.csproj --configuration Release
 
   ruffle-native-build:
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '14.0'
     name: Ruffle native (${{ matrix.target }})
     runs-on: ${{ matrix.runner }}
     strategy:
