@@ -1,0 +1,174 @@
+# Ruffle Native Integration Spike
+
+**Repository:** wtffidy/VibeSkua  
+**Branch:** feature/macos-support  
+**Status:** Architecture investigation; no Ruffle code vendored or compiled yet.
+
+## Outcome
+
+Ruffle's current Rust core exposes the integration seams Skua needs:
+
+- PlayerBuilder accepts custom navigator, renderer, audio, UI, storage, video, and ExternalInterface backends.
+- Player exposes tick, render, set_viewport_dimensions, update_sockets, update_net_connections, and call_internal_interface.
+- NavigatorBackend explicitly delegates raw TCP socket creation to the host through connect_socket.
+- ExternalInterfaceProvider receives calls made by Flash and is notified when ActionScript callbacks become available.
+- The host can invoke registered ActionScript callbacks with Player::call_internal_interface.
+
+This is substantially more promising than patching AVM2 socket internals or using browser JavaScript.
+
+## Verified upstream API details
+
+### Player lifecycle and backends
+
+The public ruffle_core crate re-exports Player and PlayerBuilder. PlayerBuilder supports custom backends through with_navigator, with_renderer, with_audio, with_storage, with_ui, with_video, with_external_interface, and with_fs_commands.
+
+The player is built as Arc<Mutex<Player>>. The host owns the update/render cadence and must coordinate access to the player.
+
+Relevant public methods confirmed in core/src/player.rs:
+- tick(FloatDuration)
+- render()
+- set_viewport_dimensions(...)
+- update_sockets()
+- update_net_connections()
+- set_external_interface_provider(...)
+- call_internal_interface(name, args)
+- set_is_playing(bool)
+
+**Consequence:** We do not need to embed Ruffle's desktop GUI. We can use the core player directly and supply a Skua-owned host.
+
+### Raw TCP sockets
+
+NavigatorBackend::connect_socket is the explicit socket boundary. It receives the host and port, timeout, Ruffle socket handle, a channel receiver for outgoing byte buffers, and a channel sender for connect/data/close actions back into the AVM.
+
+The Ruffle core handles ActionScript socket object state and dispatches connection/data/close events. The navigator backend owns the actual network stream.
+
+Ruffle's frontend-utils ExternalNavigatorBackend already implements raw TCP connections using its async runtime, socket allow-list, and SocketMode (Allow / Deny / Ask).
+
+**Consequence:** Browser sandbox restrictions are not relevant if we host the native core. We can either:
+1. Reuse/adapt Ruffle's native navigator backend and add Skua's policy/proxy behavior; or
+2. Implement NavigatorBackend directly and route connections through the existing Skua capture proxy.
+
+The second option gives Skua explicit control over connection routing and logging. First inspect how CaptureProxy expects connections to be established and whether it can preserve each destination host/port.
+
+### ExternalInterface bridge
+
+Ruffle's ExternalInterfaceProvider has three methods:
+- call_method(context, name, args): ActionScript calls into the host.
+- on_callback_available(name): ActionScript registers a callback that the host can invoke.
+- get_id(): supplies the ExternalInterface ID.
+
+Ruffle's Player::call_internal_interface(name, args) looks up the registered ActionScript callback and invokes it.
+
+Ruffle's ExternalValue is an intermediate, potentially lossy value model:
+- Undefined / Null
+- Bool / Number / String
+- Object (string-keyed map)
+- List
+
+This is sufficient for a first bridge prototype, but the current Skua Flash XML serializer needs to be compared carefully. Test object types, numeric edge cases, XML escaping, undefined/null distinctions, and nested arrays/objects.
+
+**Consequence:** The current Skua Externalizer.as API can likely be preserved at the ActionScript level. A Rust provider can forward host calls and callback registration to .NET, with a .NET-to-Rust call invoking Player::call_internal_interface.
+
+## Proposed integration architecture
+
+Start with an in-process Rust native library (cdylib) that wraps one Ruffle Player per Skua client session.
+
+    VibeSkua (.NET 10 / Avalonia)
+        |
+        | P/Invoke C ABI (opaque session handles)
+        v
+    Skua.Ruffle.Native (Rust cdylib)
+        |
+        +-- Ruffle Player / AVM1 / AVM2
+        |
+        +-- Skua NavigatorBackend
+        |      +-- HTTP fetch / URL resolution
+        |      +-- raw TCP socket tasks
+        |      +-- optional Skua CaptureProxy routing
+        |
+        +-- Skua ExternalInterfaceProvider
+        |      +-- ActionScript -> .NET calls
+        |      +-- callback registration notifications
+        |      +-- .NET -> ActionScript callback invocation
+        |
+        +-- Rendering adapter
+               +-- first spike: offscreen frame output
+               +-- later: native GPU surface if host lifecycle permits
+
+The C ABI should expose only stable, blittable values and opaque handles. Do not expose Rust structs, trait objects, Arc, Mutex, or Ruffle types directly across P/Invoke.
+
+Suggested initial C ABI:
+- skua_ruffle_create(config, callbacks, user_data) -> session_handle
+- skua_ruffle_load(session, url_or_bytes)
+- skua_ruffle_resize(session, width, height, scale_factor)
+- skua_ruffle_tick(session, elapsed_microseconds)
+- skua_ruffle_render(session, output_buffer, stride, width, height)
+- skua_ruffle_call(session, callback_name, serialized_args, result_buffer)
+- skua_ruffle_key_event(...)
+- skua_ruffle_pointer_event(...)
+- skua_ruffle_dispose(session)
+
+This is a proposed interface, not an implemented or upstream Ruffle API. Exported functions must catch Rust panics before returning across the C ABI. Callback ownership, threading, buffer lifetime, UTF-8 encoding, and reentrancy need explicit contracts.
+
+## Rendering decision: do not start with a separate desktop process
+
+Ruffle's desktop frontend uses Winit, egui, and WGPU. Its desktop app is a useful reference for constructing a player and native backends, but its GUI is not a reusable embeddable control.
+
+A separate Ruffle process would introduce difficult cross-process rendering and window embedding. The existing Skua tab host already demonstrates why OS-native child-window embedding is a poor portability boundary.
+
+For the first experiment, prefer an in-process Rust library with an offscreen renderer and a pixel buffer. This is the simplest way to prove player, socket, and ExternalInterface integration without coupling the first milestone to AppKit/Winit event-loop integration.
+
+Offscreen rendering is a spike, not necessarily the final high-performance renderer. Measure frame-copy cost and CPU/GPU utilization before accepting it. If inadequate, investigate a native Metal/WGPU surface hosted through Avalonia's macOS native view support.
+
+## Spike milestones
+
+### R0 — Build upstream core for macOS
+- Pin a specific Ruffle revision.
+- Build a small Rust crate depending on ruffle_core for aarch64-apple-darwin and x86_64-apple-darwin.
+- Confirm public APIs and feature set compile for both targets.
+- Produce a dylib and call a trivial exported function from a .NET 10 macOS test host.
+
+### R1 — Player lifecycle
+- Create one player session.
+- Load a small local AVM2 SWF.
+- Tick and render it offscreen.
+- Resize, pause, resume, and dispose.
+- Verify there are no Rust panics or native memory lifetime errors.
+
+### R2 — ExternalInterface
+- Implement a Rust provider that records ActionScript -> host calls.
+- Notify .NET when ActionScript callbacks are registered.
+- Invoke callbacks from .NET using call_internal_interface.
+- Test all supported value types and error cases.
+- Port the real Skua Externalizer.as contract into an integration test.
+
+### R3 — Networking
+- Implement or adapt NavigatorBackend::connect_socket.
+- Connect to a local TCP test server.
+- Verify binary payload integrity, partial reads, write ordering, close, timeout, and failure events.
+- Test the existing Skua capture proxy separately.
+- Test the actual AQW SWF connection only after local protocol tests pass.
+
+### R4 — AQW compatibility gate
+- Load the real Skua bootstrap SWF and game SWF.
+- Verify all HTTP asset requests and redirects.
+- Verify AQW socket connection, handshake, login, and sustained gameplay.
+- Compare callback names and call order against the existing ActiveX client.
+- Run two isolated sessions simultaneously.
+
+## Risks and unresolved questions
+
+1. Ruffle core API stability: upstream Rust APIs are not a stable ABI. Pin a commit and keep all Ruffle-specific types behind the Rust wrapper.
+2. Rendering: Ruffle's RenderBackend is a substantial interface. The first spike needs a viable offscreen backend; the desktop WGPU backend is tied to its own window/event-loop setup.
+3. ExternalInterface behavior: provider callbacks are exposed, but all current Skua XML/object semantics must be tested against Ruffle's value conversion.
+4. Networking policy: Ruffle's desktop navigator has socket allow/deny/ask policy and raw TCP support. Skua must decide whether to reuse this policy, route through CaptureProxy, or combine both.
+5. HTTP behavior: the native navigator must reproduce expected headers, cookies, redirects, cache behavior, URL resolution, and crossdomain policy behavior of the current Flash environment.
+6. Flash API coverage: a successful socket connection does not prove all AQW APIs work. The actual game SWF is the compatibility test.
+7. macOS build prerequisites: both Apple Silicon and Intel targets need Rust toolchains, .NET 10 SDK, native linker setup, and CI runners or cross-compilation strategy.
+8. License review: Ruffle is MIT/Apache-2.0 dual-licensed, but all transitive dependencies and redistributed binaries must be reviewed before packaging.
+
+## Recommendation
+
+Proceed with R0 and R1 before changing the existing Skua client.
+
+Do not patch the current Windows Flash host yet. Keep Windows behavior intact while the native Ruffle wrapper proves that Ruffle can load a SWF, render it, expose the Skua callback bridge, and connect to an AQW-compatible TCP endpoint on both macOS architectures.
