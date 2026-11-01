@@ -192,7 +192,7 @@ impl RuffleSession {
             None,
             SkuaFutureSpawner,
             None,
-            false,
+            true,
             HashSet::new(),
             SocketMode::Ask,
             Rc::new(PlayingContent::DirectFile(content_descriptor)),
