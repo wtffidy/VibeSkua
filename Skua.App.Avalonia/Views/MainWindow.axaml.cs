@@ -339,14 +339,15 @@ public partial class MainWindow : Window
             try
             {
                 ruffleFlash.InitializeFlash();
-                _ruffleStopwatch = Stopwatch.StartNew();
+                Stopwatch ruffleStopwatch = Stopwatch.StartNew();
+                _ruffleStopwatch = ruffleStopwatch;
                 _ruffleTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
                 _ruffleTimer.Tick += (timerSender, timerArgs) =>
                 {
                     try
                     {
-                        double elapsedMilliseconds = Math.Min(_ruffleStopwatch.Elapsed.TotalMilliseconds, 100.0);
-                        _ruffleStopwatch.Restart();
+                        double elapsedMilliseconds = Math.Min(ruffleStopwatch.Elapsed.TotalMilliseconds, 100.0);
+                        ruffleStopwatch.Restart();
                         ruffleFlash.Tick(elapsedMilliseconds);
                         byte[]? frame = ruffleFlash.RenderFrame();
                         if (frame != null)
