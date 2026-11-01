@@ -15,3 +15,4 @@ ruffle_render_wgpu = { git = "https://github.com/ruffle-rs/ruffle.git", rev = "a
 tokio = { version = "1.52.3", features = ["rt", "net", "time", "sync", "macros"] }
 tracing = "0.1.43"
 url = "2.5.8"
+serde_json = "1.0.149"
