@@ -45,8 +45,12 @@ jobs:
       matrix:
         include:
           - target: arm64
+            rid: osx-arm64
+            rust_target: aarch64-apple-darwin
             runner: macos-26
           - target: x64
+            rid: osx-x64
+            rust_target: x86_64-apple-darwin
             runner: macos-26-intel
 
     steps:
@@ -58,11 +62,16 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+
       - name: Build client
-        run: dotnet build Skua.App.Avalonia/Skua.App.Avalonia.csproj --configuration Release
+        run: dotnet build Skua.App.Avalonia/Skua.App.Avalonia.csproj --configuration Release --runtime ${{ matrix.rid }}
 
       - name: Build manager
-        run: dotnet build Skua.Manager.Avalonia/Skua.Manager.Avalonia.csproj --configuration Release
+        run: dotnet build Skua.Manager.Avalonia/Skua.Manager.Avalonia.csproj --configuration Release --runtime ${{ matrix.rid }}
 
       - name: Build AS3 project
         run: dotnet build Skua.AS3/Skua.AS3.csproj --configuration Release
