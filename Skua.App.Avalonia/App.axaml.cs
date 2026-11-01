@@ -202,7 +202,7 @@ public partial class App : Application
                 Task.Run(() => Skua.App.Avalonia.Flash.FlashUtil.PreloadSwf());
 
             
-            if (hasEmbedFlag)
+            if (hasEmbedFlag && OperatingSystem.IsWindows())
             {
                 // Child instance
                 Views.MainWindow mainChild = new()
