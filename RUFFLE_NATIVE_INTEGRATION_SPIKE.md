@@ -364,6 +364,6 @@ The session stores a Tokio current-thread runtime and LocalSet and enforces thre
 
 The AQW Server.as helper now keeps the existing Security.loadPolicyFile call for Windows Flash, then sends an additional ExternalInterface call named allowSocket with the selected server IP and port.
 
-The shared ScriptInterface handles allowSocket and calls IFlashUtil.AuthorizeSocket(host, port). IFlashUtil provides a default no-op implementation so the existing Windows ActiveX player is unchanged. The Ruffle implementation will forward this to skua_ruffle_session_allow_socket.
+The native SkuaExternalInterfaceProvider handles allowSocket internally and updates the same shared socket allow-list used by ExternalNavigatorBackend. It does not forward this particular call into .NET. This avoids re-entering the native session while Ruffle's Player is mutably borrowed.
 
 This closes the design gap between Ruffle's SocketMode::Ask and AQW's dynamic server list: the native navigator denies unknown endpoints, while endpoints explicitly supplied by the AQW server list or selected-server connection path can be authorized before the game socket opens.
