@@ -364,3 +364,22 @@ ProcessStartService was also adjusted:
 - The fallback text editor uses Notepad on Windows, open -t on macOS, and xdg-open on Linux.
 
 FlashTrustManager now exits immediately on non-Windows platforms because the Flash Player trust-folder mechanism is only relevant to the existing Windows ActiveX player.
+
+
+## 18. Core hotkey forwarding had unguarded Win32 calls
+
+Skua.Core.AppStartup.HotKeys contains user32 calls for:
+- Enumerating client windows and broadcasting hotkey reloads.
+- Forwarding host hotkey actions to embedded child HWNDs.
+- Sending army-control messages to other client windows.
+- Checking the foreground window before executing a hotkey.
+
+These methods were reachable from shared hotkey commands even though the low-level global hook itself is Windows-only.
+
+The macOS branch now:
+- Uses local hotkey execution instead of HWND forwarding.
+- Skips cross-process hotkey and army broadcasts on non-Windows platforms.
+- Avoids foreground-window Win32 checks outside Windows.
+- Retains the existing Windows forwarding behavior unchanged.
+
+This is an initial compatibility fallback. Native macOS multi-client/army control still needs a platform-neutral message transport and host UI.
