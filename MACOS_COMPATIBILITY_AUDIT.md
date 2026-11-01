@@ -433,3 +433,20 @@ The client runtime identifiers are scoped by target framework: win-x64/win-x86 f
 MainWindow.axaml always declares WinFormsFlashHost, even though its real NativeControlHost/WinForms implementation is Windows-only. The non-Windows target therefore needs a placeholder Avalonia Control with the same XAML type name and a no-op SetScaleMode method for shared MainWindow code.
 
 The macOS branch now provides that placeholder. The actual Ruffle renderer will replace this placeholder with a proper cross-platform game surface; it is not a rendering implementation.
+
+
+## 23. macOS distribution can reuse the existing Velopack pipeline
+
+Current Velopack documentation confirms that macOS packages use .app bundles. Velopack can generate the app bundle itself from a publish directory when supplied with a valid .icns icon, or accept a prebuilt .app directory. It can also generate a signed .pkg installer and portable .zip. A custom Info.plist / bundle identifier can be supplied.
+
+This means we should keep Velopack as the cross-platform updater/packager instead of introducing a separate macOS update framework.
+
+**Distribution plan:**
+- Publish the client and manager separately for osx-arm64 and osx-x64.
+- Package each architecture as its own Velopack macOS release initially.
+- Supply a real .icns icon and a stable reverse-DNS bundle identifier.
+- Sign and notarize release bundles before distribution.
+- Do not enable the macOS App Sandbox when using Velopack's in-place updater; its updater needs to replace the .app bundle and may need elevation when installed under /Applications.
+- Consider a universal app only after proving that every native Mach-O dependency (including the Ruffle dylib and Avalonia native components) can be merged and re-signed correctly.
+
+Separate architecture packages are the lower-risk first release. .NET does not produce universal macOS binaries directly; it requires per-architecture publishing and lipo merging of native executables, with corresponding work for bundled native libraries.
