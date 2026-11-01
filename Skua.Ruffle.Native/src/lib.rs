@@ -19,6 +19,7 @@ use ruffle_core::backend::navigator::{OwnedFuture, SocketMode};
 use ruffle_core::context::UpdateContext;
 use ruffle_core::external::{ExternalInterfaceProvider, Value as ExternalValue};
 use ruffle_core::loader::Error;
+use ruffle_frontend_utils::backends::audio::CpalAudioBackend;
 use ruffle_frontend_utils::backends::navigator::{
     ExternalNavigatorBackend, FutureSpawner, NavigatorInterface,
 };
@@ -210,15 +211,19 @@ impl RuffleSession {
         let local_set = tokio::task::LocalSet::new();
         let external_interface = SkuaExternalInterfaceProvider::new(navigator_interface.clone(), pending_calls.clone());
 
-        let player = local_set.block_on(&runtime, async {
-            ruffle_core::PlayerBuilder::new()
-                .with_movie(movie)
-                .with_navigator(navigator)
-                .with_renderer(renderer)
-                .with_viewport_dimensions(width, height, 1.0)
-                .with_external_interface(Box::new(external_interface))
-                .build()
-        });
+        let mut builder = ruffle_core::PlayerBuilder::new()
+            .with_movie(movie)
+            .with_navigator(navigator)
+            .with_renderer(renderer)
+            .with_viewport_dimensions(width, height, 1.0)
+            .with_external_interface(Box::new(external_interface));
+
+        match CpalAudioBackend::new(None) {
+            Ok(audio) => builder = builder.with_audio(audio),
+            Err(error) => tracing::error!("Ruffle audio initialization failed: {error}"),
+        }
+
+        let player = local_set.block_on(&runtime, async { builder.build() });
 
         Ok(Self {
             owner_thread: thread::current().id(),
