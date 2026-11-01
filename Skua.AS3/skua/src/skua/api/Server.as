@@ -17,6 +17,19 @@ public class Server {
         super();
     }
 
+    private static function requestSocketAccess(ip:String, port:int):void {
+        if (ip == null || ip.length == 0 || port <= 0) return;
+
+        // Ruffle uses host-level socket permissions instead of Flash's XML socket policy enforcement.
+        try {
+            requestSocketAccess(ip, port);
+        } catch (e:Error) {}
+
+        try {
+            Main.instance.external.call("allowSocket", ip, port);
+        } catch (e:Error) {}
+    }
+
     public static function loadPolicyFiles():void {
         try {
             if (Main.instance.game == null) return;
@@ -30,7 +43,7 @@ public class Server {
                         if (s != null && s.sIP != null && s.iPort != null) {
                             var port:int = int(s.iPort);
                             if (port > 0) {
-                                Security.loadPolicyFile("xmlsocket://" + String(s.sIP) + ":" + port);
+                                requestSocketAccess(String(s.sIP), port);
                             }
                         }
                     }
@@ -47,7 +60,7 @@ public class Server {
                         if (cServer != null && cServer.sIP != null && cServer.iPort != null) {
                             var cPort:int = int(cServer.iPort);
                             if (cPort > 0) {
-                                Security.loadPolicyFile("xmlsocket://" + String(cServer.sIP) + ":" + cPort);
+                                requestSocketAccess(String(cServer.sIP), cPort);
                             }
                         }
                     }
@@ -103,7 +116,7 @@ public class Server {
                 try {
                     var cServer:Object = child.server || child.objServer;
                     if (cServer != null && cServer.sIP != null && cServer.iPort != null) {
-                        Security.loadPolicyFile("xmlsocket://" + String(cServer.sIP) + ":" + int(cServer.iPort));
+                        requestSocketAccess(String(cServer.sIP), int(cServer.iPort));
                     }
                 } catch (e:Error) {}
                 child.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
@@ -119,7 +132,7 @@ public class Server {
         var serverData:Object = JSON.parse(server);
         if (serverData != null && serverData.sIP != null && serverData.iPort != null) {
             try {
-                Security.loadPolicyFile("xmlsocket://" + String(serverData.sIP) + ":" + int(serverData.iPort));
+                requestSocketAccess(String(serverData.sIP), int(serverData.iPort));
             } catch (e:Error) {}
         }
 
@@ -173,7 +186,7 @@ public class Server {
         } else {
             if (server != null && server.sIP != null && server.iPort != null) {
                 try {
-                    Security.loadPolicyFile("xmlsocket://" + String(server.sIP) + ":" + int(server.iPort));
+                    requestSocketAccess(String(server.sIP), int(server.iPort));
                 } catch (e:Error) {}
             }
             Main.instance.game.objServerInfo = server;
