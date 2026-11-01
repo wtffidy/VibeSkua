@@ -426,3 +426,10 @@ Windows Forms, the IS_WINDOWS symbol, ActiveX COM references, CoreHook, CoreHook
 The client runtime identifiers are scoped by target framework: win-x64/win-x86 for net10.0-windows and osx-arm64/osx-x64 for net10.0. The manager now emits WinExe only on Windows, uses Exe elsewhere, and limits its ICO/manifest settings to Windows.
 
 **Important:** This is a build-target foundation, not a successful build. The non-Windows FlashUtil is still a deliberate placeholder that throws NotImplementedException. The next major implementation remains the Ruffle-backed IFlashUtil and player host.
+
+
+## 22. Non-Windows XAML still needs a Flash host control type
+
+MainWindow.axaml always declares WinFormsFlashHost, even though its real NativeControlHost/WinForms implementation is Windows-only. The non-Windows target therefore needs a placeholder Avalonia Control with the same XAML type name and a no-op SetScaleMode method for shared MainWindow code.
+
+The macOS branch now provides that placeholder. The actual Ruffle renderer will replace this placeholder with a proper cross-platform game surface; it is not a rendering implementation.
