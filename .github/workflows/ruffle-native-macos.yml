@@ -99,13 +99,17 @@ jobs:
       - name: Build client
         run: dotnet build Skua.App.Avalonia/Skua.App.Avalonia.csproj --configuration Release --runtime ${{ matrix.rid }}
 
-      - name: Verify packaged Ruffle native library
+      - name: Verify packaged Ruffle native library and player
         env:
           RUNTIME_ID: ${{ matrix.rid }}
           TARGET_ARCH: ${{ matrix.target }}
         run: |
-          native_library="Skua.App.Avalonia/bin/Release/net10.0/${RUNTIME_ID}/Assemblies/runtimes/${RUNTIME_ID}/native/libskua_ruffle_native.dylib"
+          app_output="Skua.App.Avalonia/bin/Release/net10.0/${RUNTIME_ID}"
+          native_library="$app_output/Assemblies/runtimes/${RUNTIME_ID}/native/libskua_ruffle_native.dylib"
+          swf_path="$app_output/skua.swf"
+
           test -f "$native_library"
+          test -f "$swf_path"
 
           file "$native_library"
           case "$TARGET_ARCH" in
@@ -115,63 +119,7 @@ jobs:
           esac
 
           otool -L "$native_library"
-
-          mkdir -p "$RUNNER_TEMP/ruffle-native-smoke"
-          cat > "$RUNNER_TEMP/ruffle-native-smoke/ruffle-native-smoke.csproj" <<'EOF'
-          <Project Sdk="Microsoft.NET.Sdk">
-            <PropertyGroup>
-              <OutputType>Exe</OutputType>
-              <TargetFramework>net10.0</TargetFramework>
-              <Nullable>enable</Nullable>
-            </PropertyGroup>
-          </Project>
-          EOF
-
-          cat > "$RUNNER_TEMP/ruffle-native-smoke/Program.cs" <<'EOF'
-          using System;
-          using System.Runtime.InteropServices;
-
-          if (args.Length != 1)
-              throw new ArgumentException("Expected the packaged Ruffle native library path.");
-
-          nint library = NativeLibrary.Load(args[0]);
-          try
-          {
-              string[] requiredExports =
-              {
-                  "skua_ruffle_session_create",
-                  "skua_ruffle_session_tick",
-                  "skua_ruffle_session_render",
-                  "skua_ruffle_session_drain_callbacks",
-                  "skua_ruffle_session_call",
-                  "skua_ruffle_session_mouse_move",
-                  "skua_ruffle_session_mouse_enter",
-                  "skua_ruffle_session_mouse_down",
-                  "skua_ruffle_session_mouse_up",
-                  "skua_ruffle_session_mouse_wheel",
-                  "skua_ruffle_session_mouse_leave",
-                  "skua_ruffle_session_key",
-                  "skua_ruffle_session_text_input",
-                  "skua_ruffle_session_focus",
-                  "skua_ruffle_session_allow_socket",
-                  "skua_ruffle_session_resize",
-                  "skua_ruffle_session_get_size",
-                  "skua_ruffle_session_destroy"
-              };
-
-              foreach (string export in requiredExports)
-                  if (!NativeLibrary.TryGetExport(library, export, out _))
-                      throw new EntryPointNotFoundException($"Missing native export: {export}");
-
-              Console.WriteLine($"Loaded {args[0]} and verified {requiredExports.Length} native exports.");
-          }
-          finally
-          {
-              NativeLibrary.Free(library);
-          }
-          EOF
-
-          dotnet run --project "$RUNNER_TEMP/ruffle-native-smoke/ruffle-native-smoke.csproj" --configuration Release -- "$native_library"
+          dotnet run --project Skua.Ruffle.Native.Smoke/Skua.Ruffle.Native.Smoke.csproj --configuration Release -- "$native_library" "$swf_path"
 
       - name: Build manager
         run: dotnet build Skua.Manager.Avalonia/Skua.Manager.Avalonia.csproj --configuration Release --runtime ${{ matrix.rid }}
