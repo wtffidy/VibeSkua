@@ -22,7 +22,7 @@ public class Server {
 
         // Ruffle uses host-level socket permissions instead of Flash's XML socket policy enforcement.
         try {
-            requestSocketAccess(ip, port);
+            Security.loadPolicyFile("xmlsocket://" + ip + ":" + port);
         } catch (e:Error) {}
 
         try {
@@ -74,7 +74,7 @@ public class Server {
     public static function loadPolicyFile(ip:String, port:int):void {
         try {
             if (ip != null && ip.length > 0 && port > 0) {
-                Security.loadPolicyFile("xmlsocket://" + ip + ":" + port);
+                requestSocketAccess(ip, port);
             }
         } catch (e:Error) {
             Main.instance.external.debug("Error in loadPolicyFile: " + e);
