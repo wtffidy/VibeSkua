@@ -79,11 +79,6 @@ public class WinFormsFlashHost : NativeControlHost
     }
 }
 #else
-public class WinFormsFlashHost : NativeControlHost
-{
-    
-}
-#else
 public class WinFormsFlashHost : Control
 {
     public void SetScaleMode(bool isExactFit = false)
