@@ -274,3 +274,22 @@ The offscreen constructor creates a native WGPU instance/device and a TextureTar
 The native crate now depends on the pinned ruffle_render_wgpu package and includes a compile-time API probe for this offscreen constructor. The probe does not initialize a GPU; it only type-checks the API.
 
 This makes the first Ruffle player host significantly smaller. It does not yet prove that capture_frame has acceptable latency or throughput. Measure frame readback cost, CPU usage, GPU usage, and frame pacing before deciding whether to keep CPU pixel copies or later integrate a native Metal surface.
+
+
+## Follow-up: reuse Ruffle's native HTTP/TCP navigator before writing a custom one
+
+Ruffle's frontend-utils crate exposes ExternalNavigatorBackend, FutureSpawner, and NavigatorInterface. The native backend already implements:
+
+- HTTP fetches through reqwest, including cookies, referer, optional proxy, and user-agent configuration.
+- URL resolution and relative asset loading.
+- Raw TCP Socket/XMLSocket transport through Tokio TcpStream.
+- Socket allow/deny/ask behavior and a NavigatorInterface confirmation callback.
+- Async task scheduling through an injected FutureSpawner.
+
+The native crate now references the pinned ruffle_frontend_utils package with its navigator and native-tls features, and has a compile-time type probe for these APIs.
+
+**Preferred first implementation:** Reuse ExternalNavigatorBackend. Implement only Skua's FutureSpawner and NavigatorInterface, and configure the correct base URL, cookies/referer, proxy, content descriptor, and socket policy. This avoids reimplementing HTTP behavior and raw TCP stream handling.
+
+The FutureSpawner must run on the same dedicated Rust owner thread as the Player. Its futures are not declared Send, and the native navigator uses Tokio networking/timers. A current-thread Tokio runtime with a LocalSet is the leading implementation, but it must be validated against the pinned Ruffle revision and tested for cancellation/disposal.
+
+Only replace ExternalNavigatorBackend with a custom NavigatorBackend if Skua needs to intercept or redirect individual socket streams in a way the existing backend cannot support. The existing CaptureProxy is not a drop-in replacement for the native raw TCP backend (see the earlier CaptureProxy section).
