@@ -352,12 +352,19 @@ The Rust bridge now contains an initial opaque RuffleSession API:
 
 The session stores a Tokio current-thread runtime and LocalSet and enforces thread affinity. This is deliberate: Ruffle's Player/ExternalInterface uses Rc-owned state, and navigator futures are not Send. The first .NET host must marshal all session calls to the Avalonia UI thread, matching the existing ActiveX host's UI-thread affinity. A dedicated worker-thread design can be considered later if frame/render measurements justify the added cross-thread bridge.
 
-**Important remaining work:**
-- The C# P/Invoke wrapper and RuffleFlashUtil implementation do not exist yet.
-- The C# JSON converter must map nested arrays/objects and the tagged undefined value back to the same object shapes expected by existing Skua code.
-- The host must populate the socket allow-list from AQW's server list or an explicit user permission flow. Unknown sockets are denied by default.
-- External website navigation currently logs the requested URL; it does not yet open the browser.
-- No actual SWF has been loaded through this C ABI yet. CI only checks that the Rust code compiles for both macOS architectures.
+**Current integration state:**
+- The non-Windows `FlashUtil` implementation now wraps the C ABI with P/Invoke.
+- The C# converter maps nested arrays/objects and the tagged undefined value into the object shapes expected by Skua.
+- The Avalonia non-Windows Flash host now displays RGBA frames using a `WriteableBitmap`.
+- `MainWindow` initializes the native session, ticks it on a 16 ms dispatcher timer, resizes the viewport, and disposes the session on close.
+- ActionScript-to-.NET callbacks are drained after native calls, avoiding reentrant P/Invoke.
+- AQW's `Server.as` sends selected game-server endpoints through `Externalizer.call("allowSocket", ...)`; the native provider handles this internally and also authorizes the corresponding policy-file port 843.
+- External navigation requests are queued as the existing `openWebsite` host event so Skua can open them using its normal handler.
+
+**Still unverified:**
+- No actual SWF has been loaded through this C ABI yet.
+- No AQW login, socket handshake, audio playback, or in-game rendering test has been performed.
+- CI must compile the native library for both macOS architectures and build the .NET client/manager. A passing compile is not proof of runtime compatibility.
 
 
 ## Follow-up: AQW now forwards its selected server endpoints to the native socket allow-list
