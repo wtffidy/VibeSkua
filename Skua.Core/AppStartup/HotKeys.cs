@@ -272,6 +272,9 @@ public class HotKeys
 
     public static void BroadcastReloadHotkeys()
     {
+        if (!OperatingSystem.IsWindows())
+            return;
+
         try
         {
             if (HostHwnd != IntPtr.Zero)
@@ -345,7 +348,7 @@ public class HotKeys
 
     private static void ExecuteOrForward(string actionName, Action localExecute)
     {
-        if (IsHostProcess)
+        if (IsHostProcess && OperatingSystem.IsWindows())
         {
             IntPtr childHwnd = IntPtr.Zero;
             IntPtr fg = GetForegroundWindow();
@@ -484,6 +487,9 @@ public class HotKeys
 
     private static bool CanExecuteHotKey()
     {
+        if (!OperatingSystem.IsWindows())
+            return true;
+
         try
         {
             IntPtr foregroundWindow = GetForegroundWindow();
@@ -541,7 +547,7 @@ public class HotKeys
             }
             catch { }
         }
-        else if (HostHwnd != IntPtr.Zero)
+        else if (OperatingSystem.IsWindows() && HostHwnd != IntPtr.Zero)
         {
             PostMessage(HostHwnd, WM_SKUA_LOAD_SCRIPT_ALL, IntPtr.Zero, IntPtr.Zero);
         }
@@ -573,6 +579,9 @@ public class HotKeys
 
     private static void BroadcastArmyMessage(uint msg, int wParam, int lParam)
     {
+        if (!OperatingSystem.IsWindows())
+            return;
+
         var skuaProcesses = System.Diagnostics.Process.GetProcessesByName(System.Diagnostics.Process.GetCurrentProcess().ProcessName);
         var pids = skuaProcesses.Select(p => p.Id).ToHashSet();
         
