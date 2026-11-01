@@ -70,7 +70,7 @@ public class ScreenshotService : IScreenshotService
             }
         });
 #else
-        return Task.FromResult(Array.Empty<byte>());
+        return Array.Empty<byte>();
 #endif
     }
 }
