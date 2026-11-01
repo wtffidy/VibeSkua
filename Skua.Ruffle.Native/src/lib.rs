@@ -443,8 +443,12 @@ pub unsafe extern "C" fn skua_ruffle_session_create(
 /// Advances the player, renders the next frame, and polls local navigator tasks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn skua_ruffle_session_tick(session: *mut c_void, elapsed_ms: f64) -> i32 {
-    let result = unsafe { get_session(session) }.and_then(|session| session.tick(elapsed_ms));
-    result.map(|_| 0).unwrap_or(-1)
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        unsafe { get_session(session) }.and_then(|session| session.tick(elapsed_ms))
+    })) {
+        Ok(Ok(())) => 0,
+        _ => -1,
+    }
 }
 
 /// Copies the most recently rendered RGBA frame into the supplied buffer.
@@ -456,9 +460,12 @@ pub unsafe extern "C" fn skua_ruffle_session_render(
     output: *mut u8,
     capacity: usize,
 ) -> usize {
-    unsafe { get_session(session) }
-        .and_then(|session| session.render(output, capacity))
-        .unwrap_or(usize::MAX)
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        unsafe { get_session(session) }.and_then(|session| session.render(output, capacity))
+    }))
+    .ok()
+    .and_then(Result::ok)
+    .unwrap_or(usize::MAX)
 }
 
 /// Copies queued ActionScript-to-host ExternalInterface calls into a UTF-8 JSON buffer.
@@ -471,9 +478,12 @@ pub unsafe extern "C" fn skua_ruffle_session_drain_callbacks(
     output: *mut c_char,
     capacity: usize,
 ) -> usize {
-    unsafe { get_session(session) }
-        .and_then(|session| session.drain_callbacks(output, capacity))
-        .unwrap_or(usize::MAX)
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        unsafe { get_session(session) }.and_then(|session| session.drain_callbacks(output, capacity))
+    }))
+    .ok()
+    .and_then(Result::ok)
+    .unwrap_or(usize::MAX)
 }
 
 /// Calls an ActionScript callback registered through ExternalInterface.addCallback.
@@ -500,10 +510,11 @@ pub unsafe extern "C" fn skua_ruffle_session_call(
         Err(_) => return usize::MAX,
     };
 
-    let Ok(session) = (unsafe { get_session(session) }) else {
-        return usize::MAX;
-    };
-    let Ok(result) = session.call(&function_name, &arguments_json) else {
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let session = unsafe { get_session(session) }?;
+        session.call(&function_name, &arguments_json)
+    }));
+    let Ok(Ok(result)) = result else {
         return usize::MAX;
     };
     let bytes = result.as_bytes();
@@ -531,14 +542,17 @@ pub unsafe extern "C" fn skua_ruffle_session_allow_socket(
     let Ok(host) = unsafe { CStr::from_ptr(host) }.to_str() else {
         return false;
     };
-    let Ok(session) = (unsafe { get_session(session) }) else {
-        return false;
-    };
-    if session.check_thread().is_err() {
-        return false;
-    }
-    session.navigator_interface.allow_socket(host, port);
-    true
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let Ok(session) = (unsafe { get_session(session) }) else {
+            return false;
+        };
+        if session.check_thread().is_err() {
+            return false;
+        }
+        session.navigator_interface.allow_socket(host, port);
+        true
+    }))
+    .unwrap_or(false)
 }
 
 /// Updates the player viewport dimensions.
@@ -549,9 +563,12 @@ pub unsafe extern "C" fn skua_ruffle_session_resize(
     height: u32,
     scale_factor: f64,
 ) -> bool {
-    unsafe { get_session(session) }
-        .and_then(|session| session.resize(width, height, scale_factor))
-        .is_ok()
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        unsafe { get_session(session) }
+            .and_then(|session| session.resize(width, height, scale_factor))
+            .is_ok()
+    }))
+    .unwrap_or(false)
 }
 
 /// Returns the current viewport width and height.
@@ -564,14 +581,20 @@ pub unsafe extern "C" fn skua_ruffle_session_get_size(
     if width.is_null() || height.is_null() {
         return false;
     }
-    let Ok(session) = (unsafe { get_session(session) }) else {
-        return false;
-    };
-    unsafe {
-        *width = session.width;
-        *height = session.height;
-    }
-    true
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let Ok(session) = (unsafe { get_session(session) }) else {
+            return false;
+        };
+        if session.check_thread().is_err() {
+            return false;
+        }
+        unsafe {
+            *width = session.width;
+            *height = session.height;
+        }
+        true
+    }))
+    .unwrap_or(false)
 }
 
 /// Destroys a Ruffle session. Must be called on the creating thread.
@@ -580,10 +603,12 @@ pub unsafe extern "C" fn skua_ruffle_session_destroy(session: *mut c_void) {
     if session.is_null() {
         return;
     }
-    let session = unsafe { &mut *(session.cast::<RuffleSession>()) };
-    if session.check_thread().is_err() {
-        tracing::error!("Refusing to destroy Ruffle session from a non-owner thread.");
-        return;
-    }
-    drop(unsafe { Box::from_raw(session as *mut RuffleSession) });
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let session = unsafe { &mut *(session.cast::<RuffleSession>()) };
+        if session.check_thread().is_err() {
+            tracing::error!("Refusing to destroy Ruffle session from a non-owner thread.");
+            return;
+        }
+        drop(unsafe { Box::from_raw(session as *mut RuffleSession) });
+    }));
 }
