@@ -4,11 +4,15 @@
 
 use std::any::Any;
 use std::collections::HashSet;
+use std::ffi::{c_char, c_void, CStr, CString};
 use std::fs::File;
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::ptr;
 use std::rc::Rc;
-use std::sync::{Arc, RwLock};
+use std::slice;
+use std::sync::{Arc, Mutex, RwLock};
+use std::thread::{self, ThreadId};
 use url::Url;
 
 use ruffle_core::backend::navigator::{OwnedFuture, SocketMode};
@@ -20,22 +24,12 @@ use ruffle_frontend_utils::backends::navigator::{
 };
 use ruffle_frontend_utils::content::{ContentDescriptor, PlayingContent};
 
-/// Returns the native bridge ABI version.
-#[unsafe(no_mangle)]
-pub extern "C" fn skua_ruffle_native_abi_version() -> u32 {
-    1
-}
+type FlashCallCallback = unsafe extern "C" fn(
+    user_data: *mut c_void,
+    function_name: *const c_char,
+    arguments_json: *const c_char,
+);
 
-/// Compile-time probe for the pinned upstream Ruffle core API.
-#[unsafe(no_mangle)]
-pub extern "C" fn skua_ruffle_core_api_probe() -> u32 {
-    let _builder = ruffle_core::PlayerBuilder::new();
-    1
-}
-
-/// Schedules Ruffle's non-Send navigator futures on the player thread's Tokio LocalSet.
-///
-/// Every call to spawn must occur while the session's LocalSet is entered.
 struct SkuaFutureSpawner;
 
 impl FutureSpawner<Error> for SkuaFutureSpawner {
@@ -48,7 +42,6 @@ impl FutureSpawner<Error> for SkuaFutureSpawner {
     }
 }
 
-/// Host callbacks and socket permissions shared with the Ruffle navigator.
 #[derive(Clone, Default)]
 struct SkuaNavigatorInterface {
     allowed_sockets: Arc<RwLock<HashSet<String>>>,
@@ -80,10 +73,21 @@ impl NavigatorInterface for SkuaNavigatorInterface {
     }
 }
 
-/// Receives calls from ActionScript and tracks callbacks registered by the SWF.
-#[derive(Default)]
+#[derive(Clone, Default)]
 struct SkuaExternalInterfaceProvider {
+    callback: Option<FlashCallCallback>,
+    user_data: usize,
     callback_names: Arc<RwLock<HashSet<String>>>,
+}
+
+impl SkuaExternalInterfaceProvider {
+    fn new(callback: Option<FlashCallCallback>, user_data: *mut c_void) -> Self {
+        Self {
+            callback,
+            user_data: user_data as usize,
+            callback_names: Arc::new(RwLock::new(HashSet::new())),
+        }
+    }
 }
 
 impl ExternalInterfaceProvider for SkuaExternalInterfaceProvider {
@@ -91,9 +95,32 @@ impl ExternalInterfaceProvider for SkuaExternalInterfaceProvider {
         &self,
         _context: &mut UpdateContext<'_>,
         name: &str,
-        _args: &[ExternalValue],
+        args: &[ExternalValue],
     ) -> ExternalValue {
-        tracing::debug!("ActionScript called host function: {name}");
+        let Some(callback) = self.callback else {
+            return ExternalValue::Undefined;
+        };
+
+        let args_json = serde_json::to_string(
+            &args.iter().map(external_value_to_json).collect::<Vec<_>>(),
+        )
+        .unwrap_or_else(|_| "[]".to_string());
+
+        let Ok(function_name) = CString::new(name) else {
+            return ExternalValue::Undefined;
+        };
+        let Ok(arguments_json) = CString::new(args_json) else {
+            return ExternalValue::Undefined;
+        };
+
+        unsafe {
+            callback(
+                self.user_data as *mut c_void,
+                function_name.as_ptr(),
+                arguments_json.as_ptr(),
+            );
+        }
+
         ExternalValue::Undefined
     }
 
@@ -108,83 +135,386 @@ impl ExternalInterfaceProvider for SkuaExternalInterfaceProvider {
     }
 }
 
-/// Compile-time probe for creating a full Ruffle player with the native navigator,
-/// ExternalInterface provider, and offscreen WGPU renderer.
-///
-/// This function is intentionally not called by CI; it type-checks the integration
-/// without requiring a real SWF file or an attached GPU.
-#[allow(dead_code)]
-fn _ruffle_full_player_api_probe(swf_bytes: &[u8], swf_path: &Path) {
-    let Ok(swf_path) = std::fs::canonicalize(swf_path) else {
-        return;
-    };
-    let Ok(swf_url) = Url::from_file_path(&swf_path) else {
-        return;
-    };
-    let Ok(movie) = ruffle_core::tag_utils::SwfMovieData::from_data(
-        swf_bytes,
-        swf_url.to_string(),
-        None,
-        None,
-    ) else {
-        return;
-    };
-    let Some(content_descriptor) = ContentDescriptor::new_local(
-        &swf_path,
-        swf_path.parent().map(Path::to_path_buf),
-    ) else {
-        return;
-    };
+struct RuffleSession {
+    owner_thread: ThreadId,
+    runtime: tokio::runtime::Runtime,
+    local_set: tokio::task::LocalSet,
+    player: Arc<Mutex<ruffle_core::Player>>,
+    navigator_interface: SkuaNavigatorInterface,
+    width: u32,
+    height: u32,
+}
 
-    let navigator_interface = SkuaNavigatorInterface::default();
-    let navigator = ExternalNavigatorBackend::new(
-        swf_url,
-        None,
-        None,
-        SkuaFutureSpawner,
-        None,
-        false,
-        HashSet::new(),
-        SocketMode::Ask,
-        Rc::new(PlayingContent::DirectFile(content_descriptor)),
-        navigator_interface,
-    );
+impl RuffleSession {
+    fn new(swf_bytes: &[u8], swf_path: &Path, width: u32, height: u32, callback: Option<FlashCallCallback>, user_data: *mut c_void) -> Result<Self, String> {
+        if width == 0 || height == 0 {
+            return Err("Viewport dimensions must be greater than zero.".to_string());
+        }
 
-    let Ok(renderer) = ruffle_render_wgpu::backend::WgpuRenderBackend::for_offscreen(
-        (640, 480),
-        ruffle_render_wgpu::wgpu::Backends::METAL,
-        ruffle_render_wgpu::wgpu::PowerPreference::LowPower,
-    ) else {
-        return;
-    };
+        let swf_path = std::fs::canonicalize(swf_path).map_err(|error| error.to_string())?;
+        let swf_url = Url::from_file_path(&swf_path).map_err(|_| "SWF path could not be converted to a file URL.".to_string())?;
+        let movie = ruffle_core::tag_utils::SwfMovieData::from_data(swf_bytes, swf_url.to_string(), None, None)
+            .map_err(|error| format!("Ruffle could not parse the SWF: {error}"))?;
+        let content_descriptor = ContentDescriptor::new_local(&swf_path, swf_path.parent().map(Path::to_path_buf))
+            .ok_or_else(|| "Ruffle could not create a local SWF content descriptor.".to_string())?;
 
-    let Ok(runtime) = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-    else {
-        return;
-    };
-    let local_set = tokio::task::LocalSet::new();
+        let navigator_interface = SkuaNavigatorInterface::default();
+        let navigator = ExternalNavigatorBackend::new(
+            swf_url,
+            None,
+            None,
+            SkuaFutureSpawner,
+            None,
+            false,
+            HashSet::new(),
+            SocketMode::Ask,
+            Rc::new(PlayingContent::DirectFile(content_descriptor)),
+            navigator_interface.clone(),
+        );
 
-    let player = local_set.block_on(&runtime, async {
-        ruffle_core::PlayerBuilder::new()
-            .with_movie(movie)
-            .with_navigator(navigator)
-            .with_renderer(renderer)
-            .with_viewport_dimensions(640, 480, 1.0)
-            .with_external_interface(Box::new(SkuaExternalInterfaceProvider::default()))
+        let renderer = ruffle_render_wgpu::backend::WgpuRenderBackend::for_offscreen(
+            (width, height),
+            ruffle_render_wgpu::wgpu::Backends::METAL,
+            ruffle_render_wgpu::wgpu::PowerPreference::HighPerformance,
+        )
+        .map_err(|error| format!("Ruffle could not initialize the Metal renderer: {error}"))?;
+
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
             .build()
-    });
+            .map_err(|error| format!("Could not initialize the Ruffle Tokio runtime: {error}"))?;
+        let local_set = tokio::task::LocalSet::new();
+        let external_interface = SkuaExternalInterfaceProvider::new(callback, user_data);
 
-    let mut player = player.lock().expect("Ruffle player mutex poisoned");
-    player.render();
+        let player = local_set.block_on(&runtime, async {
+            ruffle_core::PlayerBuilder::new()
+                .with_movie(movie)
+                .with_navigator(navigator)
+                .with_renderer(renderer)
+                .with_viewport_dimensions(width, height, 1.0)
+                .with_external_interface(Box::new(external_interface))
+                .build()
+        });
 
-    let renderer = <dyn Any>::downcast_mut::<
-        ruffle_render_wgpu::backend::WgpuRenderBackend<
-            ruffle_render_wgpu::target::TextureTarget,
-        >,
-    >(player.renderer_mut())
-    .expect("Ruffle player must use the offscreen WGPU renderer");
+        Ok(Self {
+            owner_thread: thread::current().id(),
+            runtime,
+            local_set,
+            player,
+            navigator_interface,
+            width,
+            height,
+        })
+    }
 
-    let _frame = renderer.capture_frame();
+    fn check_thread(&self) -> Result<(), String> {
+        if thread::current().id() != self.owner_thread {
+            return Err("Ruffle session calls must be made on the session's creating thread.".to_string());
+        }
+        Ok(())
+    }
+
+    fn tick(&mut self, elapsed_ms: f64) -> Result<(), String> {
+        self.check_thread()?;
+        if !elapsed_ms.is_finite() || elapsed_ms < 0.0 {
+            return Err("Elapsed time must be a finite, non-negative value.".to_string());
+        }
+
+        let player = self.player.clone();
+        self.local_set.block_on(&self.runtime, async move {
+            let mut player = player.lock().map_err(|_| "Ruffle player mutex poisoned.".to_string())?;
+            player.tick(ruffle_core::FloatDuration::from_millis(elapsed_ms));
+            player.render();
+            tokio::task::yield_now().await;
+            Ok::<(), String>(())
+        })
+    }
+
+    fn render(&mut self, output: *mut u8, capacity: usize) -> Result<usize, String> {
+        self.check_thread()?;
+        let mut player = self.player.lock().map_err(|_| "Ruffle player mutex poisoned.".to_string())?;
+        let renderer = <dyn Any>::downcast_mut::<
+            ruffle_render_wgpu::backend::WgpuRenderBackend<
+                ruffle_render_wgpu::target::TextureTarget,
+            >,
+        >(player.renderer_mut())
+        .ok_or_else(|| "Ruffle session does not have an offscreen WGPU renderer.".to_string())?;
+
+        let frame = renderer.capture_frame().ok_or_else(|| "Ruffle did not produce an offscreen frame.".to_string())?;
+        let bytes = frame.as_raw();
+        if output.is_null() || capacity < bytes.len() {
+            return Ok(bytes.len());
+        }
+
+        unsafe {
+            ptr::copy_nonoverlapping(bytes.as_ptr(), output, bytes.len());
+        }
+        Ok(bytes.len())
+    }
+
+    fn call(&mut self, function_name: &str, arguments_json: &str) -> Result<String, String> {
+        self.check_thread()?;
+        let json_arguments: Vec<serde_json::Value> = serde_json::from_str(arguments_json)
+            .map_err(|error| format!("Invalid ExternalInterface arguments JSON: {error}"))?;
+        let arguments = json_arguments.into_iter().map(json_to_external_value).collect::<Vec<_>>();
+        let player = self.player.clone();
+
+        let result = self.local_set.block_on(&self.runtime, async move {
+            let mut player = player.lock().map_err(|_| "Ruffle player mutex poisoned.".to_string())?;
+            Ok::<Option<ExternalValue>, String>(player.call_internal_interface(function_name, &arguments))
+        })?;
+
+        let result = result.unwrap_or(ExternalValue::Undefined);
+        serde_json::to_string(&external_value_to_json(&result))
+            .map_err(|error| format!("Could not serialize the Ruffle return value: {error}"))
+    }
+
+    fn resize(&mut self, width: u32, height: u32, scale_factor: f64) -> Result<(), String> {
+        self.check_thread()?;
+        if width == 0 || height == 0 || !scale_factor.is_finite() || scale_factor <= 0.0 {
+            return Err("Viewport dimensions and scale factor must be positive.".to_string());
+        }
+
+        let mut player = self.player.lock().map_err(|_| "Ruffle player mutex poisoned.".to_string())?;
+        player.set_viewport_dimensions(ruffle_core::ViewportDimensions {
+            width,
+            height,
+            scale_factor,
+        });
+        self.width = width;
+        self.height = height;
+        Ok(())
+    }
+}
+
+fn external_value_to_json(value: &ExternalValue) -> serde_json::Value {
+    match value {
+        ExternalValue::Undefined => serde_json::json!({ "$ruffle": "undefined" }),
+        ExternalValue::Null => serde_json::Value::Null,
+        ExternalValue::Bool(value) => serde_json::Value::Bool(*value),
+        ExternalValue::Number(value) => serde_json::Number::from_f64(*value)
+            .map(serde_json::Value::Number)
+            .unwrap_or(serde_json::Value::Null),
+        ExternalValue::String(value) => serde_json::Value::String(value.clone()),
+        ExternalValue::Object(value) => {
+            let object = value
+                .iter()
+                .map(|(key, value)| (key.clone(), external_value_to_json(value)))
+                .collect();
+            serde_json::Value::Object(object)
+        }
+        ExternalValue::List(value) => {
+            serde_json::Value::Array(value.iter().map(external_value_to_json).collect())
+        }
+    }
+}
+
+fn json_to_external_value(value: serde_json::Value) -> ExternalValue {
+    match value {
+        serde_json::Value::Null => ExternalValue::Null,
+        serde_json::Value::Bool(value) => ExternalValue::Bool(value),
+        serde_json::Value::Number(value) => ExternalValue::Number(value.as_f64().unwrap_or_default()),
+        serde_json::Value::String(value) => ExternalValue::String(value),
+        serde_json::Value::Array(value) => ExternalValue::List(value.into_iter().map(json_to_external_value).collect()),
+        serde_json::Value::Object(mut value) => {
+            if value.len() == 1 && value.get("$ruffle").and_then(serde_json::Value::as_str) == Some("undefined") {
+                return ExternalValue::Undefined;
+            }
+            let object = value.drain().map(|(key, value)| (key, json_to_external_value(value))).collect();
+            ExternalValue::Object(object)
+        }
+    }
+}
+
+unsafe fn write_error(buffer: *mut c_char, capacity: usize, error: &str) {
+    if buffer.is_null() || capacity == 0 {
+        return;
+    }
+
+    let bytes = error.as_bytes();
+    let length = bytes.len().min(capacity - 1);
+    unsafe {
+        ptr::copy_nonoverlapping(bytes.as_ptr(), buffer.cast::<u8>(), length);
+        *buffer.add(length) = 0;
+    }
+}
+
+unsafe fn get_session<'a>(session: *mut c_void) -> Result<&'a mut RuffleSession, String> {
+    if session.is_null() {
+        return Err("Ruffle session handle is null.".to_string());
+    }
+    Ok(unsafe { &mut *(session.cast::<RuffleSession>()) })
+}
+
+/// Creates a Ruffle session. The session is bound to the calling thread.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn skua_ruffle_session_create(
+    swf_data: *const u8,
+    swf_length: usize,
+    swf_path: *const c_char,
+    width: u32,
+    height: u32,
+    callback: Option<FlashCallCallback>,
+    user_data: *mut c_void,
+    error_buffer: *mut c_char,
+    error_capacity: usize,
+) -> *mut c_void {
+    if swf_data.is_null() || swf_path.is_null() || swf_length == 0 {
+        unsafe { write_error(error_buffer, error_capacity, "SWF data and path are required.") };
+        return ptr::null_mut();
+    }
+
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let swf_bytes = unsafe { slice::from_raw_parts(swf_data, swf_length) };
+        let swf_path = match unsafe { CStr::from_ptr(swf_path) }.to_str() {
+            Ok(path) => PathBuf::from(path),
+            Err(error) => return Err(format!("SWF path is not valid UTF-8: {error}")),
+        };
+        RuffleSession::new(swf_bytes, &swf_path, width, height, callback, user_data)
+    }));
+
+    match result {
+        Ok(Ok(session)) => Box::into_raw(Box::new(session)).cast::<c_void>(),
+        Ok(Err(error)) => {
+            unsafe { write_error(error_buffer, error_capacity, &error) };
+            ptr::null_mut()
+        }
+        Err(_) => {
+            unsafe { write_error(error_buffer, error_capacity, "Ruffle session creation panicked.") };
+            ptr::null_mut()
+        }
+    }
+}
+
+/// Advances the player, renders the next frame, and polls local navigator tasks.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn skua_ruffle_session_tick(session: *mut c_void, elapsed_ms: f64) -> i32 {
+    let result = unsafe { get_session(session) }.and_then(|session| session.tick(elapsed_ms));
+    result.map(|_| 0).unwrap_or(-1)
+}
+
+/// Copies the most recently rendered RGBA frame into the supplied buffer.
+///
+/// Returns the required buffer size. Pass a null buffer to query the size.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn skua_ruffle_session_render(
+    session: *mut c_void,
+    output: *mut u8,
+    capacity: usize,
+) -> usize {
+    unsafe { get_session(session) }
+        .and_then(|session| session.render(output, capacity))
+        .unwrap_or(usize::MAX)
+}
+
+/// Calls an ActionScript callback registered through ExternalInterface.addCallback.
+///
+/// Returns the required UTF-8 JSON buffer size, or usize::MAX on error.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn skua_ruffle_session_call(
+    session: *mut c_void,
+    function_name: *const c_char,
+    arguments_json: *const c_char,
+    output: *mut c_char,
+    capacity: usize,
+) -> usize {
+    if function_name.is_null() || arguments_json.is_null() {
+        return usize::MAX;
+    }
+
+    let function_name = match unsafe { CStr::from_ptr(function_name) }.to_str() {
+        Ok(value) => value.to_string(),
+        Err(_) => return usize::MAX,
+    };
+    let arguments_json = match unsafe { CStr::from_ptr(arguments_json) }.to_str() {
+        Ok(value) => value.to_string(),
+        Err(_) => return usize::MAX,
+    };
+
+    let Ok(session) = (unsafe { get_session(session) }) else {
+        return usize::MAX;
+    };
+    let Ok(result) = session.call(&function_name, &arguments_json) else {
+        return usize::MAX;
+    };
+    let bytes = result.as_bytes();
+    if output.is_null() || capacity < bytes.len() + 1 {
+        return bytes.len() + 1;
+    }
+
+    unsafe {
+        ptr::copy_nonoverlapping(bytes.as_ptr(), output.cast::<u8>(), bytes.len());
+        *output.add(bytes.len()) = 0;
+    }
+    bytes.len() + 1
+}
+
+/// Adds an explicit host:port socket permission to this session.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn skua_ruffle_session_allow_socket(
+    session: *mut c_void,
+    host: *const c_char,
+    port: u16,
+) -> bool {
+    if host.is_null() {
+        return false;
+    }
+    let Ok(host) = unsafe { CStr::from_ptr(host) }.to_str() else {
+        return false;
+    };
+    let Ok(session) = (unsafe { get_session(session) }) else {
+        return false;
+    };
+    if session.check_thread().is_err() {
+        return false;
+    }
+    session.navigator_interface.allow_socket(host, port);
+    true
+}
+
+/// Updates the player viewport dimensions.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn skua_ruffle_session_resize(
+    session: *mut c_void,
+    width: u32,
+    height: u32,
+    scale_factor: f64,
+) -> bool {
+    unsafe { get_session(session) }
+        .and_then(|session| session.resize(width, height, scale_factor))
+        .is_ok()
+}
+
+/// Returns the current viewport width and height.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn skua_ruffle_session_get_size(
+    session: *mut c_void,
+    width: *mut u32,
+    height: *mut u32,
+) -> bool {
+    if width.is_null() || height.is_null() {
+        return false;
+    }
+    let Ok(session) = (unsafe { get_session(session) }) else {
+        return false;
+    };
+    unsafe {
+        *width = session.width;
+        *height = session.height;
+    }
+    true
+}
+
+/// Destroys a Ruffle session. Must be called on the creating thread.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn skua_ruffle_session_destroy(session: *mut c_void) {
+    if session.is_null() {
+        return;
+    }
+    let session = unsafe { &mut *(session.cast::<RuffleSession>()) };
+    if session.check_thread().is_err() {
+        tracing::error!("Refusing to destroy Ruffle session from a non-owner thread.");
+        return;
+    }
+    drop(unsafe { Box::from_raw(session as *mut RuffleSession) });
 }
