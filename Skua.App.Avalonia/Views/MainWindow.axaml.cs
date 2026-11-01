@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using Material.Icons;
 using Material.Icons.Avalonia;
 using Skua.App.Avalonia.Services;
+using Skua.App.Avalonia.Flash;
 using Skua.App.Avalonia.ViewModels;
 using Skua.App.Avalonia.ViewModels.MainMenu;
 using Skua.Core.Interfaces;
@@ -100,6 +101,10 @@ public partial class MainWindow : Window
     private readonly MainViewModel _mainViewModel;
     private MenuItem? _pluginsMenuItem;
     private DispatcherTimer? _tabTitleSyncTimer;
+#if !IS_WINDOWS
+    private DispatcherTimer? _ruffleTimer;
+    private Stopwatch? _ruffleStopwatch;
+#endif
     private bool _isFlashLoaded;
     private bool _isTitleBarPermanentlyHidden = false;
     private int _preThrottleFPS = -1;
@@ -281,6 +286,9 @@ public partial class MainWindow : Window
         Opened += MainWindow_Opened;
         Closing += (s, e) => App.DisposeTrayIcon();
         Closed += MainWindow_Closed;
+#if !IS_WINDOWS
+        FlashHost.SizeChanged += RuffleFlashHost_SizeChanged;
+#endif
 
         if (_options is System.ComponentModel.INotifyPropertyChanged notifyOptions)
         {
@@ -312,10 +320,10 @@ public partial class MainWindow : Window
         }
         catch { }
         
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) 
+        if (OperatingSystem.IsWindows())
         {
             _flash.InitializeFlash();
-            
+
 #if IS_WINDOWS
             if (this.TryGetPlatformHandle()?.Handle is IntPtr hwnd && hwnd != IntPtr.Zero)
             {
@@ -325,7 +333,42 @@ public partial class MainWindow : Window
             }
 #endif
         }
+#if !IS_WINDOWS
+        else if (OperatingSystem.IsMacOS() && _flash is FlashUtil ruffleFlash)
+        {
+            try
+            {
+                ruffleFlash.InitializeFlash();
+                _ruffleStopwatch = Stopwatch.StartNew();
+                _ruffleTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+                _ruffleTimer.Tick += (timerSender, timerArgs) =>
+                {
+                    try
+                    {
+                        double elapsedMilliseconds = Math.Min(_ruffleStopwatch.Elapsed.TotalMilliseconds, 100.0);
+                        _ruffleStopwatch.Restart();
+                        ruffleFlash.Tick(elapsedMilliseconds);
+                        byte[]? frame = ruffleFlash.RenderFrame();
+                        if (frame != null)
+                            FlashHost.SetFrame(frame, ruffleFlash.Width, ruffleFlash.Height);
+                    }
+                    catch (Exception ex)
+                    {
+                        Trace.WriteLine($"Ruffle frame update failed: {ex}");
+                        _ruffleTimer?.Stop();
+                    }
+                };
+                _ruffleTimer.Start();
+            }
+            catch (Exception ex)
+            {
+                LoadingBar.IsVisible = false;
+                Trace.WriteLine($"Ruffle initialization failed: {ex}");
+            }
+        }
+#endif
 
+#if IS_WINDOWS
         _tabTitleSyncTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         string lastWrittenUsername = "";
         _tabTitleSyncTimer.Tick += (s, ev) =>
@@ -372,11 +415,26 @@ public partial class MainWindow : Window
             catch { }
         };
         _tabTitleSyncTimer.Start();
+#endif
     }
+
+#if !IS_WINDOWS
+    private void RuffleFlashHost_SizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        if (_flash is not FlashUtil ruffleFlash || !ruffleFlash.IsInitialized)
+            return;
+
+        double scaleFactor = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1.0;
+        uint width = (uint)Math.Max(1, Math.Round(e.NewSize.Width * scaleFactor));
+        uint height = (uint)Math.Max(1, Math.Round(e.NewSize.Height * scaleFactor));
+        ruffleFlash.Resize(width, height, scaleFactor);
+    }
+#endif
 
     private void MainWindow_Closed(object? sender, EventArgs e)
     {
         App.DisposeTrayIcon();
+#if IS_WINDOWS
         _tabTitleSyncTimer?.Stop();
         try
         {
@@ -392,6 +450,11 @@ public partial class MainWindow : Window
                 System.IO.File.Delete(temporaryFile);
         }
         catch { }
+#else
+        _ruffleTimer?.Stop();
+        if (_flash is FlashUtil ruffleFlash)
+            ruffleFlash.Dispose();
+#endif
 
         _flash.FlashCall -= OnFlashCall;
         _startup.Dispose();
