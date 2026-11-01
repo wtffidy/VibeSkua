@@ -532,7 +532,7 @@ public class FlashUtil : IFlashUtil
             {
                 string argumentsJson = JsonConvert.SerializeObject(args);
                 nuint written = SessionCall(_session, function, argumentsJson, _callBuffer, (nuint)CallBufferSize);
-                if (written == nuint.MaxValue || written == 0 || written > CallBufferSize)
+                if (written == nuint.MaxValue || written == 0 || written > (nuint)CallBufferSize)
                     throw new InvalidOperationException($"Ruffle call '{function}' failed or exceeded the native result buffer.");
 
                 byte[] resultBytes = new byte[(int)written - 1];
