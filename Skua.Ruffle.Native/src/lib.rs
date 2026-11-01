@@ -36,22 +36,35 @@ impl FutureSpawner<Error> for SkuaFutureSpawner {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 struct SkuaNavigatorInterface {
     allowed_sockets: Arc<RwLock<HashSet<String>>>,
+    pending_calls: Arc<Mutex<VecDeque<PendingFlashCall>>>,
 }
 
 impl SkuaNavigatorInterface {
+    fn new(pending_calls: Arc<Mutex<VecDeque<PendingFlashCall>>>) -> Self {
+        Self {
+            allowed_sockets: Arc::new(RwLock::new(HashSet::new())),
+            pending_calls,
+        }
+    }
+
     fn allow_socket(&self, host: &str, port: u16) {
         if let Ok(mut allowed_sockets) = self.allowed_sockets.write() {
-            allowed_sockets.insert(format!("{host}:{port}"));
+            allowed_sockets.insert(format!("{}:{port}", host.to_ascii_lowercase()));
         }
     }
 }
 
 impl NavigatorInterface for SkuaNavigatorInterface {
     fn navigate_to_website(&self, url: Url) {
-        tracing::info!("SWF requested external navigation: {url}");
+        if let Ok(mut pending_calls) = self.pending_calls.lock() {
+            pending_calls.push_back(PendingFlashCall {
+                function: "openWebsite".to_string(),
+                arguments: vec![serde_json::Value::String(url.to_string())],
+            });
+        }
     }
 
     async fn open_file(&self, path: &Path) -> io::Result<File> {
@@ -59,7 +72,7 @@ impl NavigatorInterface for SkuaNavigatorInterface {
     }
 
     async fn confirm_socket(&self, host: &str, port: u16) -> bool {
-        let address = format!("{host}:{port}");
+        let address = format!("{}:{port}", host.to_ascii_lowercase());
         self.allowed_sockets
             .read()
             .map(|allowed_sockets| allowed_sockets.contains(&address))
@@ -164,8 +177,8 @@ impl RuffleSession {
         let content_descriptor = ContentDescriptor::new_local(&swf_path, swf_path.parent().map(Path::to_path_buf))
             .ok_or_else(|| "Ruffle could not create a local SWF content descriptor.".to_string())?;
 
-        let navigator_interface = SkuaNavigatorInterface::default();
         let pending_calls = Arc::new(Mutex::new(VecDeque::new()));
+        let navigator_interface = SkuaNavigatorInterface::new(pending_calls.clone());
         let navigator = ExternalNavigatorBackend::new(
             swf_url,
             None,
