@@ -388,6 +388,11 @@ public class FlashUtil : IFlashUtil
     private IntPtr _callBuffer;
     private IntPtr _renderBuffer;
     private int _renderBufferSize;
+    private uint _width = 960;
+    private uint _height = 540;
+
+    public uint Width => _width;
+    public uint Height => _height;
 
     public FlashUtil(IMessenger messenger, Lazy<IScriptManager> manager)
     {
@@ -422,8 +427,8 @@ public class FlashUtil : IFlashUtil
                 swfData,
                 (nuint)swfData.Length,
                 swfPath,
-                960,
-                540,
+                _width,
+                _height,
                 NativeCallback,
                 GCHandle.ToIntPtr(_selfHandle),
                 errorBuffer,
@@ -473,7 +478,9 @@ public class FlashUtil : IFlashUtil
             byte[] frame = new byte[frameLength];
             EnsureRenderBufferCapacity(frameLength);
             nuint written = SessionRender(_session, _renderBuffer, (nuint)_renderBufferSize);
-            if (written == nuint.MaxValue || written != (nuint)frameLength)
+            if (written == nuint.MaxValue || written == 0)
+                return null;
+            if (written != (nuint)frameLength)
                 throw new InvalidOperationException("Ruffle returned an invalid frame buffer size.");
 
             Marshal.Copy(_renderBuffer, frame, 0, frameLength);
@@ -502,6 +509,8 @@ public class FlashUtil : IFlashUtil
         {
             if (!SessionResize(_session, width, height, scaleFactor))
                 throw new InvalidOperationException("Ruffle could not resize the player viewport.");
+            _width = width;
+            _height = height;
             return true;
         });
     }
