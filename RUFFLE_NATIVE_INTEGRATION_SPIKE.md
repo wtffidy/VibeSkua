@@ -358,3 +358,12 @@ The session stores a Tokio current-thread runtime and LocalSet and enforces thre
 - The host must populate the socket allow-list from AQW's server list or an explicit user permission flow. Unknown sockets are denied by default.
 - External website navigation currently logs the requested URL; it does not yet open the browser.
 - No actual SWF has been loaded through this C ABI yet. CI only checks that the Rust code compiles for both macOS architectures.
+
+
+## Follow-up: AQW now forwards its selected server endpoints to the native socket allow-list
+
+The AQW Server.as helper now keeps the existing Security.loadPolicyFile call for Windows Flash, then sends an additional ExternalInterface call named allowSocket with the selected server IP and port.
+
+The shared ScriptInterface handles allowSocket and calls IFlashUtil.AuthorizeSocket(host, port). IFlashUtil provides a default no-op implementation so the existing Windows ActiveX player is unchanged. The Ruffle implementation will forward this to skua_ruffle_session_allow_socket.
+
+This closes the design gap between Ruffle's SocketMode::Ask and AQW's dynamic server list: the native navigator denies unknown endpoints, while endpoints explicitly supplied by the AQW server list or selected-server connection path can be authorized before the game socket opens.
