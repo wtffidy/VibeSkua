@@ -12,6 +12,9 @@ public static class FlashTrustManager
 
     public static void EnsureTrustFile()
     {
+        if (!OperatingSystem.IsWindows())
+            return;
+
         try
         {
             Directory.CreateDirectory(TrustFolderPath);
