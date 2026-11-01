@@ -241,3 +241,20 @@ The compatibility layer is more specific than a generic ExternalInterface bridge
 - return values from RemoteRegistry and game callbacks
 
 The current FlashUtil XML parser has legacy behavior (for example, number conversion to int/float and default values on failures). Match observed Windows behavior before attempting to improve it, because existing scripts may rely on those conversions.
+
+
+## Follow-up: AQW explicitly requests socket policy files, but Ruffle's stub may not block connectivity
+
+Inspected the complete Skua AS3 Server.as implementation and Ruffle's AVM2 Security implementation.
+
+Skua calls Security.loadPolicyFile("xmlsocket://host:port") for server-list entries and again before selecting/connecting to a server. Adobe's Flash behavior is to send a null-terminated <policy-file-request/> over TCP and wait for the policy response before allowing the subsequent socket connection.
+
+Ruffle's current flash.system.Security.loadPolicyFile implementation is a stub. However, Ruffle's AVM2 Socket implementation delegates directly to NavigatorBackend, and the native desktop navigator applies its own SocketMode allow/deny/ask policy. It does not rely on the Flash policy-file call as the same security gate.
+
+**Revised assessment:** This is a confirmed ActionScript API compatibility gap, but it is not yet a proven AQW connectivity blocker. Ruffle may intentionally replace Flash's policy-file enforcement with its host-level socket permissions. We must test whether AQW's server requires the policy request as part of its connection flow, rather than assuming the stub prevents login.
+
+**Test cases:**
+1. Record the policy-file requests made by the current ActiveX client when the server list loads and when a server is selected.
+2. Run the same SWF in native Ruffle with its normal socket policy and observe whether the game can connect without policy requests.
+3. If AQW requires the request, implement xmlsocket:// policy retrieval in a custom navigator/host extension or upstream Ruffle contribution.
+4. If it does not, document the intentional security-model difference and make sure Skua's host-level socket allow-list is restrictive and explicit.
