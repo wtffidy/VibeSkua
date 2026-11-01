@@ -461,6 +461,18 @@ public class ScriptInterface : IScriptInterface, IScriptInterfaceManager, IDispo
     {
         switch (name)
         {
+            case "allowSocket":
+                if (args is { Length: >= 2 }
+                    && args[0] is not null
+                    && int.TryParse(args[1]?.ToString(), out int socketPort)
+                    && socketPort is > 0 and <= 65535)
+                {
+                    string socketHost = args[0].ToString() ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(socketHost))
+                        Flash.AuthorizeSocket(socketHost, socketPort);
+                }
+                break;
+
             case "pre-load":
                 Schedule(1000, _ =>
                 {
