@@ -484,3 +484,8 @@ The macOS manager currently permits multiple manager instances rather than tryin
 The AQW socket-authorization bridge is implemented in `Server.as`, so the bundled `skua.swf` must be rebuilt for the change to reach the running game. The macOS build workflow now installs Java, PowerShell, and the Apache Flex 4.16.1 binary SDK, points `PLAYERGLOBAL_HOME` at the repository's pinned Flash Player 28.0 SWC, and runs `compile-as3.ps1` before building the client.
 
 This avoids shipping a stale SWF that would never call the native `allowSocket` hook. The generated SWF is consumed by the client build in CI; the workflow does not push generated binaries back to the branch.
+
+
+## 27. Supported macOS baseline
+
+The CI matrix targets both `osx-arm64` and `osx-x64`. The minimum OS baseline is macOS 14 Sonoma, matching the currently supported macOS versions for .NET 10. The native Rust library is compiled with `MACOSX_DEPLOYMENT_TARGET=14.0` so it does not advertise a lower OS requirement than the managed application.
