@@ -1,14 +1,30 @@
-name: Ruffle Native macOS
+name: macOS Compatibility
 
 on:
   push:
     branches:
       - feature/macos-support
     paths:
+      - "Skua.App.Avalonia/**"
+      - "Skua.Manager.Avalonia/**"
+      - "Skua.Shared.Avalonia/**"
+      - "Skua.Core/**"
+      - "Skua.Core.Models/**"
+      - "Skua.Core.Interfaces/**"
+      - "Skua.Core.Utils/**"
+      - "Skua.AS3/**"
       - "Skua.Ruffle.Native/**"
       - ".github/workflows/ruffle-native-macos.yml"
   pull_request:
     paths:
+      - "Skua.App.Avalonia/**"
+      - "Skua.Manager.Avalonia/**"
+      - "Skua.Shared.Avalonia/**"
+      - "Skua.Core/**"
+      - "Skua.Core.Models/**"
+      - "Skua.Core.Interfaces/**"
+      - "Skua.Core.Utils/**"
+      - "Skua.AS3/**"
       - "Skua.Ruffle.Native/**"
       - ".github/workflows/ruffle-native-macos.yml"
   workflow_dispatch:
@@ -17,8 +33,38 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    name: Build ${{ matrix.target }}
+  dotnet-build:
+    name: .NET build (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: arm64
+            runner: macos-26
+          - target: x64
+            runner: macos-26-intel
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build client
+        run: dotnet build Skua.App.Avalonia/Skua.App.Avalonia.csproj --configuration Release
+
+      - name: Build manager
+        run: dotnet build Skua.Manager.Avalonia/Skua.Manager.Avalonia.csproj --configuration Release
+
+      - name: Build AS3 project
+        run: dotnet build Skua.AS3/Skua.AS3.csproj --configuration Release
+
+  ruffle-native-build:
+    name: Ruffle native (${{ matrix.target }})
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
