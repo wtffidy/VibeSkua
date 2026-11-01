@@ -349,19 +349,17 @@ public class FlashUtil : IFlashUtil
 {
     private const int CallBufferSize = 4 * 1024 * 1024;
 
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    private delegate void NativeFlashCallCallback(IntPtr userData, IntPtr functionName, IntPtr argumentsJson);
-
-    private static readonly NativeFlashCallCallback NativeCallback = HandleNativeFlashCall;
-
     [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_create", CallingConvention = CallingConvention.Cdecl)]
-    private static extern IntPtr SessionCreate([In] byte[] swfData, nuint swfLength, [MarshalAs(UnmanagedType.LPUTF8Str)] string swfPath, uint width, uint height, NativeFlashCallCallback callback, IntPtr userData, [Out] byte[] errorBuffer, nuint errorCapacity);
+    private static extern IntPtr SessionCreate([In] byte[] swfData, nuint swfLength, [MarshalAs(UnmanagedType.LPUTF8Str)] string swfPath, uint width, uint height, [Out] byte[] errorBuffer, nuint errorCapacity);
 
     [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_tick", CallingConvention = CallingConvention.Cdecl)]
     private static extern int SessionTick(IntPtr session, double elapsedMilliseconds);
 
     [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_render", CallingConvention = CallingConvention.Cdecl)]
     private static extern nuint SessionRender(IntPtr session, IntPtr output, nuint capacity);
+
+    [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_drain_callbacks", CallingConvention = CallingConvention.Cdecl)]
+    private static extern nuint SessionDrainCallbacks(IntPtr session, IntPtr output, nuint capacity);
 
     [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_call", CallingConvention = CallingConvention.Cdecl)]
     private static extern nuint SessionCall(IntPtr session, [MarshalAs(UnmanagedType.LPUTF8Str)] string functionName, [MarshalAs(UnmanagedType.LPUTF8Str)] string argumentsJson, IntPtr output, nuint capacity);
@@ -383,7 +381,6 @@ public class FlashUtil : IFlashUtil
 
     private readonly IMessenger _messenger;
     private readonly Lazy<IScriptManager> _lazyManager;
-    private GCHandle _selfHandle;
     private IntPtr _session;
     private IntPtr _callBuffer;
     private IntPtr _renderBuffer;
@@ -419,8 +416,6 @@ public class FlashUtil : IFlashUtil
 
         byte[] swfData = File.ReadAllBytes(swfPath);
         byte[] errorBuffer = new byte[2048];
-        _selfHandle = GCHandle.Alloc(this, GCHandleType.Normal);
-
         try
         {
             _session = SessionCreate(
@@ -429,8 +424,6 @@ public class FlashUtil : IFlashUtil
                 swfPath,
                 _width,
                 _height,
-                NativeCallback,
-                GCHandle.ToIntPtr(_selfHandle),
                 errorBuffer,
                 (nuint)errorBuffer.Length);
 
@@ -444,8 +437,11 @@ public class FlashUtil : IFlashUtil
         }
         catch
         {
-            if (_selfHandle.IsAllocated)
-                _selfHandle.Free();
+            if (_session != IntPtr.Zero)
+            {
+                SessionDestroy(_session);
+                _session = IntPtr.Zero;
+            }
             throw;
         }
     }
@@ -460,6 +456,7 @@ public class FlashUtil : IFlashUtil
             int result = SessionTick(_session, elapsedMilliseconds);
             if (result != 0)
                 throw new InvalidOperationException("Ruffle failed while advancing the player.");
+            DrainFlashCalls();
             return true;
         });
     }
@@ -515,14 +512,6 @@ public class FlashUtil : IFlashUtil
         });
     }
 
-    public void AuthorizeSocket(string host, int port)
-    {
-        if (_session == IntPtr.Zero || string.IsNullOrWhiteSpace(host) || port is <= 0 or > ushort.MaxValue)
-            return;
-
-        InvokeOnUiThread(() => SessionAllowSocket(_session, host, (ushort)port));
-    }
-
     public string? Call(string function, params object[] args)
     {
         return Call<string>(function, args);
@@ -555,10 +544,11 @@ public class FlashUtil : IFlashUtil
                 Marshal.Copy(_callBuffer, resultBytes, 0, resultBytes.Length);
                 string resultJson = Encoding.UTF8.GetString(resultBytes);
                 object? converted = ConvertJsonToken(JToken.Parse(resultJson));
-                if (type == typeof(object) || converted == null || type.IsInstanceOfType(converted))
-                    return converted;
-
-                return JsonConvert.DeserializeObject(resultJson, type);
+                object? typedResult = type == typeof(object) || converted == null || type.IsInstanceOfType(converted)
+                    ? converted
+                    : JsonConvert.DeserializeObject(resultJson, type);
+                DrainFlashCalls();
+                return typedResult;
             });
         }
         catch (Exception ex)
@@ -633,23 +623,43 @@ public class FlashUtil : IFlashUtil
         return null;
     }
 
-    private static void HandleNativeFlashCall(IntPtr userData, IntPtr functionName, IntPtr argumentsJson)
+    private bool _isDrainingCallbacks;
+
+    private void DrainFlashCalls()
     {
+        if (_isDrainingCallbacks || _session == IntPtr.Zero)
+            return;
+
+        _isDrainingCallbacks = true;
         try
         {
-            GCHandle handle = GCHandle.FromIntPtr(userData);
-            if (handle.Target is not FlashUtil flashUtil)
-                return;
+            while (true)
+            {
+                nuint written = SessionDrainCallbacks(_session, _callBuffer, (nuint)CallBufferSize);
+                if (written == nuint.MaxValue || written == 0 || written > CallBufferSize)
+                    throw new InvalidOperationException("Ruffle could not drain its ExternalInterface callback queue.");
 
-            string function = Marshal.PtrToStringUTF8(functionName) ?? string.Empty;
-            string json = Marshal.PtrToStringUTF8(argumentsJson) ?? "[]";
-            JArray arguments = JArray.Parse(json);
-            object[] args = arguments.Select(token => ConvertJsonToken(token)!).ToArray();
-            flashUtil.FlashCall?.Invoke(function, args);
+                byte[] callbackBytes = new byte[(int)written - 1];
+                Marshal.Copy(_callBuffer, callbackBytes, 0, callbackBytes.Length);
+                JArray callbacks = JArray.Parse(Encoding.UTF8.GetString(callbackBytes));
+                if (callbacks.Count == 0)
+                    break;
+
+                foreach (JToken callbackToken in callbacks)
+                {
+                    if (callbackToken is not JObject callback)
+                        continue;
+
+                    string function = (string?)callback["function"] ?? string.Empty;
+                    JArray arguments = callback["arguments"] as JArray ?? new JArray();
+                    object[] args = arguments.Select(token => ConvertJsonToken(token)!).ToArray();
+                    FlashCall?.Invoke(function, args);
+                }
+            }
         }
-        catch (Exception ex)
+        finally
         {
-            Trace.WriteLine($"Ruffle ExternalInterface callback failed: {ex}");
+            _isDrainingCallbacks = false;
         }
     }
 
@@ -693,8 +703,6 @@ public class FlashUtil : IFlashUtil
             _renderBufferSize = 0;
         }
 
-        if (_selfHandle.IsAllocated)
-            _selfHandle.Free();
     }
 }
 #endif
