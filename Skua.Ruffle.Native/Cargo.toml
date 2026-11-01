@@ -9,8 +9,8 @@ name = "skua_ruffle_native"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-ruffle_core = { git = "https://github.com/ruffle-rs/ruffle.git", rev = "a6388aef49d800c28d627b4301b971c598d6ee41", default-features = false }
-ruffle_frontend_utils = { git = "https://github.com/ruffle-rs/ruffle.git", rev = "a6388aef49d800c28d627b4301b971c598d6ee41", default-features = false, features = ["navigator", "native-tls"] }
+ruffle_core = { git = "https://github.com/ruffle-rs/ruffle.git", rev = "a6388aef49d800c28d627b4301b971c598d6ee41", default-features = false, features = ["audio", "mp3", "aac", "nellymoser", "default_compatibility_rules"] }
+ruffle_frontend_utils = { git = "https://github.com/ruffle-rs/ruffle.git", rev = "a6388aef49d800c28d627b4301b971c598d6ee41", default-features = false, features = ["cpal", "fs", "navigator", "native-tls"] }
 ruffle_render_wgpu = { git = "https://github.com/ruffle-rs/ruffle.git", rev = "a6388aef49d800c28d627b4301b971c598d6ee41" }
 tokio = { version = "1.52.3", features = ["rt", "net", "time", "sync", "macros"] }
 tracing = "0.1.43"
