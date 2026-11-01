@@ -73,6 +73,21 @@ jobs:
         with:
           targets: ${{ matrix.rust_target }}
 
+      - name: Install PowerShell
+        run: if ! command -v pwsh >/dev/null 2>&1; then brew install --cask powershell; fi
+
+      - name: Install Apache Flex SDK
+        run: |
+          mkdir -p "$RUNNER_TEMP/flex"
+          curl --fail --location --retry 3 https://dlcdn.apache.org/flex/4.16.1/binaries/apache-flex-sdk-4.16.1-bin.tar.gz -o "$RUNNER_TEMP/apache-flex-sdk.tar.gz"
+          tar -xzf "$RUNNER_TEMP/apache-flex-sdk.tar.gz" -C "$RUNNER_TEMP/flex"
+          echo "FLEX_HOME=$RUNNER_TEMP/flex/apache-flex-sdk-4.16.1-bin" >> "$GITHUB_ENV"
+          echo "PLAYERGLOBAL_HOME=$GITHUB_WORKSPACE/Skua.AS3/playerglobal" >> "$GITHUB_ENV"
+          echo "$RUNNER_TEMP/flex/apache-flex-sdk-4.16.1-bin/bin" >> "$GITHUB_PATH"
+
+      - name: Compile ActionScript
+        run: pwsh -NoProfile -File Skua.AS3/compile-as3.ps1
+
       - name: Build client
         run: dotnet build Skua.App.Avalonia/Skua.App.Avalonia.csproj --configuration Release --runtime ${{ matrix.rid }}
 
