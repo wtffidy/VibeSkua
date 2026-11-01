@@ -7,14 +7,18 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io;
 use std::path::Path;
+use std::rc::Rc;
 use std::sync::{Arc, RwLock};
 use url::Url;
 
-use ruffle_core::backend::navigator::OwnedFuture;
+use ruffle_core::backend::navigator::{OwnedFuture, SocketMode};
+use ruffle_core::context::UpdateContext;
+use ruffle_core::external::{ExternalInterfaceProvider, Value as ExternalValue};
 use ruffle_core::loader::Error;
 use ruffle_frontend_utils::backends::navigator::{
     ExternalNavigatorBackend, FutureSpawner, NavigatorInterface,
 };
+use ruffle_frontend_utils::content::{ContentDescriptor, PlayingContent};
 
 /// Returns the native bridge ABI version.
 #[unsafe(no_mangle)]
@@ -76,20 +80,75 @@ impl NavigatorInterface for SkuaNavigatorInterface {
     }
 }
 
-/// Compile-time probe for Ruffle's native offscreen WGPU renderer and player API.
+/// Receives calls from ActionScript and tracks callbacks registered by the SWF.
+#[derive(Default)]
+struct SkuaExternalInterfaceProvider {
+    callback_names: Arc<RwLock<HashSet<String>>>,
+}
+
+impl ExternalInterfaceProvider for SkuaExternalInterfaceProvider {
+    fn call_method(
+        &self,
+        _context: &mut UpdateContext<'_>,
+        name: &str,
+        _args: &[ExternalValue],
+    ) -> ExternalValue {
+        tracing::debug!("ActionScript called host function: {name}");
+        ExternalValue::Undefined
+    }
+
+    fn on_callback_available(&self, name: &str) {
+        if let Ok(mut callback_names) = self.callback_names.write() {
+            callback_names.insert(name.to_string());
+        }
+    }
+
+    fn get_id(&self) -> Option<String> {
+        Some("VibeSkua".to_string())
+    }
+}
+
+/// Compile-time probe for creating a full Ruffle player with the native navigator,
+/// ExternalInterface provider, and offscreen WGPU renderer.
 ///
-/// This function is intentionally not called by the ABI probe, so CI can check
-/// the API without requiring an attached GPU or initializing a graphics device.
+/// This function is intentionally not called by CI; it type-checks the integration
+/// without requiring a real SWF file or an attached GPU.
 #[allow(dead_code)]
-fn _ruffle_player_api_probe(swf_bytes: &[u8]) {
+fn _ruffle_full_player_api_probe(swf_bytes: &[u8], swf_path: &Path) {
+    let Ok(swf_path) = std::fs::canonicalize(swf_path) else {
+        return;
+    };
+    let Ok(swf_url) = Url::from_file_path(&swf_path) else {
+        return;
+    };
     let Ok(movie) = ruffle_core::tag_utils::SwfMovieData::from_data(
         swf_bytes,
-        "file:///skua.swf".to_string(),
+        swf_url.to_string(),
         None,
         None,
     ) else {
         return;
     };
+    let Some(content_descriptor) = ContentDescriptor::new_local(
+        &swf_path,
+        swf_path.parent().map(Path::to_path_buf),
+    ) else {
+        return;
+    };
+
+    let navigator_interface = SkuaNavigatorInterface::default();
+    let navigator = ExternalNavigatorBackend::new(
+        swf_url,
+        None,
+        None,
+        SkuaFutureSpawner,
+        None,
+        false,
+        HashSet::new(),
+        SocketMode::Ask,
+        Rc::new(PlayingContent::DirectFile(content_descriptor)),
+        navigator_interface,
+    );
 
     let Ok(renderer) = ruffle_render_wgpu::backend::WgpuRenderBackend::for_offscreen(
         (640, 480),
@@ -99,11 +158,23 @@ fn _ruffle_player_api_probe(swf_bytes: &[u8]) {
         return;
     };
 
-    let player = ruffle_core::PlayerBuilder::new()
-        .with_movie(movie)
-        .with_renderer(renderer)
-        .with_viewport_dimensions(640, 480, 1.0)
-        .build();
+    let Ok(runtime) = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    else {
+        return;
+    };
+    let local_set = tokio::task::LocalSet::new();
+
+    let player = local_set.block_on(&runtime, async {
+        ruffle_core::PlayerBuilder::new()
+            .with_movie(movie)
+            .with_navigator(navigator)
+            .with_renderer(renderer)
+            .with_viewport_dimensions(640, 480, 1.0)
+            .with_external_interface(Box::new(SkuaExternalInterfaceProvider::default()))
+            .build()
+    });
 
     let mut player = player.lock().expect("Ruffle player mutex poisoned");
     player.render();
@@ -116,15 +187,4 @@ fn _ruffle_player_api_probe(swf_bytes: &[u8]) {
     .expect("Ruffle player must use the offscreen WGPU renderer");
 
     let _frame = renderer.capture_frame();
-}
-
-/// Compile-time probe for the built-in native HTTP and raw TCP navigator.
-#[allow(dead_code)]
-fn _ruffle_navigator_api_probe<F, I>(
-    _navigator: &ExternalNavigatorBackend<F, I>,
-)
-where
-    F: FutureSpawner<Error>,
-    I: NavigatorInterface,
-{
 }
