@@ -89,7 +89,7 @@ struct PendingFlashCall {
     arguments: Vec<serde_json::Value>,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 struct SkuaExternalInterfaceProvider {
     navigator_interface: SkuaNavigatorInterface,
     pending_calls: Arc<Mutex<VecDeque<PendingFlashCall>>>,
