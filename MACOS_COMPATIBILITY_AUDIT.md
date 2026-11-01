@@ -397,3 +397,19 @@ The manager previously searched only for VibeSkua.exe / Skua.exe and Windows net
 ProcessCloser now retains its HWND/WM_CLOSE implementation on Windows and uses Process.CloseMainWindow on non-Windows platforms before falling back to process termination.
 
 This does not yet replace the Windows tabbed host. macOS manager launch is intended to start standalone client processes until a portable host/session protocol is implemented.
+
+
+## 20. Avalonia startup no longer forces Win32 on macOS
+
+The client startup path had two additional Windows assumptions:
+- Program.BuildAvaloniaApp unconditionally applied Win32PlatformOptions after UsePlatformDetect.
+- App startup accepted --embed / --host-pid arguments and could enter the HWND child-window branch on any OS.
+
+The macOS branch now:
+- Applies Win32PlatformOptions only on Windows.
+- Ignores HWND embedding arguments outside Windows, keeping the macOS client standalone.
+- Runs the ActiveX SWF preload only on Windows.
+- Uses RuntimeInformation.RuntimeIdentifier to locate native runtime assets.
+- Resolves platform native library names using .dll, .dylib, or .so extensions and searches the application native asset directories.
+
+This gets the Avalonia bootstrap closer to a real macOS launch, but it does not make the game playable yet. The non-Windows FlashUtil remains a NotImplementedException stub and must be replaced with the Ruffle-backed IFlashUtil implementation before macOS gameplay can work.
