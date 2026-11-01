@@ -33,7 +33,9 @@ internal static class Program
         {
             try
             {
-                SetDllDirectory(assembliesDir);
+                if (OperatingSystem.IsWindows())
+                    SetDllDirectory(assembliesDir);
+
                 assembliesSet = new HashSet<string>(
                     Directory.EnumerateFiles(assembliesDir, "*.dll").Select(Path.GetFileName)!,
                     StringComparer.OrdinalIgnoreCase);
@@ -43,15 +45,16 @@ internal static class Program
             }
         }
 
-        string arch = Environment.Is64BitProcess ? "win-x64" : "win-x86";
-        string runtimeNativeDir = Path.Combine(AppContext.BaseDirectory, "Assemblies", "runtimes", arch, "native");
+        string runtimeIdentifier = RuntimeInformation.RuntimeIdentifier;
+        string runtimeNativeDir = Path.Combine(AppContext.BaseDirectory, "Assemblies", "runtimes", runtimeIdentifier, "native");
+        string nativeExtension = OperatingSystem.IsWindows() ? ".dll" : OperatingSystem.IsMacOS() ? ".dylib" : ".so";
         HashSet<string>? runtimeNativeSet = null;
         if (Directory.Exists(runtimeNativeDir))
         {
             try
             {
                 runtimeNativeSet = new HashSet<string>(
-                    Directory.EnumerateFiles(runtimeNativeDir, "*.dll").Select(Path.GetFileName)!,
+                    Directory.EnumerateFiles(runtimeNativeDir, $"*{nativeExtension}").Select(Path.GetFileName)!,
                     StringComparer.OrdinalIgnoreCase);
             }
             catch
@@ -66,9 +69,7 @@ internal static class Program
 
             string fileName = $"{assemblyName.Name}.dll";
             if (assembliesSet != null && assembliesSet.Contains(fileName))
-            {
                 return context.LoadFromAssemblyPath(Path.Combine(assembliesDir, fileName));
-            }
 
             string rootPath = Path.Combine(AppContext.BaseDirectory, fileName);
             if (File.Exists(rootPath))
@@ -79,12 +80,18 @@ internal static class Program
 
         AssemblyLoadContext.Default.ResolvingUnmanagedDll += (assembly, unmanagedDllName) =>
         {
-            string fileName = unmanagedDllName.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
-                ? unmanagedDllName
-                : $"{unmanagedDllName}.dll";
+            string libraryName = Path.GetFileNameWithoutExtension(unmanagedDllName);
+            string fileName = OperatingSystem.IsWindows()
+                ? $"{libraryName}.dll"
+                : $"{(libraryName.StartsWith("lib", StringComparison.Ordinal) ? libraryName : $"lib{libraryName}")}{nativeExtension}";
 
-            if (assembliesSet != null && assembliesSet.Contains(fileName))
-                return NativeLibrary.Load(Path.Combine(assembliesDir, fileName));
+            string assembliesNativePath = Path.Combine(assembliesDir, fileName);
+            if (File.Exists(assembliesNativePath))
+                return NativeLibrary.Load(assembliesNativePath);
+
+            string rootNativePath = Path.Combine(AppContext.BaseDirectory, fileName);
+            if (File.Exists(rootNativePath))
+                return NativeLibrary.Load(rootNativePath);
 
             if (runtimeNativeSet != null && runtimeNativeSet.Contains(fileName))
                 return NativeLibrary.Load(Path.Combine(runtimeNativeDir, fileName));
@@ -103,9 +110,7 @@ internal static class Program
 
             string assemblyName = new AssemblyName(args.Name).Name + ".dll";
             if (assembliesSet != null && assembliesSet.Contains(assemblyName))
-            {
                 return Assembly.LoadFrom(Path.Combine(assembliesDir, assemblyName));
-            }
 
             string rootPath = Path.Combine(AppContext.BaseDirectory, assemblyName);
             if (File.Exists(rootPath))
@@ -121,12 +126,13 @@ internal static class Program
         try
         {
             ClientFileSources.EnsureInitialized();
-            System.Threading.Tasks.Task.Run(() => Skua.App.Avalonia.Flash.FlashUtil.PreloadSwf());
+            if (OperatingSystem.IsWindows())
+                System.Threading.Tasks.Task.Run(() => Skua.App.Avalonia.Flash.FlashUtil.PreloadSwf());
+
             VelopackApp.Build().Run();
             if (Skua.Shared.Avalonia.Utils.AppShortcutHelper.IsInstalled())
-            {
                 Skua.Shared.Avalonia.Utils.AppShortcutHelper.CreateOrUpdateShortcuts(createIfMissing: false);
-            }
+
             Environment.CurrentDirectory = AppContext.BaseDirectory;
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
@@ -138,13 +144,15 @@ internal static class Program
 
     public static AppBuilder BuildAvaloniaApp()
     {
-        AppBuilder builder = AppBuilder.Configure<App>()
-            .UsePlatformDetect()
-            .With(new Win32PlatformOptions
+        AppBuilder builder = AppBuilder.Configure<App>().UsePlatformDetect();
+        if (OperatingSystem.IsWindows())
+        {
+            builder = builder.With(new Win32PlatformOptions
             {
                 RenderingMode = new[] { Win32RenderingMode.AngleEgl, Win32RenderingMode.Software },
                 CompositionMode = new[] { Win32CompositionMode.WinUIComposition, Win32CompositionMode.RedirectionSurface }
             });
+        }
 #if DEBUG
         builder = builder.WithDeveloperTools();
 #endif
