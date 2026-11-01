@@ -24,7 +24,7 @@ use ruffle_frontend_utils::backends::navigator::{
 };
 use ruffle_frontend_utils::content::{ContentDescriptor, PlayingContent};
 
-type FlashCallCallback = unsafe extern "C" fn(
+pub type FlashCallCallback = unsafe extern "C" fn(
     user_data: *mut c_void,
     function_name: *const c_char,
     arguments_json: *const c_char,
@@ -320,7 +320,7 @@ fn json_to_external_value(value: serde_json::Value) -> ExternalValue {
             if value.len() == 1 && value.get("$ruffle").and_then(serde_json::Value::as_str) == Some("undefined") {
                 return ExternalValue::Undefined;
             }
-            let object = value.drain().map(|(key, value)| (key, json_to_external_value(value))).collect();
+            let object = value.into_iter().map(|(key, value)| (key, json_to_external_value(value))).collect();
             ExternalValue::Object(object)
         }
     }
