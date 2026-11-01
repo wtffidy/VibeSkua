@@ -1,4 +1,4 @@
-﻿using Skua.Core.Interfaces;
+using Skua.Core.Interfaces;
 using Skua.Core.Models;
 using System.Diagnostics;
 
@@ -19,12 +19,11 @@ public class ProcessStartService : IProcessService
 
     public void OpenLink(string link)
     {
-        ProcessStartInfo ps = new(link)
+        ProcessStartInfo startInfo = new(link)
         {
-            UseShellExecute = true,
-            Verb = "open"
+            UseShellExecute = true
         };
-        Process.Start(ps);
+        Process.Start(startInfo);
     }
 
     public void OpenVSC()
@@ -34,6 +33,7 @@ public class ProcessStartService : IProcessService
             Process.Start(_vscPath, _scriptsPath);
             return;
         }
+
         try
         {
             VSCode(string.Empty);
@@ -51,24 +51,42 @@ public class ProcessStartService : IProcessService
             Process.Start(_vscPath, new[] { _scriptsPath, path, "--reuse-window" });
             return;
         }
+
         try
         {
             VSCode(path);
         }
         catch
         {
-            Process.Start("notepad", path);
+            OpenInTextEditor(path);
         }
     }
 
     private void VSCode(string path)
     {
-        ProcessStartInfo psi = new("code", $"{_scriptsPath} {path}")
+        ProcessStartInfo startInfo = new("code")
         {
-            UseShellExecute = true,
-            CreateNoWindow = true
+            UseShellExecute = false
         };
+        startInfo.ArgumentList.Add(_scriptsPath);
+        if (!string.IsNullOrWhiteSpace(path))
+            startInfo.ArgumentList.Add(path);
+        Process.Start(startInfo);
+    }
 
-        Process.Start(psi);
+    private static void OpenInTextEditor(string path)
+    {
+        ProcessStartInfo startInfo = OperatingSystem.IsWindows()
+            ? new ProcessStartInfo("notepad")
+            : OperatingSystem.IsMacOS()
+                ? new ProcessStartInfo("open")
+                : new ProcessStartInfo("xdg-open");
+
+        if (OperatingSystem.IsMacOS())
+            startInfo.ArgumentList.Add("-t");
+
+        startInfo.ArgumentList.Add(path);
+        startInfo.UseShellExecute = false;
+        Process.Start(startInfo);
     }
 }
