@@ -477,3 +477,10 @@ The macOS branch now:
 - Defines IS_WINDOWS for the manager only on Windows.
 
 The macOS manager currently permits multiple manager instances rather than trying to emulate the Windows wake-event behavior. A native macOS single-instance / reopen-window implementation can be added separately if desired.
+
+
+## 26. macOS CI now rebuilds the ActionScript SWF before the client
+
+The AQW socket-authorization bridge is implemented in `Server.as`, so the bundled `skua.swf` must be rebuilt for the change to reach the running game. The macOS build workflow now installs Java, PowerShell, and the Apache Flex 4.16.1 binary SDK, points `PLAYERGLOBAL_HOME` at the repository's pinned Flash Player 28.0 SWC, and runs `compile-as3.ps1` before building the client.
+
+This avoids shipping a stale SWF that would never call the native `allowSocket` hook. The generated SWF is consumed by the client build in CI; the workflow does not push generated binaries back to the branch.
