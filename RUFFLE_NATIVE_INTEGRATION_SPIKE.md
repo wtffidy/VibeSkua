@@ -172,3 +172,24 @@ Offscreen rendering is a spike, not necessarily the final high-performance rende
 Proceed with R0 and R1 before changing the existing Skua client.
 
 Do not patch the current Windows Flash host yet. Keep Windows behavior intact while the native Ruffle wrapper proves that Ruffle can load a SWF, render it, expose the Skua callback bridge, and connect to an AQW-compatible TCP endpoint on both macOS architectures.
+
+
+## Follow-up: existing Skua CaptureProxy is not a drop-in Ruffle socket backend
+
+Inspected current Skua source at Skua.Core/GameProxy/CaptureProxy.cs.
+
+The existing CaptureProxy is a message-aware inspection proxy, not a general-purpose multi-destination TCP router:
+
+- It is configured with one Destination IPEndPoint.
+- It listens on the configured destination port on loopback.
+- Every accepted local connection is forwarded to that same configured destination.
+- It inspects zero-delimited text packets and has AQW-specific Z-prefixed zlib/Base64 decompression and recompression behavior.
+- It maintains single current-client/current-forwarder fields, so lifecycle and concurrency need review before using it for multiple simultaneous game sessions.
+
+**Decision:** Do not wire Ruffle's NavigatorBackend directly to the existing CaptureProxy yet. Ruffle may request connections to more than one host/port (game, policy, and other Flash socket endpoints), and a transparent native socket backend must preserve arbitrary binary stream semantics.
+
+Preferred sequence:
+1. Implement direct raw TCP support in the Rust NavigatorBackend first.
+2. Prove AQW login and sustained gameplay with no packet inspection.
+3. If Skua packet inspection is required, extract the packet framing/interception logic into a reusable stream interceptor with explicit destination routing and per-connection state.
+4. Keep the current CaptureProxy behavior working for Windows while the shared interceptor is validated.
