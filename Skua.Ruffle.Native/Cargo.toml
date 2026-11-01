@@ -1,0 +1,12 @@
+[package]
+name = "skua-ruffle-native"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+name = "skua_ruffle_native"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+ruffle_core = { git = "https://github.com/ruffle-rs/ruffle.git", rev = "a6388aef49d800c28d627b4301b971c598d6ee41", default-features = false }
