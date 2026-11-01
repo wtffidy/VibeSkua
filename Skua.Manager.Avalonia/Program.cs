@@ -30,10 +30,17 @@ internal static class Program
     {
         InitializeAssemblyResolvers();
 
-        VelopackApp.Build()
-            .OnAfterInstallFastCallback(_ => AppShortcutHelper.CreateOrUpdateShortcuts(createIfMissing: true))
-            .OnAfterUpdateFastCallback(_ => AppShortcutHelper.CreateOrUpdateShortcuts(createIfMissing: true))
-            .OnBeforeUninstallFastCallback(_ => AppShortcutHelper.RemoveClientShortcuts())
+        VelopackApp velopackApp = VelopackApp.Build();
+
+        if (OperatingSystem.IsWindows())
+        {
+            velopackApp = velopackApp
+                .OnAfterInstallFastCallback(_ => AppShortcutHelper.CreateOrUpdateShortcuts(createIfMissing: true))
+                .OnAfterUpdateFastCallback(_ => AppShortcutHelper.CreateOrUpdateShortcuts(createIfMissing: true))
+                .OnBeforeUninstallFastCallback(_ => AppShortcutHelper.RemoveClientShortcuts());
+        }
+
+        velopackApp
             .OnFirstRun(_ => AppShortcutHelper.CreateOrUpdateShortcuts(createIfMissing: true))
             .OnRestarted(_ => AppShortcutHelper.CreateOrUpdateShortcuts(createIfMissing: true))
             .Run();

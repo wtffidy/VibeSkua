@@ -67,7 +67,7 @@ public partial class MainWindow : Window
 
     protected override void OnClosing(WindowClosingEventArgs e)
     {
-        if (!_allowClose)
+        if (!_allowClose && OperatingSystem.IsWindows())
         {
             e.Cancel = true;
             Hide();

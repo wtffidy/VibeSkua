@@ -25,7 +25,7 @@ public class UnifiedSettingsService
 
         Directory.CreateDirectory(ClientFileSources.SkuaDIR);
 
-        _fileMutex = new Mutex(false, @"Global\VibeSkua.Settings.IO");
+        _fileMutex = new Mutex(false, OperatingSystem.IsWindows() ? @"Global\VibeSkua.Settings.IO" : "VibeSkua.Settings.IO");
     }
 
     public void Initialize(AppRole role)
@@ -37,9 +37,19 @@ public class UnifiedSettingsService
 
             _currentRole = role;
 
+            bool mutexAcquired = false;
             try
             {
-                _fileMutex.WaitOne();
+                try
+                {
+                    _fileMutex.WaitOne();
+                    mutexAcquired = true;
+                }
+                catch (AbandonedMutexException)
+                {
+                    // An abandoned mutex is still acquired by this thread.
+                    mutexAcquired = true;
+                }
 
                 if (!File.Exists(ClientFileSources.SkuaSettingsDIR))
                 {
@@ -64,7 +74,8 @@ public class UnifiedSettingsService
             }
             finally
             {
-                _fileMutex.ReleaseMutex();
+                if (mutexAcquired)
+                    _fileMutex.ReleaseMutex();
             }
         }
     }

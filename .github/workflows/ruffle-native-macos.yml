@@ -14,6 +14,7 @@ on:
       - "Skua.Core.Utils/**"
       - "Skua.AS3/**"
       - "Skua.Ruffle.Native/**"
+      - "Skua.Ruffle.Native.Smoke/**"
       - ".github/workflows/ruffle-native-macos.yml"
   pull_request:
     paths:
@@ -26,6 +27,7 @@ on:
       - "Skua.Core.Utils/**"
       - "Skua.AS3/**"
       - "Skua.Ruffle.Native/**"
+      - "Skua.Ruffle.Native.Smoke/**"
       - ".github/workflows/ruffle-native-macos.yml"
   workflow_dispatch:
 
@@ -74,6 +76,12 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.rust_target }}
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: Skua.Ruffle.Native -> target
+          shared-key: ruffle-${{ matrix.rust_target }}
 
       - name: Install PowerShell
         run: if ! command -v pwsh >/dev/null 2>&1; then brew install --cask powershell; fi
@@ -155,6 +163,12 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: Skua.Ruffle.Native -> target
+          shared-key: ruffle-${{ matrix.target }}
 
       - name: Check native Ruffle bridge
         working-directory: Skua.Ruffle.Native

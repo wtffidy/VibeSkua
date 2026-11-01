@@ -1,5 +1,8 @@
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
+using Skua.Core.Models;
+using Skua.Core.Services;
 
 if (args.Length != 2)
     throw new ArgumentException("Expected the native library path and packaged SWF path.");
@@ -7,6 +10,10 @@ if (args.Length != 2)
 string nativePath = Path.GetFullPath(args[0]);
 string swfPath = Path.GetFullPath(args[1]);
 byte[] swfData = File.ReadAllBytes(swfPath);
+
+UnifiedSettingsService settingsService = new();
+settingsService.Initialize(AppRole.Client);
+Console.WriteLine($"Initialized VibeSkua settings at {ClientFileSources.SkuaSettingsDIR}.");
 
 nint library = NativeLibrary.Load(nativePath);
 nint session = IntPtr.Zero;
@@ -46,6 +53,9 @@ try
     SessionRenderDelegate render = GetExport<SessionRenderDelegate>(library, "skua_ruffle_session_render");
     SessionResizeDelegate resize = GetExport<SessionResizeDelegate>(library, "skua_ruffle_session_resize");
     SessionGetSizeDelegate getSize = GetExport<SessionGetSizeDelegate>(library, "skua_ruffle_session_get_size");
+    SessionDrainCallbacksDelegate drainCallbacks = GetExport<SessionDrainCallbacksDelegate>(library, "skua_ruffle_session_drain_callbacks");
+    SessionCallDelegate callActionScript = GetExport<SessionCallDelegate>(library, "skua_ruffle_session_call");
+    SessionAllowSocketDelegate allowSocket = GetExport<SessionAllowSocketDelegate>(library, "skua_ruffle_session_allow_socket");
     SessionDestroyDelegate destroy = GetExport<SessionDestroyDelegate>(library, "skua_ruffle_session_destroy");
     SessionMouseMoveDelegate mouseMove = GetExport<SessionMouseMoveDelegate>(library, "skua_ruffle_session_mouse_move");
     SessionMouseEnterDelegate mouseEnter = GetExport<SessionMouseEnterDelegate>(library, "skua_ruffle_session_mouse_enter");
@@ -79,10 +89,48 @@ try
         Require(textInput(session, 32), "text input");
         Require(focus(session, false), "focus loss");
         Require(resize(session, 960, 540, 1.0), "resize");
+        Require(allowSocket(session, "game.aq.com", 843), "socket allow-list update");
 
         for (int frame = 0; frame < 3; frame++)
             if (tick(session, 16.0) != 0)
                 throw new InvalidOperationException($"Ruffle tick failed on frame {frame + 1}.");
+
+        nint callbackBuffer = Marshal.AllocHGlobal(64 * 1024);
+        try
+        {
+            nuint callbackLength = drainCallbacks(session, callbackBuffer, 64 * 1024);
+            string callbackJson = ReadUtf8Result(callbackBuffer, callbackLength);
+            using JsonDocument callbacks = JsonDocument.Parse(callbackJson);
+            bool requestedLoad = callbacks.RootElement.EnumerateArray().Any(item =>
+                item.TryGetProperty("function", out JsonElement function) &&
+                function.GetString() == "requestLoadGame");
+
+            if (!requestedLoad)
+                throw new InvalidOperationException("Ruffle did not forward the ActionScript requestLoadGame callback.");
+
+            Console.WriteLine("Verified ActionScript-to-host ExternalInterface callback delivery.");
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(callbackBuffer);
+        }
+
+        nint callBuffer = Marshal.AllocHGlobal(4096);
+        try
+        {
+            nuint callLength = callActionScript(session, "isTrue", "[]", callBuffer, 4096);
+            string resultJson = ReadUtf8Result(callBuffer, callLength);
+            string? result = JsonSerializer.Deserialize<string>(resultJson);
+
+            if (result != "true")
+                throw new InvalidOperationException($"Ruffle returned an unexpected ActionScript callback result: {resultJson}");
+
+            Console.WriteLine("Verified host-to-ActionScript ExternalInterface callback invocation.");
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(callBuffer);
+        }
 
         if (!getSize(session, out uint width, out uint height))
             throw new InvalidOperationException("Ruffle did not return its viewport dimensions.");
@@ -129,11 +177,29 @@ static T GetExport<T>(nint library, string name) where T : Delegate
     return Marshal.GetDelegateForFunctionPointer<T>(export);
 }
 
+static string ReadUtf8Result(IntPtr buffer, nuint length)
+{
+    if (length == nuint.MaxValue || length == 0)
+        throw new InvalidOperationException("Ruffle returned an invalid UTF-8 result buffer length.");
+
+    return Marshal.PtrToStringUTF8(buffer, checked((int)length - 1)) ?? string.Empty;
+}
+
 static void Require(bool succeeded, string operation)
 {
     if (!succeeded)
         throw new InvalidOperationException($"Ruffle rejected the {operation} event.");
 }
+
+[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+delegate nuint SessionDrainCallbacksDelegate(IntPtr session, IntPtr output, nuint capacity);
+
+[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+delegate nuint SessionCallDelegate(IntPtr session, [MarshalAs(UnmanagedType.LPUTF8Str)] string functionName, [MarshalAs(UnmanagedType.LPUTF8Str)] string argumentsJson, IntPtr output, nuint capacity);
+
+[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+[return: MarshalAs(UnmanagedType.I1)]
+delegate bool SessionAllowSocketDelegate(IntPtr session, [MarshalAs(UnmanagedType.LPUTF8Str)] string host, ushort port);
 
 [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 delegate IntPtr SessionCreateDelegate([In] byte[] swfData, nuint swfLength, [MarshalAs(UnmanagedType.LPUTF8Str)] string swfPath, uint width, uint height, [Out] byte[] errorBuffer, nuint errorCapacity);
