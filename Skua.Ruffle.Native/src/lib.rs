@@ -3,8 +3,8 @@
 //! Keep Ruffle's Rust types behind this crate. Only expose a stable C ABI to .NET.
 
 use std::any::Any;
-use std::collections::HashSet;
-use std::ffi::{c_char, c_void, CStr, CString};
+use std::collections::{HashSet, VecDeque};
+use std::ffi::{c_char, c_void, CStr};
 use std::fs::File;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -23,12 +23,6 @@ use ruffle_frontend_utils::backends::navigator::{
     ExternalNavigatorBackend, FutureSpawner, NavigatorInterface,
 };
 use ruffle_frontend_utils::content::{ContentDescriptor, PlayingContent};
-
-pub type FlashCallCallback = unsafe extern "C" fn(
-    user_data: *mut c_void,
-    function_name: *const c_char,
-    arguments_json: *const c_char,
-);
 
 struct SkuaFutureSpawner;
 
@@ -73,18 +67,26 @@ impl NavigatorInterface for SkuaNavigatorInterface {
     }
 }
 
+struct PendingFlashCall {
+    function: String,
+    arguments: Vec<serde_json::Value>,
+}
+
 #[derive(Clone, Default)]
 struct SkuaExternalInterfaceProvider {
-    callback: Option<FlashCallCallback>,
-    user_data: usize,
+    navigator_interface: SkuaNavigatorInterface,
+    pending_calls: Arc<Mutex<VecDeque<PendingFlashCall>>>,
     callback_names: Arc<RwLock<HashSet<String>>>,
 }
 
 impl SkuaExternalInterfaceProvider {
-    fn new(callback: Option<FlashCallCallback>, user_data: *mut c_void) -> Self {
+    fn new(
+        navigator_interface: SkuaNavigatorInterface,
+        pending_calls: Arc<Mutex<VecDeque<PendingFlashCall>>>,
+    ) -> Self {
         Self {
-            callback,
-            user_data: user_data as usize,
+            navigator_interface,
+            pending_calls,
             callback_names: Arc::new(RwLock::new(HashSet::new())),
         }
     }
@@ -97,28 +99,23 @@ impl ExternalInterfaceProvider for SkuaExternalInterfaceProvider {
         name: &str,
         args: &[ExternalValue],
     ) -> ExternalValue {
-        let Some(callback) = self.callback else {
+        // Socket permissions are handled inside Rust to avoid re-entering the
+        // native session from a managed callback while its player is borrowed.
+        if name == "allowSocket" {
+            if let [ExternalValue::String(host), ExternalValue::Number(port), ..] = args {
+                if port.is_finite() && *port >= 1.0 && *port <= f64::from(u16::MAX) {
+                    self.navigator_interface.allow_socket(host, *port as u16);
+                }
+            }
             return ExternalValue::Undefined;
-        };
+        }
 
-        let args_json = serde_json::to_string(
-            &args.iter().map(external_value_to_json).collect::<Vec<_>>(),
-        )
-        .unwrap_or_else(|_| "[]".to_string());
-
-        let Ok(function_name) = CString::new(name) else {
-            return ExternalValue::Undefined;
-        };
-        let Ok(arguments_json) = CString::new(args_json) else {
-            return ExternalValue::Undefined;
-        };
-
-        unsafe {
-            callback(
-                self.user_data as *mut c_void,
-                function_name.as_ptr(),
-                arguments_json.as_ptr(),
-            );
+        let arguments = args.iter().map(external_value_to_json).collect();
+        if let Ok(mut pending_calls) = self.pending_calls.lock() {
+            pending_calls.push_back(PendingFlashCall {
+                function: name.to_string(),
+                arguments,
+            });
         }
 
         ExternalValue::Undefined
@@ -141,12 +138,13 @@ struct RuffleSession {
     local_set: tokio::task::LocalSet,
     player: Arc<Mutex<ruffle_core::Player>>,
     navigator_interface: SkuaNavigatorInterface,
+    pending_calls: Arc<Mutex<VecDeque<PendingFlashCall>>>,
     width: u32,
     height: u32,
 }
 
 impl RuffleSession {
-    fn new(swf_bytes: &[u8], swf_path: &Path, width: u32, height: u32, callback: Option<FlashCallCallback>, user_data: *mut c_void) -> Result<Self, String> {
+    fn new(swf_bytes: &[u8], swf_path: &Path, width: u32, height: u32) -> Result<Self, String> {
         if width == 0 || height == 0 {
             return Err("Viewport dimensions must be greater than zero.".to_string());
         }
@@ -159,6 +157,7 @@ impl RuffleSession {
             .ok_or_else(|| "Ruffle could not create a local SWF content descriptor.".to_string())?;
 
         let navigator_interface = SkuaNavigatorInterface::default();
+        let pending_calls = Arc::new(Mutex::new(VecDeque::new()));
         let navigator = ExternalNavigatorBackend::new(
             swf_url,
             None,
@@ -184,7 +183,7 @@ impl RuffleSession {
             .build()
             .map_err(|error| format!("Could not initialize the Ruffle Tokio runtime: {error}"))?;
         let local_set = tokio::task::LocalSet::new();
-        let external_interface = SkuaExternalInterfaceProvider::new(callback, user_data);
+        let external_interface = SkuaExternalInterfaceProvider::new(navigator_interface.clone(), pending_calls.clone());
 
         let player = local_set.block_on(&runtime, async {
             ruffle_core::PlayerBuilder::new()
@@ -202,6 +201,7 @@ impl RuffleSession {
             local_set,
             player,
             navigator_interface,
+            pending_calls,
             width,
             height,
         })
@@ -250,6 +250,30 @@ impl RuffleSession {
             ptr::copy_nonoverlapping(bytes.as_ptr(), output, bytes.len());
         }
         Ok(bytes.len())
+    }
+
+    fn drain_callbacks(&mut self, output: *mut c_char, capacity: usize) -> Result<usize, String> {
+        self.check_thread()?;
+        let mut pending_calls = self.pending_calls.lock().map_err(|_| "Ruffle callback queue mutex poisoned.".to_string())?;
+        let calls = pending_calls
+            .iter()
+            .map(|call| serde_json::json!({
+                "function": call.function,
+                "arguments": call.arguments
+            }))
+            .collect::<Vec<_>>();
+        let json = serde_json::to_string(&calls).map_err(|error| error.to_string())?;
+        let bytes = json.as_bytes();
+        if output.is_null() || capacity < bytes.len() + 1 {
+            return Err(format!("Callback buffer requires {} bytes.", bytes.len() + 1));
+        }
+
+        unsafe {
+            ptr::copy_nonoverlapping(bytes.as_ptr(), output.cast::<u8>(), bytes.len());
+            *output.add(bytes.len()) = 0;
+        }
+        pending_calls.clear();
+        Ok(bytes.len() + 1)
     }
 
     fn call(&mut self, function_name: &str, arguments_json: &str) -> Result<String, String> {
@@ -354,8 +378,6 @@ pub unsafe extern "C" fn skua_ruffle_session_create(
     swf_path: *const c_char,
     width: u32,
     height: u32,
-    callback: Option<FlashCallCallback>,
-    user_data: *mut c_void,
     error_buffer: *mut c_char,
     error_capacity: usize,
 ) -> *mut c_void {
@@ -370,7 +392,7 @@ pub unsafe extern "C" fn skua_ruffle_session_create(
             Ok(path) => PathBuf::from(path),
             Err(error) => return Err(format!("SWF path is not valid UTF-8: {error}")),
         };
-        RuffleSession::new(swf_bytes, &swf_path, width, height, callback, user_data)
+        RuffleSession::new(swf_bytes, &swf_path, width, height)
     }));
 
     match result {
@@ -404,6 +426,21 @@ pub unsafe extern "C" fn skua_ruffle_session_render(
 ) -> usize {
     unsafe { get_session(session) }
         .and_then(|session| session.render(output, capacity))
+        .unwrap_or(usize::MAX)
+}
+
+/// Copies queued ActionScript-to-host ExternalInterface calls into a UTF-8 JSON buffer.
+///
+/// Each entry contains a function name and its arguments. The queue is only cleared
+/// after the complete result has been copied successfully.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn skua_ruffle_session_drain_callbacks(
+    session: *mut c_void,
+    output: *mut c_char,
+    capacity: usize,
+) -> usize {
+    unsafe { get_session(session) }
+        .and_then(|session| session.drain_callbacks(output, capacity))
         .unwrap_or(usize::MAX)
 }
 
