@@ -367,3 +367,13 @@ The AQW Server.as helper now keeps the existing Security.loadPolicyFile call for
 The native SkuaExternalInterfaceProvider handles allowSocket internally and updates the same shared socket allow-list used by ExternalNavigatorBackend. It does not forward this particular call into .NET. This avoids re-entering the native session while Ruffle's Player is mutably borrowed.
 
 This closes the design gap between Ruffle's SocketMode::Ask and AQW's dynamic server list: the native navigator denies unknown endpoints, while endpoints explicitly supplied by the AQW server list or selected-server connection path can be authorized before the game socket opens.
+
+
+## ExternalInterface compatibility and reentrancy
+
+Two important compatibility details are now handled in the native bridge:
+
+1. The existing AS3 Externalizer.call(name, ...rest) passes its rest array as one ExternalInterface argument. The old ActiveX host exposed those array elements as individual FlashCall arguments. The Ruffle provider now unwraps a single List argument to preserve that existing contract.
+2. ActionScript-to-.NET calls are queued in Rust and drained by C# after the native tick/call returns. Rust never invokes a managed callback while the Player or RuffleSession is mutably borrowed. This prevents reentrant P/Invoke and mutable-aliasing hazards when existing FlashCall handlers call back into IFlashUtil.
+
+The C# host drains callbacks after each player tick and after each managed-to-ActionScript call. Nested callbacks are processed in a subsequent drain pass.
