@@ -219,6 +219,7 @@ impl RuffleSession {
 
         let mut builder = ruffle_core::PlayerBuilder::new()
             .with_movie(movie)
+            .with_autoplay(true)
             .with_navigator(navigator)
             .with_renderer(renderer)
             .with_viewport_dimensions(width, height, 1.0)
