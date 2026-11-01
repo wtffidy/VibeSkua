@@ -293,3 +293,16 @@ The native crate now references the pinned ruffle_frontend_utils package with it
 The FutureSpawner must run on the same dedicated Rust owner thread as the Player. Its futures are not declared Send, and the native navigator uses Tokio networking/timers. A current-thread Tokio runtime with a LocalSet is the leading implementation, but it must be validated against the pinned Ruffle revision and tested for cancellation/disposal.
 
 Only replace ExternalNavigatorBackend with a custom NavigatorBackend if Skua needs to intercept or redirect individual socket streams in a way the existing backend cannot support. The existing CaptureProxy is not a drop-in replacement for the native raw TCP backend (see the earlier CaptureProxy section).
+
+
+## Follow-up: current FlashCall event handler does not synchronously re-enter Flash
+
+Inspected the existing ScriptInterface subscription and HandleFlashCall implementation.
+
+- ScriptInterface subscribes to IFlashUtil.FlashCall.
+- The "loaded" callback only starts the ScriptInterface worker thread.
+- "pre-load" schedules its Flash.Call for later on a separate task.
+- Other callbacks update state, send messenger events, log, or open external URLs.
+- No synchronous Flash.Call was found inside the current HandleFlashCall switch.
+
+This reduces the immediate reentrancy risk for forwarding ExternalInterface.call from the Rust owner thread into the existing .NET FlashCall event. Still keep the C ABI callback contract explicit and marshal any UI-bound work to Avalonia's dispatcher. Add a regression test that fails if a future FlashCall subscriber synchronously calls back into the same Ruffle session.
