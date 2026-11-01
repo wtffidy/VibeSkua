@@ -450,3 +450,16 @@ This means we should keep Velopack as the cross-platform updater/packager instea
 - Consider a universal app only after proving that every native Mach-O dependency (including the Ruffle dylib and Avalonia native components) can be merged and re-signed correctly.
 
 Separate architecture packages are the lower-risk first release. .NET does not produce universal macOS binaries directly; it requires per-architecture publishing and lipo merging of native executables, with corresponding work for bundled native libraries.
+
+
+## 24. macOS now bypasses the Windows tabbed-host process model
+
+A deeper startup trace found that the client always created TabbedHostWindow as its main window when not launched with --embed. That path owns Windows named-pipe single-instance forwarding, HWND embedding, and Win32 window messaging.
+
+The macOS branch now:
+- Ignores --host-instance and related tab-host identity arguments.
+- Skips Windows named-pipe / named-mutex single-instance forwarding.
+- Creates the normal MainWindow directly on non-Windows platforms.
+- Leaves the existing Windows TabbedHostWindow and child HWND embedding flow unchanged.
+
+This gives macOS a standalone client window and allows the manager to launch separate client processes. It deliberately does not provide the current Windows tabbed multi-client host on macOS; that requires a separate cross-platform session/IPC design.
