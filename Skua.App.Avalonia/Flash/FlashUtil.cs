@@ -329,7 +329,7 @@ public class FlashUtil : IFlashUtil
     }
 }
 #else
-using Avalonia.Threading;
+using global::Avalonia.Threading;
 using CommunityToolkit.Mvvm.Messaging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
