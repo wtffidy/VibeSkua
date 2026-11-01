@@ -125,17 +125,18 @@ public partial class App : Application
         bool hasEmbedFlag = false;
         long embedHwnd = 0;
         int hostPid = 0;
-        for (int i = 0; i < args.Length; i++)
+        if (OperatingSystem.IsWindows())
         {
-            if (args[i] == "--embed" && i + 1 < args.Length)
+            for (int i = 0; i < args.Length; i++)
             {
-                hasEmbedFlag = true;
-                if (long.TryParse(args[i + 1], out embedHwnd))
-                    Skua.Core.AppStartup.HotKeys.HostHwnd = new IntPtr(embedHwnd);
-            }
-            if (args[i] == "--host-pid" && i + 1 < args.Length)
-            {
-                int.TryParse(args[i + 1], out hostPid);
+                if (args[i] == "--embed" && i + 1 < args.Length)
+                {
+                    hasEmbedFlag = true;
+                    if (long.TryParse(args[i + 1], out embedHwnd))
+                        Skua.Core.AppStartup.HotKeys.HostHwnd = new IntPtr(embedHwnd);
+                }
+                if (args[i] == "--host-pid" && i + 1 < args.Length)
+                    int.TryParse(args[i + 1], out hostPid);
             }
         }
 
@@ -189,7 +190,9 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
-            Task.Run(() => Skua.App.Avalonia.Flash.FlashUtil.PreloadSwf());
+            if (OperatingSystem.IsWindows())
+                Task.Run(() => Skua.App.Avalonia.Flash.FlashUtil.PreloadSwf());
+
             
             if (hasEmbedFlag)
             {
