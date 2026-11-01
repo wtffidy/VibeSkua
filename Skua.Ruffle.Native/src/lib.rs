@@ -481,6 +481,10 @@ fn physical_key_from_avalonia(key: &str) -> PhysicalKey {
 }
 
 fn logical_key_from_avalonia(key: &str, key_symbol: &str) -> LogicalKey {
+    if key == "Space" {
+        return LogicalKey::Character(' ');
+    }
+
     let named_key = match key {
         "Back" | "Backspace" => Some(NamedKey::Backspace),
         "Tab" => Some(NamedKey::Tab),
@@ -496,7 +500,6 @@ fn logical_key_from_avalonia(key: &str, key_symbol: &str) -> LogicalKey {
         "PageDown" => Some(NamedKey::PageDown),
         "Delete" => Some(NamedKey::Delete),
         "Insert" => Some(NamedKey::Insert),
-        "Space" => Some(NamedKey::Space),
         "LeftShift" | "RightShift" => Some(NamedKey::Shift),
         "LeftCtrl" | "RightCtrl" => Some(NamedKey::Control),
         "LeftAlt" | "RightAlt" => Some(NamedKey::Alt),
