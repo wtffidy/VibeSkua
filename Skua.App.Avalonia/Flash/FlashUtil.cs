@@ -340,7 +340,6 @@ using System.IO;
 using System.Linq;
 using System.Diagnostics;
 using System.Dynamic;
-using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -522,7 +521,7 @@ public class FlashUtil : IFlashUtil
     public object? Call(string function, Type type, params object[] args)
     {
         if (_session == IntPtr.Zero)
-            return type.IsValueType ? Activator.CreateInstance(type) : null;
+            return GetDefault(type);
 
         if (_lazyManager.Value.ShouldExit && Thread.CurrentThread.Name == "Script Thread")
             _lazyManager.Value.ScriptCts?.Token.ThrowIfCancellationRequested();
@@ -551,7 +550,7 @@ public class FlashUtil : IFlashUtil
         {
             if (function != "isKicked")
                 _messenger.Send<FlashErrorMessage>(new(ex, function, args));
-            return type.IsValueType ? Activator.CreateInstance(type) : null;
+            return GetDefault(type);
         }
     }
 
@@ -649,7 +648,14 @@ public class FlashUtil : IFlashUtil
                     string function = (string?)callback["function"] ?? string.Empty;
                     JArray arguments = callback["arguments"] as JArray ?? new JArray();
                     object[] args = arguments.Select(token => ConvertJsonToken(token)!).ToArray();
-                    FlashCall?.Invoke(function, args);
+                    try
+                    {
+                        FlashCall?.Invoke(function, args);
+                    }
+                    catch (Exception ex)
+                    {
+                        Trace.WriteLine($"Ruffle FlashCall handler failed for '{function}': {ex}");
+                    }
                 }
             }
         }
@@ -657,6 +663,11 @@ public class FlashUtil : IFlashUtil
         {
             _isDrainingCallbacks = false;
         }
+    }
+
+    private static object? GetDefault(Type type)
+    {
+        return type == typeof(void) ? null : type.IsValueType ? Activator.CreateInstance(type) : null;
     }
 
     private static T InvokeOnUiThread<T>(Func<T> action)
