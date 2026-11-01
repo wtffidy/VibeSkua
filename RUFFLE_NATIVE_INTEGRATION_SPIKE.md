@@ -322,3 +322,15 @@ Use a process-wide graphics context:
 5. Keep each Player and its renderer session-isolated while sharing the GPU device and queue.
 
 The current compile probe uses for_offscreen because it is the shortest proof of the native offscreen API. The production multi-client implementation should follow the shared-Descriptors pattern used by Ruffle's exporter.
+
+
+## Implementation started: native navigator host abstractions
+
+The native crate now includes initial implementations of Ruffle's required host seams:
+
+- SkuaFutureSpawner schedules non-Send navigator futures with Tokio spawn_local. It must only be called while the session LocalSet is entered.
+- SkuaNavigatorInterface implements website navigation, local file access, and socket confirmation.
+- Socket confirmation uses an explicit host:port allow-list and denies unknown endpoints by default.
+- The native crate now directly depends on Tokio, tracing, and url for these host abstractions.
+
+This is still scaffolding: the navigator is not yet constructed or attached to a Player, the allow-list is not yet populated from the game server list, and website navigation is only logged. The next implementation step is a session owner that creates the Tokio current-thread runtime + LocalSet, constructs ExternalNavigatorBackend with the app's base URL/cookies/content descriptor, and injects it through PlayerBuilder::with_navigator.
