@@ -140,20 +140,28 @@ public partial class App : Application
             }
         }
 
-        for (int i = 1; i < args.Length - 1; i++)
+        if (OperatingSystem.IsWindows())
         {
-            if (string.Equals(args[i], "--host-instance", StringComparison.OrdinalIgnoreCase)) { HostInstanceId = args[i + 1]; break; }
-        }
-        if (!string.IsNullOrWhiteSpace(HostInstanceId))
-        {
-            string safeInstanceId = new string(System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Where(HostInstanceId, char.IsLetterOrDigit)));
-            if (!string.IsNullOrWhiteSpace(safeInstanceId))
+            for (int i = 1; i < args.Length - 1; i++)
             {
-                HostInstanceId = safeInstanceId;
-                HostPipeName = $"VibeSkuaTabHostPipe-{safeInstanceId}";
-                HostMutexName = $"VibeSkuaTabHostMutex-{safeInstanceId}";
+                if (string.Equals(args[i], "--host-instance", StringComparison.OrdinalIgnoreCase))
+                {
+                    HostInstanceId = args[i + 1];
+                    break;
+                }
             }
-            else HostInstanceId = null;
+            if (!string.IsNullOrWhiteSpace(HostInstanceId))
+            {
+                string safeInstanceId = new string(System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Where(HostInstanceId, char.IsLetterOrDigit)));
+                if (!string.IsNullOrWhiteSpace(safeInstanceId))
+                {
+                    HostInstanceId = safeInstanceId;
+                    HostPipeName = $"VibeSkuaTabHostPipe-{safeInstanceId}";
+                    HostMutexName = $"VibeSkuaTabHostMutex-{safeInstanceId}";
+                }
+                else
+                    HostInstanceId = null;
+            }
         }
         _parentHostProcessId = hasEmbedFlag ? hostPid : 0;
         if (_parentHostProcessId > 0)
@@ -250,7 +258,7 @@ public partial class App : Application
                     });
                 }
             }
-            else
+            else if (OperatingSystem.IsWindows())
             {
                 string[] rawClientArgs = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Skip(args, 1));
                 List<string> filteredArgs = new();
@@ -312,6 +320,10 @@ public partial class App : Application
                         activeTheme.UseAccentOnMainTitleBar ? activeTheme.PrimaryForegroundColor : (Color?)null);
                 else
                     ThemeResourceApplicator.ApplyTitleBarTheme(masterWindow, themeService.IsDarkTheme);
+            }
+            else
+            {
+                desktop.MainWindow = new Views.MainWindow();
             }
             desktop.Exit += OnDesktopExit;
         }
