@@ -117,6 +117,23 @@ try
     {
         TickFrames(tick, bridgeSession, 6);
 
+        nint callBuffer = Marshal.AllocHGlobal(4096);
+        try
+        {
+            nuint callLength = callActionScript(bridgeSession, "isTrue", "[]", callBuffer, 4096);
+            string resultJson = ReadUtf8Result(callBuffer, callLength);
+            string? result = JsonSerializer.Deserialize<string>(resultJson);
+
+            if (result != "true")
+                throw new InvalidOperationException($"Ruffle returned an unexpected ActionScript callback result: {resultJson}");
+
+            Console.WriteLine("Verified host-to-ActionScript ExternalInterface callback invocation.");
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(callBuffer);
+        }
+
         nint callbackBuffer = Marshal.AllocHGlobal(64 * 1024);
         try
         {
@@ -141,22 +158,6 @@ try
             Marshal.FreeHGlobal(callbackBuffer);
         }
 
-        nint callBuffer = Marshal.AllocHGlobal(4096);
-        try
-        {
-            nuint callLength = callActionScript(bridgeSession, "isTrue", "[]", callBuffer, 4096);
-            string resultJson = ReadUtf8Result(callBuffer, callLength);
-            string? result = JsonSerializer.Deserialize<string>(resultJson);
-
-            if (result != "true")
-                throw new InvalidOperationException($"Ruffle returned an unexpected ActionScript callback result: {resultJson}");
-
-            Console.WriteLine("Verified host-to-ActionScript ExternalInterface callback invocation.");
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(callBuffer);
-        }
     }
     finally
     {
