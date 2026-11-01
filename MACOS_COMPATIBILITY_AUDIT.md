@@ -463,3 +463,17 @@ The macOS branch now:
 - Leaves the existing Windows TabbedHostWindow and child HWND embedding flow unchanged.
 
 This gives macOS a standalone client window and allows the manager to launch separate client processes. It deliberately does not provide the current Windows tabbed multi-client host on macOS; that requires a separate cross-platform session/IPC design.
+
+
+## 25. Manager startup had Windows-only single-instance and Win32 initialization
+
+The manager's Program.cs used a named Global\\ EventWaitHandle, unconditionally called SetDllDirectory, resolved only Windows native DLLs, and always applied Win32PlatformOptions. This would prevent or break a native macOS manager launch even though the manager project itself targets generic net10.0.
+
+The macOS branch now:
+- Runs the Windows named-event single-instance/wake behavior only on Windows.
+- Skips SetDllDirectory outside Windows.
+- Resolves native assets using the current runtime identifier and platform extension.
+- Applies Win32 Avalonia rendering/composition options only when the Windows compilation symbol is defined.
+- Defines IS_WINDOWS for the manager only on Windows.
+
+The macOS manager currently permits multiple manager instances rather than trying to emulate the Windows wake-event behavior. A native macOS single-instance / reopen-window implementation can be added separately if desired.
