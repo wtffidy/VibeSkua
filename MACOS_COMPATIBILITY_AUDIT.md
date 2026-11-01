@@ -413,3 +413,16 @@ The macOS branch now:
 - Resolves platform native library names using .dll, .dylib, or .so extensions and searches the application native asset directories.
 
 This gets the Avalonia bootstrap closer to a real macOS launch, but it does not make the game playable yet. The non-Windows FlashUtil remains a NotImplementedException stub and must be replaced with the Ruffle-backed IFlashUtil implementation before macOS gameplay can work.
+
+
+## 21. Client and manager project targets are now platform-selectable
+
+The Avalonia client project now selects:
+- net10.0-windows on Windows by default, preserving the existing ActiveX/WinForms implementation.
+- net10.0 on macOS/Linux by default, compiling the non-Windows FlashUtil placeholder until the Ruffle adapter is implemented.
+
+Windows Forms, the IS_WINDOWS symbol, ActiveX COM references, CoreHook, CoreHook native DLL content, the Windows icon, and the application manifest are limited to the net10.0-windows target.
+
+The client runtime identifiers are scoped by target framework: win-x64/win-x86 for net10.0-windows and osx-arm64/osx-x64 for net10.0. The manager now emits WinExe only on Windows, uses Exe elsewhere, and limits its ICO/manifest settings to Windows.
+
+**Important:** This is a build-target foundation, not a successful build. The non-Windows FlashUtil is still a deliberate placeholder that throws NotImplementedException. The next major implementation remains the Ruffle-backed IFlashUtil and player host.
