@@ -192,3 +192,66 @@ If raw TCP support cannot be supplied reliably, stop and reassess before investi
 ## Audit limitations
 
 This is an initial static audit of selected project files and source paths. It is not an exhaustive scan of every source file, package, native dependency, or runtime path. No macOS hardware/runtime was available in this audit, so no macOS compilation, signing, launch, game login, or networking tests have been run.
+
+
+## Additional dependency tracing
+
+A second pass followed the multi-client and network paths beyond the initial project-file review.
+
+### 8. Multi-client host is more Windows-specific than the UI suggests
+
+**Files inspected**
+- `Skua.App.Avalonia/App.axaml.cs`
+- `Skua.App.Avalonia/Views/TabbedHostWindow.axaml.cs`
+- `Skua.Manager.Avalonia/Services/ProcessCloser.cs`
+
+**Findings**
+- The tabbed host launches child client processes and embeds their native windows using HWND APIs.
+- The host uses a large set of `user32.dll` and `comctl32.dll` calls, including child-window positioning, styles, custom messages, and process/window lifecycle handling.
+- The client also uses Windows messages for army controls, grid mode, login/logout, options, and child readiness.
+- Named pipes are already used for some host/client communication. That is a useful portable transport candidate, but it does not make the current architecture portable: the HWND embedding and custom window-message control plane remain Windows-only.
+- The manager's process-closing helper also posts Windows messages to HWNDs.
+
+**Implication**
+- The macOS multi-client implementation should not try to reproduce HWND child-window embedding.
+- A more portable design is a single Avalonia host window containing multiple independently hosted Ruffle surfaces/sessions, with host-to-session commands flowing through a typed IPC or in-process messaging abstraction.
+- If clients remain separate processes, named pipes or Unix domain sockets can carry messages, but rendering must use a macOS-native hosting model rather than window reparenting.
+- Existing army-control commands should be moved behind a platform-neutral message contract, not recreated as platform-specific window messages.
+
+### 9. Network capture proxy is already based on portable .NET sockets
+
+**File inspected**
+- `Skua.Core/GameProxy/CaptureProxy.cs`
+
+**Findings**
+- The capture proxy uses `TcpListener`, `TcpClient`, and `IPAddress.Loopback` from .NET.
+- The proxy itself does not show a Windows-only networking dependency in the inspected source.
+- This is encouraging for macOS, but the proxy's lifecycle, port allocation, and interaction with the Flash runtime still need end-to-end testing.
+
+**Implication**
+- Keep the existing proxy in shared core unless runtime tests reveal an issue.
+- Validate whether Ruffle's native socket backend can be directed through the existing local proxy, and whether the AQW client expects socket policy requests or other Flash-specific connection behavior.
+
+### 10. FFDec and bundled Java tooling
+
+**Finding**
+- The repository contains a bundled FFDec distribution with Java JAR dependencies, in addition to Windows-oriented scripts elsewhere in the build/tooling tree.
+- Java itself is cross-platform, but any launch scripts, executable names, path assumptions, and native helper dependencies around FFDec must be audited before calling the tool portable.
+
+**Implication**
+- Prefer invoking the Java entry point with a detected Java runtime on macOS, rather than depending on a Windows `.exe` or `.bat`.
+- This is a tooling concern separate from the runtime Flash player and does not solve the Ruffle networking requirement.
+
+## Revised risk ranking
+
+| Area | Risk | Reason |
+|---|---|---|
+| Ruffle native integration and AQW sockets | Critical | Needs a native networking backend and a working AQW login proof |
+| Tabbed host / multi-client rendering | Critical | Current design depends on HWND embedding and Windows messages |
+| Flash ↔ C# ExternalInterface bridge | Critical | ActiveX COM callbacks must be replaced without breaking the existing API contract |
+| Windows native hooks / interop | High | CoreHook, kernel32, user32, comctl32, COM and native DLLs |
+| Project targeting / packaging | High | Client is `net10.0-windows` with Windows-only RIDs and assets |
+| AS3 build pipeline | Medium | Flex/MXMLC and Java are portable; current wrappers and SDK discovery are Windows-specific |
+| C# runtime compiler | Low–Medium | Roslyn and collectible AssemblyLoadContext are cross-platform APIs; runtime dependencies still need validation |
+| Core TCP capture proxy | Low–Medium | Uses portable .NET sockets; end-to-end runtime behavior remains unproven |
+| Avalonia UI | Medium | Framework is cross-platform, but native hosting, chrome, shortcuts, dialogs, and window management need platform review |
