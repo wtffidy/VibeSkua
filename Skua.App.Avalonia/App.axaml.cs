@@ -109,7 +109,8 @@ public partial class App : Application
                 Ioc.Default.GetRequiredService<IDiagnosticsService>().Start();
                 ISettingsService settings = Ioc.Default.GetRequiredService<ISettingsService>();
                 settings.SetApplicationVersion();
-                FlashTrustManager.EnsureTrustFile();
+                if (OperatingSystem.IsWindows())
+                    FlashTrustManager.EnsureTrustFile();
             }
             catch { }
         });
