@@ -89,14 +89,14 @@
         </None>
     </ItemGroup>
 
-    <Target Name="BuildRuffleNative" BeforeTargets="Build" Condition="'$(TargetFramework)' == 'net10.0' and $([MSBuild]::IsOSPlatform('OSX')) and '$(RuffleRustTarget)' != ''">
+    <Target Name="BuildRuffleNative" BeforeTargets="CoreCompile" Condition="'$(TargetFramework)' == 'net10.0' and '$(OS)' != 'Windows_NT' and '$(RuffleRustTarget)' != ''">
         <Exec Command="cargo build --release --target $(RuffleRustTarget)" WorkingDirectory="$(MSBuildProjectDirectory)/../Skua.Ruffle.Native" />
         <MakeDir Directories="$(OutDir)Assemblies/runtimes/$(RuntimeIdentifier)/native" />
         <Copy SourceFiles="$(MSBuildProjectDirectory)/../Skua.Ruffle.Native/target/$(RuffleRustTarget)/release/libskua_ruffle_native.dylib"
               DestinationFolder="$(OutDir)Assemblies/runtimes/$(RuntimeIdentifier)/native" />
     </Target>
 
-    <Target Name="CopyRuffleNativeToPublish" AfterTargets="Publish" Condition="'$(TargetFramework)' == 'net10.0' and $([MSBuild]::IsOSPlatform('OSX')) and '$(RuffleRustTarget)' != ''">
+    <Target Name="CopyRuffleNativeToPublish" AfterTargets="Publish" Condition="'$(TargetFramework)' == 'net10.0' and '$(OS)' != 'Windows_NT' and '$(RuffleRustTarget)' != ''">
         <MakeDir Directories="$(PublishDir)Assemblies/runtimes/$(RuntimeIdentifier)/native" />
         <Copy SourceFiles="$(MSBuildProjectDirectory)/../Skua.Ruffle.Native/target/$(RuffleRustTarget)/release/libskua_ruffle_native.dylib"
               DestinationFolder="$(PublishDir)Assemblies/runtimes/$(RuntimeIdentifier)/native" />
