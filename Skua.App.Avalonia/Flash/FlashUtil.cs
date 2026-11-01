@@ -386,6 +386,8 @@ public class FlashUtil : IFlashUtil
     private GCHandle _selfHandle;
     private IntPtr _session;
     private IntPtr _callBuffer;
+    private IntPtr _renderBuffer;
+    private int _renderBufferSize;
 
     public FlashUtil(IMessenger messenger, Lazy<IScriptManager> manager)
     {
@@ -469,13 +471,26 @@ public class FlashUtil : IFlashUtil
 
             int frameLength = checked((int)(width * height * 4));
             byte[] frame = new byte[frameLength];
-            nuint written = SessionRender(_session, _callBuffer, (nuint)CallBufferSize);
-            if (written == nuint.MaxValue || written > (nuint)frameLength)
+            EnsureRenderBufferCapacity(frameLength);
+            nuint written = SessionRender(_session, _renderBuffer, (nuint)_renderBufferSize);
+            if (written == nuint.MaxValue || written != (nuint)frameLength)
                 throw new InvalidOperationException("Ruffle returned an invalid frame buffer size.");
 
-            Marshal.Copy(_callBuffer, frame, 0, (int)written);
+            Marshal.Copy(_renderBuffer, frame, 0, frameLength);
             return frame;
         });
+    }
+
+    private void EnsureRenderBufferCapacity(int required)
+    {
+        if (required <= _renderBufferSize)
+            return;
+
+        if (_renderBuffer != IntPtr.Zero)
+            Marshal.FreeHGlobal(_renderBuffer);
+
+        _renderBuffer = Marshal.AllocHGlobal(required);
+        _renderBufferSize = required;
     }
 
     public void Resize(uint width, uint height, double scaleFactor)
@@ -660,6 +675,13 @@ public class FlashUtil : IFlashUtil
         {
             Marshal.FreeHGlobal(_callBuffer);
             _callBuffer = IntPtr.Zero;
+        }
+
+        if (_renderBuffer != IntPtr.Zero)
+        {
+            Marshal.FreeHGlobal(_renderBuffer);
+            _renderBuffer = IntPtr.Zero;
+            _renderBufferSize = 0;
         }
 
         if (_selfHandle.IsAllocated)
