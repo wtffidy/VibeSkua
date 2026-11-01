@@ -32,14 +32,6 @@ public interface IFlashUtil : IDisposable
     void InitializeFlash();
 
     /// <summary>
-    /// Authorizes a game-server socket endpoint for native Flash runtimes.
-    /// Existing Windows Flash implementations can rely on the default no-op.
-    /// </summary>
-    void AuthorizeSocket(string host, int port)
-    {
-    }
-
-    /// <summary>
     /// Make a flash call for the specified <paramref name="function"/>.
     /// </summary>
     /// <param name="function">Function to be called in the SWF.</param>
