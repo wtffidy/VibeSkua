@@ -29,6 +29,10 @@ on:
       - ".github/workflows/ruffle-native-macos.yml"
   workflow_dispatch:
 
+concurrency:
+  group: macos-compatibility-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
