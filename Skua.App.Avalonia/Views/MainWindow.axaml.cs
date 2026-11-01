@@ -103,7 +103,6 @@ public partial class MainWindow : Window
     private DispatcherTimer? _tabTitleSyncTimer;
 #if !IS_WINDOWS
     private DispatcherTimer? _ruffleTimer;
-    private Stopwatch? _ruffleStopwatch;
 #endif
     private bool _isFlashLoaded;
     private bool _isTitleBarPermanentlyHidden = false;
@@ -340,7 +339,6 @@ public partial class MainWindow : Window
             {
                 ruffleFlash.InitializeFlash();
                 Stopwatch ruffleStopwatch = Stopwatch.StartNew();
-                _ruffleStopwatch = ruffleStopwatch;
                 _ruffleTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
                 _ruffleTimer.Tick += (timerSender, timerArgs) =>
                 {
