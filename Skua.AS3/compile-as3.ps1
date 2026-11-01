@@ -8,7 +8,7 @@ $ErrorActionPreference = 'Stop'
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Join-Path $scriptRoot 'skua'
 $sourcePath = Join-Path $projectRoot 'src'
-$mainSourcePath = Join-Path $sourcePath 'skua\Main.as'
+$mainSourcePath = Join-Path $sourcePath 'skua/Main.as'
 $outputDirectory = Join-Path $projectRoot 'bin'
 if ([string]::IsNullOrWhiteSpace($OutputPath)) {
     $outputPath = Join-Path $outputDirectory 'skua.swf'
@@ -26,42 +26,80 @@ if ([string]::IsNullOrWhiteSpace($MxmlcPath)) {
     if ($mxmlcCommand) {
         $MxmlcPath = $mxmlcCommand.Source
     }
-    elseif ($env:FLEX_HOME) {
-        $candidate = Join-Path $env:FLEX_HOME 'bin\mxmlc.bat'
-        if (Test-Path -LiteralPath $candidate) {
-            $MxmlcPath = $candidate
-        }
-    }
 }
 
-if ([string]::IsNullOrWhiteSpace($MxmlcPath)) {
-    $searchRoots = @(
-        'C:\MoonshineSDKs',
-        'C:\ApacheFlex',
-        $env:ProgramFiles,
-        ${env:ProgramFiles(x86)},
-        $env:LOCALAPPDATA
-    ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and (Test-Path -LiteralPath $_) } | Select-Object -Unique
-
-    foreach ($searchRoot in $searchRoots) {
-        $foundCompiler = Get-ChildItem -LiteralPath $searchRoot -Filter 'mxmlc.bat' -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($foundCompiler) {
-            $MxmlcPath = $foundCompiler.FullName
+if ([string]::IsNullOrWhiteSpace($MxmlcPath) -and $env:FLEX_HOME) {
+    $compilerNames = if ($IsWindows) { @('mxmlc.bat', 'mxmlc.cmd', 'mxmlc') } else { @('mxmlc') }
+    foreach ($compilerName in $compilerNames) {
+        $candidate = Join-Path $env:FLEX_HOME "bin/$compilerName"
+        if (Test-Path -LiteralPath $candidate) {
+            $MxmlcPath = $candidate
             break
         }
     }
 }
 
-if ([string]::IsNullOrWhiteSpace($MxmlcPath) -or -not (Test-Path -LiteralPath $MxmlcPath)) {
-    throw 'Flex mxmlc was not found. Add it to PATH, set FLEX_HOME, install a Flex SDK in a common SDK location, or pass -MxmlcPath.'
+if ([string]::IsNullOrWhiteSpace($MxmlcPath)) {
+    if ($IsWindows) {
+        $searchRoots = @(
+            'C:\MoonshineSDKs',
+            'C:\ApacheFlex',
+            $env:ProgramFiles,
+            ${env:ProgramFiles(x86)},
+            $env:LOCALAPPDATA
+        )
+        $compilerNames = @('mxmlc.bat', 'mxmlc.cmd', 'mxmlc')
+    }
+    else {
+        $searchRoots = @(
+            $env:FLEX_HOME,
+            (Join-Path $HOME '.flex-sdk'),
+            (Join-Path $HOME 'ApacheFlex'),
+            '/opt/apache-flex',
+            '/opt/flex-sdk',
+            '/usr/local/apache-flex',
+            '/opt/homebrew/opt/apache-flex'
+        )
+        $compilerNames = @('mxmlc')
+    }
+
+    $searchRoots = $searchRoots | Where-Object {
+        -not [string]::IsNullOrWhiteSpace($_) -and (Test-Path -LiteralPath $_)
+    } | Select-Object -Unique
+
+    foreach ($searchRoot in $searchRoots) {
+        foreach ($compilerName in $compilerNames) {
+            $foundCompiler = Get-ChildItem -LiteralPath $searchRoot -Filter $compilerName -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($foundCompiler) {
+                $MxmlcPath = $foundCompiler.FullName
+                break
+            }
+        }
+        if (-not [string]::IsNullOrWhiteSpace($MxmlcPath)) {
+            break
+        }
+    }
 }
 
-if (-not $env:FLEX_HOME) {
+if ([string]::IsNullOrWhiteSpace($MxmlcPath)) {
+    throw 'Flex mxmlc was not found. Add mxmlc to PATH, set FLEX_HOME, or pass -MxmlcPath.'
+}
+
+$resolvedCommand = Get-Command -Name $MxmlcPath -ErrorAction SilentlyContinue
+if ($resolvedCommand) {
+    $MxmlcPath = $resolvedCommand.Source
+}
+
+if (-not (Test-Path -LiteralPath $MxmlcPath)) {
+    throw "Flex mxmlc was not found: $MxmlcPath"
+}
+
+if ([string]::IsNullOrWhiteSpace($env:FLEX_HOME)) {
     $mxmlcDirectory = Split-Path -Parent (Resolve-Path -LiteralPath $MxmlcPath).Path
     $env:FLEX_HOME = Split-Path -Parent $mxmlcDirectory
 }
-if (-not $env:PLAYERGLOBAL_HOME) {
-    $env:PLAYERGLOBAL_HOME = Join-Path $env:FLEX_HOME 'frameworks\libs\player'
+if ([string]::IsNullOrWhiteSpace($env:PLAYERGLOBAL_HOME)) {
+    $env:PLAYERGLOBAL_HOME = Join-Path $env:FLEX_HOME 'frameworks/libs/player'
 }
 
 $resolvedOutputDirectory = Split-Path -Parent $outputPath
