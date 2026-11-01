@@ -324,3 +324,14 @@ The manager targets generic net10.0 and uses Avalonia, but it depends on the cli
 **Implication**
 - Treat manager UI portability and manager-to-client lifecycle portability as separate acceptance gates.
 - First get the client process launching and communicating on macOS, then complete manager account launch, stop, update, and multi-client workflows.
+
+
+## 15. AQW socket policy calls versus Ruffle security model
+
+A deeper ActionScript review found that Skua's Server.as explicitly calls Security.loadPolicyFile using xmlsocket:// URLs for server-list entries and before connecting to a selected game server.
+
+Ruffle's current AVM2 implementation stubs flash.system.Security.loadPolicyFile. Ruffle's native socket implementation instead delegates connection requests to NavigatorBackend, where the desktop frontend applies its own SocketMode allow/deny/ask policy.
+
+This is a confirmed API behavior difference, but not yet a proven AQW login blocker: Ruffle may intentionally replace Flash's policy-file enforcement with host-level socket permissions. The compatibility test must determine whether AQW's server requires the XML socket policy request as part of its connection flow. If not, use an explicit Skua host allow-list. If yes, implement xmlsocket policy retrieval in the native navigator or contribute support upstream.
+
+Adobe's documented behavior for xmlsocket policy loading is to send a null-terminated policy-file request and await a null-terminated policy response before proceeding with the main socket connection. This should be included in the ActiveX-vs-Ruffle network trace comparison.
