@@ -119,7 +119,8 @@ public class WinFormsFlashHost : UserControl
         if (framebuffer.RowBytes < sourceStride)
             return;
 
-        for (int y = 0; y < height; y++)
+        int heightPixels = (int)height;
+        for (int y = 0; y < heightPixels; y++)
         {
             IntPtr destination = IntPtr.Add(framebuffer.Address, y * framebuffer.RowBytes);
             Marshal.Copy(rgba, y * sourceStride, destination, sourceStride);
