@@ -6,10 +6,10 @@ package {
     public class RuffleBridgeSmoke extends Sprite {
         public function RuffleBridgeSmoke() {
             ExternalInterface.addCallback("isTrue", isTrue);
-            ExternalInterface.call("bridgeSmoke", "ready");
         }
 
         public function isTrue():String {
+            ExternalInterface.call("bridgeSmoke", "ready");
             return "true";
         }
     }
