@@ -306,3 +306,19 @@ Inspected the existing ScriptInterface subscription and HandleFlashCall implemen
 - No synchronous Flash.Call was found inside the current HandleFlashCall switch.
 
 This reduces the immediate reentrancy risk for forwarding ExternalInterface.call from the Rust owner thread into the existing .NET FlashCall event. Still keep the C ABI callback contract explicit and marshal any UI-bound work to Avalonia's dispatcher. Add a regression test that fails if a future FlashCall subscriber synchronously calls back into the same Ruffle session.
+
+
+## Follow-up: share one WGPU device across multiple Skua clients
+
+Ruffle's own exporter and desktop frontend share a WGPU Descriptors/device context across players. The exporter creates the instance, adapter, device, queue, and Descriptors once, then creates a TextureTarget and WgpuRenderBackend for each movie.
+
+For VibeSkua's multi-client use case, do not call WgpuRenderBackend::for_offscreen independently for every player in the final design: that helper creates a new WGPU instance/device per renderer.
+
+Use a process-wide graphics context:
+1. Create one Metal WGPU instance and request one adapter/device/queue.
+2. Store the Descriptors in an Arc owned by the native host.
+3. Create a TextureTarget per Ruffle session at that session's viewport size.
+4. Create each WgpuRenderBackend with the shared Descriptors and its own TextureTarget.
+5. Keep each Player and its renderer session-isolated while sharing the GPU device and queue.
+
+The current compile probe uses for_offscreen because it is the shortest proof of the native offscreen API. The production multi-client implementation should follow the shared-Descriptors pattern used by Ruffle's exporter.
