@@ -7,7 +7,8 @@ public class SoundService : ISoundService
 {
     public void Beep()
     {
-        Console.Beep();
+        if (OperatingSystem.IsWindows())
+            Console.Beep();
     }
 
     public void Beep(int frequency, int duration)
@@ -17,6 +18,7 @@ public class SoundService : ISoundService
         else if (frequency > 32767)
             frequency = 32767;
 
-        Console.Beep(frequency, duration);
+        if (OperatingSystem.IsWindows())
+            Console.Beep(frequency, duration);
     }
 }
