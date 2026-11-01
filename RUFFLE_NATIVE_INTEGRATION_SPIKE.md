@@ -377,3 +377,10 @@ Two important compatibility details are now handled in the native bridge:
 2. ActionScript-to-.NET calls are queued in Rust and drained by C# after the native tick/call returns. Rust never invokes a managed callback while the Player or RuffleSession is mutably borrowed. This prevents reentrant P/Invoke and mutable-aliasing hazards when existing FlashCall handlers call back into IFlashUtil.
 
 The C# host drains callbacks after each player tick and after each managed-to-ActionScript call. Nested callbacks are processed in a subsequent drain pass.
+
+
+## Native runtime parity: audio and compatibility features
+
+The native crate now enables the same important Ruffle core features used by the desktop frontend: audio, MP3, AAC, Nellymoser, and default compatibility rules. It also enables the frontend-utils CPAL backend and creates a CoreAudio output stream on macOS. If no audio device is available, the player logs the error and continues without audio.
+
+The native build therefore requires the stable Rust toolchain and Java (Ruffle's playerglobal build step), in addition to the macOS SDK/Metal toolchain. CI installs Java 21 and the appropriate Rust target for each architecture.
