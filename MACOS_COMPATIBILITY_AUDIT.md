@@ -347,3 +347,20 @@ The audit findings have been converted into initial build changes on feature/mac
 - The existing Windows Build.bat entry point remains unchanged.
 
 The new shell script passed bash -n syntax validation in the available environment. The Flex compiler itself is not installed here, and no SWF was produced. The PowerShell script has not been executed because PowerShell is not installed in the available environment. A real macOS build still needs to verify the installed Flex SDK, Java runtime, playerglobal SWC, and target-player 28 compilation.
+
+
+## 17. Shared core portability fixes started
+
+Two additional Windows assumptions were found in otherwise platform-neutral core code:
+
+- Script compilation used a named mutex prefixed with Global\\. The compiler now retains that global namespace on Windows and uses a platform-neutral mutex name on macOS/Linux.
+- Settings migration used a hardcoded Global\\VibeSkua.Migration.Init mutex. It now selects the Windows global name only on Windows and uses a portable name elsewhere.
+
+Other reviewed core paths already use Environment.SpecialFolder.ApplicationData and Path.Combine, which map naturally to macOS application support paths through .NET.
+
+ProcessStartService was also adjusted:
+- Opening URLs no longer specifies the Windows-only "open" shell verb.
+- VS Code is launched with ArgumentList instead of a manually concatenated command line.
+- The fallback text editor uses Notepad on Windows, open -t on macOS, and xdg-open on Linux.
+
+FlashTrustManager now exits immediately on non-Windows platforms because the Flash Player trust-folder mechanism is only relevant to the existing Windows ActiveX player.
