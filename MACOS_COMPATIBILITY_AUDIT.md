@@ -383,3 +383,17 @@ The macOS branch now:
 - Retains the existing Windows forwarding behavior unchanged.
 
 This is an initial compatibility fallback. Native macOS multi-client/army control still needs a platform-neutral message transport and host UI.
+
+
+## 19. Manager launch and process shutdown portability started
+
+The manager previously searched only for VibeSkua.exe / Skua.exe and Windows net10.0-windows build folders. It now has separate Windows and Unix executable discovery paths, including:
+- A sibling VibeSkua.app bundle.
+- A VibeSkua.app beside the manager bundle.
+- /Applications and ~/Applications installations.
+- osx-arm64 and osx-x64 development build outputs.
+- Portable Unix apphost output.
+
+ProcessCloser now retains its HWND/WM_CLOSE implementation on Windows and uses Process.CloseMainWindow on non-Windows platforms before falling back to process termination.
+
+This does not yet replace the Windows tabbed host. macOS manager launch is intended to start standalone client processes until a portable host/session protocol is implemented.
