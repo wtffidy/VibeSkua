@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using Skua.Core.Messaging;
 using Skua.Shared.Avalonia.Utils;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -37,41 +38,42 @@ internal static class Program
             .OnRestarted(_ => AppShortcutHelper.CreateOrUpdateShortcuts(createIfMissing: true))
             .Run();
 
-        const string eventName = @"Global\VibeSkua.Manager.SingleInstance.WakeEvent";
-        bool createdNew;
-        try
+        if (OperatingSystem.IsWindows())
         {
-            _singleInstanceWaitHandle = new EventWaitHandle(false, EventResetMode.AutoReset, eventName, out createdNew);
-        }
-        catch
-        {
-            _singleInstanceWaitHandle = new EventWaitHandle(false, EventResetMode.AutoReset, "VibeSkua.Manager.SingleInstance.WakeEvent", out createdNew);
-        }
-
-        if (!createdNew)
-        {
-            // Another manager is already running! Wake it up and terminate this second instance immediately.
+            const string eventName = @"Global\VibeSkua.Manager.SingleInstance.WakeEvent";
+            bool createdNew;
             try
             {
-                _singleInstanceWaitHandle.Set();
+                _singleInstanceWaitHandle = new EventWaitHandle(false, EventResetMode.AutoReset, eventName, out createdNew);
             }
             catch
             {
+                _singleInstanceWaitHandle = new EventWaitHandle(false, EventResetMode.AutoReset, "VibeSkua.Manager.SingleInstance.WakeEvent", out createdNew);
             }
-            return;
-        }
 
-        // We are the single running instance. Listen for signals from subsequent launch attempts.
-        ThreadPool.RegisterWaitForSingleObject(_singleInstanceWaitHandle, (state, timedOut) =>
-        {
-            if (!timedOut)
+            if (!createdNew)
             {
-                Dispatcher.UIThread.Post(() =>
+                try
                 {
-                    StrongReferenceMessenger.Default.Send(new ShowMainWindowMessage());
-                });
+                    _singleInstanceWaitHandle.Set();
+                }
+                catch
+                {
+                }
+                return;
             }
-        }, null, Timeout.Infinite, false);
+
+            ThreadPool.RegisterWaitForSingleObject(_singleInstanceWaitHandle, (state, timedOut) =>
+            {
+                if (!timedOut)
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        StrongReferenceMessenger.Default.Send(new ShowMainWindowMessage());
+                    });
+                }
+            }, null, Timeout.Infinite, false);
+        }
 
         RunApp(args);
     }
@@ -82,11 +84,34 @@ internal static class Program
     private static void InitializeAssemblyResolvers()
     {
         string assembliesDir = Path.Combine(AppContext.BaseDirectory, "Assemblies");
+        HashSet<string>? assembliesSet = null;
         if (Directory.Exists(assembliesDir))
         {
             try
             {
-                SetDllDirectory(assembliesDir);
+                if (OperatingSystem.IsWindows())
+                    SetDllDirectory(assembliesDir);
+
+                assembliesSet = new HashSet<string>(
+                    Directory.EnumerateFiles(assembliesDir, "*.dll").Select(Path.GetFileName)!,
+                    StringComparer.OrdinalIgnoreCase);
+            }
+            catch
+            {
+            }
+        }
+
+        string runtimeIdentifier = RuntimeInformation.RuntimeIdentifier;
+        string nativeExtension = OperatingSystem.IsWindows() ? ".dll" : OperatingSystem.IsMacOS() ? ".dylib" : ".so";
+        string runtimeNativeDir = Path.Combine(AppContext.BaseDirectory, "Assemblies", "runtimes", runtimeIdentifier, "native");
+        HashSet<string>? runtimeNativeSet = null;
+        if (Directory.Exists(runtimeNativeDir))
+        {
+            try
+            {
+                runtimeNativeSet = new HashSet<string>(
+                    Directory.EnumerateFiles(runtimeNativeDir, $"*{nativeExtension}").Select(Path.GetFileName)!,
+                    StringComparer.OrdinalIgnoreCase);
             }
             catch
             {
@@ -99,31 +124,33 @@ internal static class Program
                 return null;
 
             string fileName = $"{assemblyName.Name}.dll";
-            string path = Path.Combine(AppContext.BaseDirectory, "Assemblies", fileName);
-            if (File.Exists(path))
-                return context.LoadFromAssemblyPath(path);
+            if (assembliesSet != null && assembliesSet.Contains(fileName))
+                return context.LoadFromAssemblyPath(Path.Combine(assembliesDir, fileName));
 
-            path = Path.Combine(AppContext.BaseDirectory, fileName);
-            if (File.Exists(path))
-                return context.LoadFromAssemblyPath(path);
+            string rootPath = Path.Combine(AppContext.BaseDirectory, fileName);
+            if (File.Exists(rootPath))
+                return context.LoadFromAssemblyPath(rootPath);
 
             return null;
         };
 
         AssemblyLoadContext.Default.ResolvingUnmanagedDll += (assembly, unmanagedDllName) =>
         {
-            string fileName = unmanagedDllName.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
-                ? unmanagedDllName
-                : $"{unmanagedDllName}.dll";
+            string libraryName = Path.GetFileNameWithoutExtension(unmanagedDllName);
+            string fileName = OperatingSystem.IsWindows()
+                ? $"{libraryName}.dll"
+                : $"{(libraryName.StartsWith("lib", StringComparison.Ordinal) ? libraryName : $"lib{libraryName}")}{nativeExtension}";
 
-            string path = Path.Combine(AppContext.BaseDirectory, "Assemblies", fileName);
-            if (File.Exists(path))
-                return NativeLibrary.Load(path);
+            string assembliesNativePath = Path.Combine(assembliesDir, fileName);
+            if (File.Exists(assembliesNativePath))
+                return NativeLibrary.Load(assembliesNativePath);
 
-            string arch = Environment.Is64BitProcess ? "win-x64" : "win-x86";
-            string runtimePath = Path.Combine(AppContext.BaseDirectory, "Assemblies", "runtimes", arch, "native", fileName);
-            if (File.Exists(runtimePath))
-                return NativeLibrary.Load(runtimePath);
+            string rootNativePath = Path.Combine(AppContext.BaseDirectory, fileName);
+            if (File.Exists(rootNativePath))
+                return NativeLibrary.Load(rootNativePath);
+
+            if (runtimeNativeSet != null && runtimeNativeSet.Contains(fileName))
+                return NativeLibrary.Load(Path.Combine(runtimeNativeDir, fileName));
 
             return IntPtr.Zero;
         };
@@ -138,13 +165,12 @@ internal static class Program
                 return existing;
 
             string assemblyName = new AssemblyName(args.Name).Name + ".dll";
-            string path = Path.Combine(AppContext.BaseDirectory, "Assemblies", assemblyName);
-            if (File.Exists(path))
-                return Assembly.LoadFrom(path);
+            if (assembliesSet != null && assembliesSet.Contains(assemblyName))
+                return Assembly.LoadFrom(Path.Combine(assembliesDir, assemblyName));
 
-            path = Path.Combine(AppContext.BaseDirectory, assemblyName);
-            if (File.Exists(path))
-                return Assembly.LoadFrom(path);
+            string rootPath = Path.Combine(AppContext.BaseDirectory, assemblyName);
+            if (File.Exists(rootPath))
+                return Assembly.LoadFrom(rootPath);
 
             return null;
         };
@@ -157,9 +183,8 @@ internal static class Program
         {
             Skua.Core.Models.ClientFileSources.EnsureInitialized();
             if (AppShortcutHelper.IsInstalled())
-            {
                 AppShortcutHelper.CreateOrUpdateShortcuts(createIfMissing: false);
-            }
+
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
         catch (Exception ex)
@@ -170,13 +195,14 @@ internal static class Program
 
     public static AppBuilder BuildAvaloniaApp()
     {
-        AppBuilder builder = AppBuilder.Configure<App>()
-            .UsePlatformDetect()
-            .With(new Win32PlatformOptions
-            {
-                RenderingMode = new[] { Win32RenderingMode.AngleEgl, Win32RenderingMode.Software },
-                CompositionMode = new[] { Win32CompositionMode.WinUIComposition, Win32CompositionMode.RedirectionSurface }
-            });
+        AppBuilder builder = AppBuilder.Configure<App>().UsePlatformDetect();
+#if IS_WINDOWS
+        builder = builder.With(new Win32PlatformOptions
+        {
+            RenderingMode = new[] { Win32RenderingMode.AngleEgl, Win32RenderingMode.Software },
+            CompositionMode = new[] { Win32CompositionMode.WinUIComposition, Win32CompositionMode.RedirectionSurface }
+        });
+#endif
 #if DEBUG
         builder = builder.WithDeveloperTools();
 #endif
