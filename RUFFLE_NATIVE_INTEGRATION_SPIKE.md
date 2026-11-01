@@ -334,3 +334,27 @@ The native crate now includes initial implementations of Ruffle's required host 
 - The native crate now directly depends on Tokio, tracing, and url for these host abstractions.
 
 This is still scaffolding: the navigator is not yet constructed or attached to a Player, the allow-list is not yet populated from the game server list, and website navigation is only logged. The next implementation step is a session owner that creates the Tokio current-thread runtime + LocalSet, constructs ExternalNavigatorBackend with the app's base URL/cookies/content descriptor, and injects it through PlayerBuilder::with_navigator.
+
+
+## Implementation started: native session C ABI
+
+The Rust bridge now contains an initial opaque RuffleSession API:
+
+- Create/destroy a session on its creating thread.
+- Load a local SWF from bytes plus a file path.
+- Create a native offscreen Metal/WGPU renderer.
+- Build the Ruffle Player with ExternalNavigatorBackend and the Skua ExternalInterface provider.
+- Tick the player, render, and copy RGBA frames into a caller-owned buffer.
+- Resize the viewport.
+- Invoke ActionScript callbacks registered through ExternalInterface.addCallback.
+- Allow explicit host:port socket destinations.
+- Forward ActionScript ExternalInterface.call invocations to a C ABI callback using JSON arguments.
+
+The session stores a Tokio current-thread runtime and LocalSet and enforces thread affinity. This is deliberate: Ruffle's Player/ExternalInterface uses Rc-owned state, and navigator futures are not Send. The first .NET host must marshal all session calls to the Avalonia UI thread, matching the existing ActiveX host's UI-thread affinity. A dedicated worker-thread design can be considered later if frame/render measurements justify the added cross-thread bridge.
+
+**Important remaining work:**
+- The C# P/Invoke wrapper and RuffleFlashUtil implementation do not exist yet.
+- The C# JSON converter must map nested arrays/objects and the tagged undefined value back to the same object shapes expected by existing Skua code.
+- The host must populate the socket allow-list from AQW's server list or an explicit user permission flow. Unknown sockets are denied by default.
+- External website navigation currently logs the requested URL; it does not yet open the browser.
+- No actual SWF has been loaded through this C ABI yet. CI only checks that the Rust code compiles for both macOS architectures.
