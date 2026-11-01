@@ -335,3 +335,15 @@ Ruffle's current AVM2 implementation stubs flash.system.Security.loadPolicyFile.
 This is a confirmed API behavior difference, but not yet a proven AQW login blocker: Ruffle may intentionally replace Flash's policy-file enforcement with host-level socket permissions. The compatibility test must determine whether AQW's server requires the XML socket policy request as part of its connection flow. If not, use an explicit Skua host allow-list. If yes, implement xmlsocket policy retrieval in the native navigator or contribute support upstream.
 
 Adobe's documented behavior for xmlsocket policy loading is to send a null-terminated policy-file request and await a null-terminated policy response before proceeding with the main socket connection. This should be included in the ActiveX-vs-Ruffle network trace comparison.
+
+
+## 16. AS3 build portability work started on the macOS branch
+
+The audit findings have been converted into initial build changes on feature/macos-support:
+
+- Skua.AS3.csproj now targets generic net10.0 instead of net10.0-windows.
+- compile-as3.ps1 now uses platform-neutral path separators, supports the Unix mxmlc launcher, and searches macOS/Linux Flex SDK locations as well as the existing Windows locations.
+- Skua.AS3/build-as3.sh provides a native Unix launcher that invokes the Flex mxmlc shell executable directly.
+- The existing Windows Build.bat entry point remains unchanged.
+
+The new shell script passed bash -n syntax validation in the available environment. The Flex compiler itself is not installed here, and no SWF was produced. The PowerShell script has not been executed because PowerShell is not installed in the available environment. A real macOS build still needs to verify the installed Flex SDK, Java runtime, playerglobal SWC, and target-player 28 compilation.
