@@ -23,6 +23,10 @@ using System.Threading.Tasks;
 using System.Text.Json;
 using Skua.Core.AppStartup;
 
+#if !IS_WINDOWS
+using Avalonia.Input;
+#endif
+
 #if IS_WINDOWS
 using Avalonia.Input;
 using AxShockwaveFlashObjects;
@@ -287,6 +291,18 @@ public partial class MainWindow : Window
         Closed += MainWindow_Closed;
 #if !IS_WINDOWS
         FlashHost.SizeChanged += RuffleFlashHost_SizeChanged;
+        FlashHost.Focusable = true;
+        FlashHost.PointerEntered += RuffleFlashHost_PointerEntered;
+        FlashHost.PointerMoved += RuffleFlashHost_PointerMoved;
+        FlashHost.PointerPressed += RuffleFlashHost_PointerPressed;
+        FlashHost.PointerReleased += RuffleFlashHost_PointerReleased;
+        FlashHost.PointerWheelChanged += RuffleFlashHost_PointerWheelChanged;
+        FlashHost.PointerExited += RuffleFlashHost_PointerExited;
+        FlashHost.GotFocus += RuffleFlashHost_GotFocus;
+        FlashHost.LostFocus += RuffleFlashHost_LostFocus;
+        FlashHost.KeyDown += RuffleFlashHost_KeyDown;
+        FlashHost.KeyUp += RuffleFlashHost_KeyUp;
+        FlashHost.TextInput += RuffleFlashHost_TextInput;
 #endif
 
         if (_options is System.ComponentModel.INotifyPropertyChanged notifyOptions)
@@ -418,6 +434,113 @@ public partial class MainWindow : Window
     }
 
 #if !IS_WINDOWS
+
+    private void RuffleFlashHost_PointerEntered(object? sender, PointerEventArgs e)
+    {
+        if (_flash is FlashUtil ruffleFlash && ruffleFlash.IsInitialized)
+            ruffleFlash.MouseEnter();
+    }
+
+    private void RuffleFlashHost_PointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_flash is not FlashUtil ruffleFlash || !ruffleFlash.IsInitialized)
+            return;
+
+        global::Avalonia.Point position = e.GetPosition(FlashHost);
+        double scaleFactor = TopLevel.GetTopLevel(FlashHost)?.RenderScaling ?? 1.0;
+        ruffleFlash.MouseMove(position.X * scaleFactor, position.Y * scaleFactor);
+    }
+
+    private void RuffleFlashHost_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (_flash is not FlashUtil ruffleFlash || !ruffleFlash.IsInitialized)
+            return;
+
+        FlashHost.Focus();
+        e.Pointer.Capture(FlashHost);
+        global::Avalonia.Point position = e.GetPosition(FlashHost);
+        double scaleFactor = TopLevel.GetTopLevel(FlashHost)?.RenderScaling ?? 1.0;
+        PointerPointProperties properties = e.GetCurrentPoint(FlashHost).Properties;
+        if (properties.IsLeftButtonPressed)
+            ruffleFlash.MouseDown(position.X * scaleFactor, position.Y * scaleFactor, 0);
+        else if (properties.IsRightButtonPressed)
+            ruffleFlash.MouseDown(position.X * scaleFactor, position.Y * scaleFactor, 1);
+        else if (properties.IsMiddleButtonPressed)
+            ruffleFlash.MouseDown(position.X * scaleFactor, position.Y * scaleFactor, 2);
+        e.Handled = true;
+    }
+
+    private void RuffleFlashHost_PointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_flash is not FlashUtil ruffleFlash || !ruffleFlash.IsInitialized)
+            return;
+
+        global::Avalonia.Point position = e.GetPosition(FlashHost);
+        double scaleFactor = TopLevel.GetTopLevel(FlashHost)?.RenderScaling ?? 1.0;
+        int button = e.InitialPressMouseButton switch
+        {
+            global::Avalonia.Input.MouseButton.Left => 0,
+            global::Avalonia.Input.MouseButton.Right => 1,
+            global::Avalonia.Input.MouseButton.Middle => 2,
+            _ => -1
+        };
+        if (button >= 0)
+            ruffleFlash.MouseUp(position.X * scaleFactor, position.Y * scaleFactor, button);
+        e.Pointer.Capture(null);
+        e.Handled = true;
+    }
+
+    private void RuffleFlashHost_PointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        if (_flash is FlashUtil ruffleFlash && ruffleFlash.IsInitialized)
+        {
+            ruffleFlash.MouseWheel(e.Delta.Y);
+            e.Handled = true;
+        }
+    }
+
+    private void RuffleFlashHost_PointerExited(object? sender, PointerEventArgs e)
+    {
+        if (_flash is FlashUtil ruffleFlash && ruffleFlash.IsInitialized)
+            ruffleFlash.MouseLeave();
+    }
+
+    private void RuffleFlashHost_GotFocus(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (_flash is FlashUtil ruffleFlash && ruffleFlash.IsInitialized)
+            ruffleFlash.SetFocus(true);
+    }
+
+    private void RuffleFlashHost_LostFocus(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (_flash is FlashUtil ruffleFlash && ruffleFlash.IsInitialized)
+            ruffleFlash.SetFocus(false);
+    }
+
+    private void RuffleFlashHost_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (_flash is not FlashUtil ruffleFlash || !ruffleFlash.IsInitialized)
+            return;
+        ruffleFlash.KeyInput(e.PhysicalKey.ToString(), e.Key.ToString(), e.KeySymbol, e.KeyModifiers.ToString(), true);
+        e.Handled = true;
+    }
+
+    private void RuffleFlashHost_KeyUp(object? sender, KeyEventArgs e)
+    {
+        if (_flash is not FlashUtil ruffleFlash || !ruffleFlash.IsInitialized)
+            return;
+        ruffleFlash.KeyInput(e.PhysicalKey.ToString(), e.Key.ToString(), e.KeySymbol, e.KeyModifiers.ToString(), false);
+        e.Handled = true;
+    }
+
+    private void RuffleFlashHost_TextInput(object? sender, TextInputEventArgs e)
+    {
+        if (_flash is not FlashUtil ruffleFlash || !ruffleFlash.IsInitialized || string.IsNullOrEmpty(e.Text))
+            return;
+        ruffleFlash.TextInput(e.Text);
+        e.Handled = true;
+    }
+
     private void RuffleFlashHost_SizeChanged(object? sender, SizeChangedEventArgs e)
     {
         if (_flash is not FlashUtil ruffleFlash || !ruffleFlash.IsInitialized)

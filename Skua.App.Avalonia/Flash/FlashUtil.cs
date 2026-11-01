@@ -371,6 +371,48 @@ public class FlashUtil : IFlashUtil
     [return: MarshalAs(UnmanagedType.I1)]
     private static extern bool SessionGetSize(IntPtr session, out uint width, out uint height);
 
+
+    [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_mouse_move", CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool SessionMouseMove(IntPtr session, double x, double y);
+
+    [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_mouse_enter", CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool SessionMouseEnter(IntPtr session);
+
+    [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_mouse_down", CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool SessionMouseDown(IntPtr session, double x, double y, int button);
+
+    [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_mouse_up", CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool SessionMouseUp(IntPtr session, double x, double y, int button);
+
+    [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_mouse_wheel", CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool SessionMouseWheel(IntPtr session, double deltaY);
+
+    [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_mouse_leave", CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool SessionMouseLeave(IntPtr session);
+
+    [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_key", CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool SessionKey(IntPtr session,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string physicalKey,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string key,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string keySymbol,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string modifiers,
+        [MarshalAs(UnmanagedType.I1)] bool isDown);
+
+    [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_text_input", CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool SessionTextInput(IntPtr session, uint codepoint);
+
+    [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_focus", CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool SessionFocus(IntPtr session, [MarshalAs(UnmanagedType.I1)] bool focused);
+
     [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_destroy", CallingConvention = CallingConvention.Cdecl)]
     private static extern void SessionDestroy(IntPtr session);
 
@@ -380,6 +422,7 @@ public class FlashUtil : IFlashUtil
     private IntPtr _callBuffer;
     private IntPtr _renderBuffer;
     private int _renderBufferSize;
+    private byte[] _managedFrameBuffer = Array.Empty<byte>();
     private uint _width = 960;
     private uint _height = 540;
 
@@ -467,7 +510,8 @@ public class FlashUtil : IFlashUtil
                 return null;
 
             int frameLength = checked((int)(width * height * 4));
-            byte[] frame = new byte[frameLength];
+            if (_managedFrameBuffer.Length != frameLength)
+                _managedFrameBuffer = new byte[frameLength];
             EnsureRenderBufferCapacity(frameLength);
             nuint written = SessionRender(_session, _renderBuffer, (nuint)_renderBufferSize);
             if (written == nuint.MaxValue || written == 0)
@@ -475,8 +519,8 @@ public class FlashUtil : IFlashUtil
             if (written != (nuint)frameLength)
                 throw new InvalidOperationException("Ruffle returned an invalid frame buffer size.");
 
-            Marshal.Copy(_renderBuffer, frame, 0, frameLength);
-            return frame;
+            Marshal.Copy(_renderBuffer, _managedFrameBuffer, 0, frameLength);
+            return _managedFrameBuffer;
         });
     }
 
@@ -490,6 +534,68 @@ public class FlashUtil : IFlashUtil
 
         _renderBuffer = Marshal.AllocHGlobal(required);
         _renderBufferSize = required;
+    }
+
+
+    public void MouseMove(double x, double y)
+    {
+        if (_session != IntPtr.Zero)
+            InvokeOnUiThread(() => SessionMouseMove(_session, x, y));
+    }
+
+    public void MouseEnter()
+    {
+        if (_session != IntPtr.Zero)
+            InvokeOnUiThread(() => SessionMouseEnter(_session));
+    }
+
+    public void MouseDown(double x, double y, int button)
+    {
+        if (_session != IntPtr.Zero)
+            InvokeOnUiThread(() => SessionMouseDown(_session, x, y, button));
+    }
+
+    public void MouseUp(double x, double y, int button)
+    {
+        if (_session != IntPtr.Zero)
+            InvokeOnUiThread(() => SessionMouseUp(_session, x, y, button));
+    }
+
+    public void MouseWheel(double deltaY)
+    {
+        if (_session != IntPtr.Zero)
+            InvokeOnUiThread(() => SessionMouseWheel(_session, deltaY));
+    }
+
+    public void MouseLeave()
+    {
+        if (_session != IntPtr.Zero)
+            InvokeOnUiThread(() => SessionMouseLeave(_session));
+    }
+
+    public void KeyInput(string physicalKey, string key, string? keySymbol, string modifiers, bool isDown)
+    {
+        if (_session != IntPtr.Zero)
+            InvokeOnUiThread(() => SessionKey(_session, physicalKey, key, keySymbol ?? string.Empty, modifiers, isDown));
+    }
+
+    public void TextInput(string? text)
+    {
+        if (_session == IntPtr.Zero || string.IsNullOrEmpty(text))
+            return;
+
+        InvokeOnUiThread(() =>
+        {
+            foreach (Rune rune in text.EnumerateRunes())
+                SessionTextInput(_session, (uint)rune.Value);
+            return true;
+        });
+    }
+
+    public void SetFocus(bool focused)
+    {
+        if (_session != IntPtr.Zero)
+            InvokeOnUiThread(() => SessionFocus(_session, focused));
     }
 
     public void Resize(uint width, uint height, double scaleFactor)

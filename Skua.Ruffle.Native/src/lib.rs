@@ -17,6 +17,10 @@ use url::Url;
 
 use ruffle_core::backend::navigator::{OwnedFuture, SocketMode};
 use ruffle_core::context::UpdateContext;
+use ruffle_core::events::{
+    KeyDescriptor, KeyLocation, LogicalKey, MouseButton, MouseWheelDelta, NamedKey, PhysicalKey,
+    PlayerEvent, TextControlCode,
+};
 use ruffle_core::external::{ExternalInterfaceProvider, Value as ExternalValue};
 use ruffle_core::loader::Error;
 use ruffle_frontend_utils::backends::audio::CpalAudioBackend;
@@ -343,6 +347,237 @@ impl RuffleSession {
     }
 }
 
+
+fn physical_key_from_avalonia(key: &str) -> PhysicalKey {
+    match key {
+        "A" => PhysicalKey::KeyA,
+        "B" => PhysicalKey::KeyB,
+        "C" => PhysicalKey::KeyC,
+        "D" => PhysicalKey::KeyD,
+        "E" => PhysicalKey::KeyE,
+        "F" => PhysicalKey::KeyF,
+        "G" => PhysicalKey::KeyG,
+        "H" => PhysicalKey::KeyH,
+        "I" => PhysicalKey::KeyI,
+        "J" => PhysicalKey::KeyJ,
+        "K" => PhysicalKey::KeyK,
+        "L" => PhysicalKey::KeyL,
+        "M" => PhysicalKey::KeyM,
+        "N" => PhysicalKey::KeyN,
+        "O" => PhysicalKey::KeyO,
+        "P" => PhysicalKey::KeyP,
+        "Q" => PhysicalKey::KeyQ,
+        "R" => PhysicalKey::KeyR,
+        "S" => PhysicalKey::KeyS,
+        "T" => PhysicalKey::KeyT,
+        "U" => PhysicalKey::KeyU,
+        "V" => PhysicalKey::KeyV,
+        "W" => PhysicalKey::KeyW,
+        "X" => PhysicalKey::KeyX,
+        "Y" => PhysicalKey::KeyY,
+        "Z" => PhysicalKey::KeyZ,
+        "Digit0" => PhysicalKey::Digit0,
+        "Digit1" => PhysicalKey::Digit1,
+        "Digit2" => PhysicalKey::Digit2,
+        "Digit3" => PhysicalKey::Digit3,
+        "Digit4" => PhysicalKey::Digit4,
+        "Digit5" => PhysicalKey::Digit5,
+        "Digit6" => PhysicalKey::Digit6,
+        "Digit7" => PhysicalKey::Digit7,
+        "Digit8" => PhysicalKey::Digit8,
+        "Digit9" => PhysicalKey::Digit9,
+        "Backquote" => PhysicalKey::Backquote,
+        "Backslash" => PhysicalKey::Backslash,
+        "BracketLeft" => PhysicalKey::BracketLeft,
+        "BracketRight" => PhysicalKey::BracketRight,
+        "Comma" => PhysicalKey::Comma,
+        "Equal" => PhysicalKey::Equal,
+        "IntlBackslash" => PhysicalKey::IntlBackslash,
+        "IntlRo" => PhysicalKey::IntlRo,
+        "IntlYen" => PhysicalKey::IntlYen,
+        "Minus" => PhysicalKey::Minus,
+        "Period" => PhysicalKey::Period,
+        "Quote" => PhysicalKey::Quote,
+        "Semicolon" => PhysicalKey::Semicolon,
+        "Slash" => PhysicalKey::Slash,
+        "AltLeft" => PhysicalKey::AltLeft,
+        "AltRight" => PhysicalKey::AltRight,
+        "Backspace" => PhysicalKey::Backspace,
+        "CapsLock" => PhysicalKey::CapsLock,
+        "ContextMenu" => PhysicalKey::ContextMenu,
+        "ControlLeft" => PhysicalKey::ControlLeft,
+        "ControlRight" => PhysicalKey::ControlRight,
+        "Enter" => PhysicalKey::Enter,
+        "MetaLeft" => PhysicalKey::SuperLeft,
+        "MetaRight" => PhysicalKey::SuperRight,
+        "ShiftLeft" => PhysicalKey::ShiftLeft,
+        "ShiftRight" => PhysicalKey::ShiftRight,
+        "Space" => PhysicalKey::Space,
+        "Tab" => PhysicalKey::Tab,
+        "Delete" => PhysicalKey::Delete,
+        "End" => PhysicalKey::End,
+        "Home" => PhysicalKey::Home,
+        "Insert" => PhysicalKey::Insert,
+        "PageDown" => PhysicalKey::PageDown,
+        "PageUp" => PhysicalKey::PageUp,
+        "ArrowDown" => PhysicalKey::ArrowDown,
+        "ArrowLeft" => PhysicalKey::ArrowLeft,
+        "ArrowRight" => PhysicalKey::ArrowRight,
+        "ArrowUp" => PhysicalKey::ArrowUp,
+        "NumLock" => PhysicalKey::NumLock,
+        "NumPadAdd" => PhysicalKey::NumpadAdd,
+        "NumPadComma" => PhysicalKey::NumpadComma,
+        "NumPadDecimal" => PhysicalKey::NumpadDecimal,
+        "NumPadDivide" => PhysicalKey::NumpadDivide,
+        "NumPadEnter" => PhysicalKey::NumpadEnter,
+        "NumPadMultiply" => PhysicalKey::NumpadMultiply,
+        "NumPadSubtract" => PhysicalKey::NumpadSubtract,
+        "NumPad0" => PhysicalKey::Numpad0,
+        "NumPad1" => PhysicalKey::Numpad1,
+        "NumPad2" => PhysicalKey::Numpad2,
+        "NumPad3" => PhysicalKey::Numpad3,
+        "NumPad4" => PhysicalKey::Numpad4,
+        "NumPad5" => PhysicalKey::Numpad5,
+        "NumPad6" => PhysicalKey::Numpad6,
+        "NumPad7" => PhysicalKey::Numpad7,
+        "NumPad8" => PhysicalKey::Numpad8,
+        "NumPad9" => PhysicalKey::Numpad9,
+        "F1" => PhysicalKey::F1,
+        "F2" => PhysicalKey::F2,
+        "F3" => PhysicalKey::F3,
+        "F4" => PhysicalKey::F4,
+        "F5" => PhysicalKey::F5,
+        "F6" => PhysicalKey::F6,
+        "F7" => PhysicalKey::F7,
+        "F8" => PhysicalKey::F8,
+        "F9" => PhysicalKey::F9,
+        "F10" => PhysicalKey::F10,
+        "F11" => PhysicalKey::F11,
+        "F12" => PhysicalKey::F12,
+        "F13" => PhysicalKey::F13,
+        "F14" => PhysicalKey::F14,
+        "F15" => PhysicalKey::F15,
+        "F16" => PhysicalKey::F16,
+        "F17" => PhysicalKey::F17,
+        "F18" => PhysicalKey::F18,
+        "F19" => PhysicalKey::F19,
+        "F20" => PhysicalKey::F20,
+        "F21" => PhysicalKey::F21,
+        "F22" => PhysicalKey::F22,
+        "F23" => PhysicalKey::F23,
+        "F24" => PhysicalKey::F24,
+        "F25" => PhysicalKey::F25,
+        "F26" => PhysicalKey::F26,
+        "F27" => PhysicalKey::F27,
+        "F28" => PhysicalKey::F28,
+        "F29" => PhysicalKey::F29,
+        "F30" => PhysicalKey::F30,
+        "F31" => PhysicalKey::F31,
+        "F32" => PhysicalKey::F32,
+        "F33" => PhysicalKey::F33,
+        "F34" => PhysicalKey::F34,
+        "F35" => PhysicalKey::F35,
+        _ => PhysicalKey::Unknown,
+    }
+}
+
+fn logical_key_from_avalonia(key: &str, key_symbol: &str) -> LogicalKey {
+    let named_key = match key {
+        "Back" | "Backspace" => Some(NamedKey::Backspace),
+        "Tab" => Some(NamedKey::Tab),
+        "Return" | "Enter" => Some(NamedKey::Enter),
+        "Escape" => Some(NamedKey::Escape),
+        "Left" | "ArrowLeft" => Some(NamedKey::ArrowLeft),
+        "Right" | "ArrowRight" => Some(NamedKey::ArrowRight),
+        "Up" | "ArrowUp" => Some(NamedKey::ArrowUp),
+        "Down" | "ArrowDown" => Some(NamedKey::ArrowDown),
+        "Home" => Some(NamedKey::Home),
+        "End" => Some(NamedKey::End),
+        "PageUp" => Some(NamedKey::PageUp),
+        "PageDown" => Some(NamedKey::PageDown),
+        "Delete" => Some(NamedKey::Delete),
+        "Insert" => Some(NamedKey::Insert),
+        "Space" => Some(NamedKey::Space),
+        "LeftShift" | "RightShift" => Some(NamedKey::Shift),
+        "LeftCtrl" | "RightCtrl" => Some(NamedKey::Control),
+        "LeftAlt" | "RightAlt" => Some(NamedKey::Alt),
+        "LWin" | "RWin" => Some(NamedKey::Super),
+        "CapsLock" => Some(NamedKey::CapsLock),
+        "NumLock" => Some(NamedKey::NumLock),
+        "Pause" => Some(NamedKey::Pause),
+        "Print" | "PrintScreen" => Some(NamedKey::PrintScreen),
+        _ => None,
+    };
+    if let Some(named_key) = named_key {
+        return LogicalKey::Named(named_key);
+    }
+
+    let mut chars = key_symbol.chars();
+    if let Some(character) = chars.next() {
+        if chars.next().is_none() {
+            return LogicalKey::Character(character);
+        }
+    }
+    LogicalKey::Unknown
+}
+
+fn text_control_for_key(key: &str, modifiers: &str) -> Option<TextControlCode> {
+    let command = modifiers.contains("Control") || modifiers.contains("Meta");
+    let shift = modifiers.contains("Shift");
+    match key {
+        "Return" | "Enter" => Some(TextControlCode::Enter),
+        "A" | "a" if command => Some(TextControlCode::SelectAll),
+        "C" | "c" if command => Some(TextControlCode::Copy),
+        "V" | "v" if command => Some(TextControlCode::Paste),
+        "X" | "x" if command => Some(TextControlCode::Cut),
+        "Back" | "Backspace" if command => Some(TextControlCode::BackspaceWord),
+        "Back" | "Backspace" => Some(TextControlCode::Backspace),
+        "Delete" if command => Some(TextControlCode::DeleteWord),
+        "Delete" => Some(TextControlCode::Delete),
+        "Left" | "ArrowLeft" if command && shift => Some(TextControlCode::SelectLeftWord),
+        "Left" | "ArrowLeft" if command => Some(TextControlCode::MoveLeftWord),
+        "Left" | "ArrowLeft" if shift => Some(TextControlCode::SelectLeft),
+        "Left" | "ArrowLeft" => Some(TextControlCode::MoveLeft),
+        "Right" | "ArrowRight" if command && shift => Some(TextControlCode::SelectRightWord),
+        "Right" | "ArrowRight" if command => Some(TextControlCode::MoveRightWord),
+        "Right" | "ArrowRight" if shift => Some(TextControlCode::SelectRight),
+        "Right" | "ArrowRight" => Some(TextControlCode::MoveRight),
+        "Home" if command && shift => Some(TextControlCode::SelectLeftDocument),
+        "Home" if command => Some(TextControlCode::MoveLeftDocument),
+        "Home" if shift => Some(TextControlCode::SelectLeftLine),
+        "Home" => Some(TextControlCode::MoveLeftLine),
+        "End" if command && shift => Some(TextControlCode::SelectRightDocument),
+        "End" if command => Some(TextControlCode::MoveRightDocument),
+        "End" if shift => Some(TextControlCode::SelectRightLine),
+        "End" => Some(TextControlCode::MoveRightLine),
+        _ => None,
+    }
+}
+
+fn dispatch_player_event(session: *mut c_void, event: PlayerEvent) -> bool {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let Ok(session) = (unsafe { get_session(session) }) else {
+            return false;
+        };
+        if session.check_thread().is_err() {
+            return false;
+        }
+        let Ok(mut player) = session.player.lock() else {
+            return false;
+        };
+        player.handle_event(event);
+        true
+    }))
+    .unwrap_or(false)
+}
+
+unsafe fn read_utf8_pointer<'a>(value: *const c_char) -> Option<&'a str> {
+    if value.is_null() {
+        return None;
+    }
+    unsafe { CStr::from_ptr(value) }.to_str().ok()
+}
+
 fn external_value_to_json(value: &ExternalValue) -> serde_json::Value {
     match value {
         ExternalValue::Undefined => serde_json::json!({ "$ruffle": "undefined" }),
@@ -527,6 +762,106 @@ pub unsafe extern "C" fn skua_ruffle_session_call(
         *output.add(bytes.len()) = 0;
     }
     bytes.len() + 1
+}
+
+
+/// Updates the Ruffle pointer position. Coordinates use physical pixels.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn skua_ruffle_session_mouse_move(session: *mut c_void, x: f64, y: f64) -> bool {
+    if !x.is_finite() || !y.is_finite() { return false; }
+    dispatch_player_event(session, PlayerEvent::MouseMove { x, y })
+}
+
+/// Tells Ruffle that the pointer entered the movie viewport.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn skua_ruffle_session_mouse_enter(session: *mut c_void) -> bool {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let Ok(session) = (unsafe { get_session(session) }) else { return false; };
+        if session.check_thread().is_err() { return false; }
+        let Ok(mut player) = session.player.lock() else { return false; };
+        player.set_mouse_in_stage(true);
+        true
+    })).unwrap_or(false)
+}
+
+/// Sends a mouse button press to the Ruffle player.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn skua_ruffle_session_mouse_down(session: *mut c_void, x: f64, y: f64, button: i32) -> bool {
+    if !x.is_finite() || !y.is_finite() { return false; }
+    let button = match button { 0 => MouseButton::Left, 1 => MouseButton::Right, 2 => MouseButton::Middle, _ => MouseButton::Unknown };
+    dispatch_player_event(session, PlayerEvent::MouseDown { x, y, button, index: None })
+}
+
+/// Sends a mouse button release to the Ruffle player.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn skua_ruffle_session_mouse_up(session: *mut c_void, x: f64, y: f64, button: i32) -> bool {
+    if !x.is_finite() || !y.is_finite() { return false; }
+    let button = match button { 0 => MouseButton::Left, 1 => MouseButton::Right, 2 => MouseButton::Middle, _ => MouseButton::Unknown };
+    dispatch_player_event(session, PlayerEvent::MouseUp { x, y, button })
+}
+
+/// Sends vertical scrolling to Ruffle, with the wheel delta expressed in lines.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn skua_ruffle_session_mouse_wheel(session: *mut c_void, delta_y: f64) -> bool {
+    if !delta_y.is_finite() { return false; }
+    dispatch_player_event(session, PlayerEvent::MouseWheel { delta: MouseWheelDelta::Lines(delta_y) })
+}
+
+/// Tells Ruffle that the pointer left the movie viewport.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn skua_ruffle_session_mouse_leave(session: *mut c_void) -> bool {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let Ok(session) = (unsafe { get_session(session) }) else { return false; };
+        if session.check_thread().is_err() { return false; }
+        let Ok(mut player) = session.player.lock() else { return false; };
+        player.set_mouse_in_stage(false);
+        player.handle_event(PlayerEvent::MouseLeave);
+        true
+    })).unwrap_or(false)
+}
+
+/// Sends keyboard state using Avalonia physical key codes and key symbols.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn skua_ruffle_session_key(
+    session: *mut c_void,
+    physical_key: *const c_char,
+    key: *const c_char,
+    key_symbol: *const c_char,
+    modifiers: *const c_char,
+    is_down: bool,
+) -> bool {
+    let Some(physical_name) = (unsafe { read_utf8_pointer(physical_key) }) else { return false; };
+    let Some(key_name) = (unsafe { read_utf8_pointer(key) }) else { return false; };
+    let key_symbol = unsafe { read_utf8_pointer(key_symbol) }.unwrap_or_default();
+    let modifiers = unsafe { read_utf8_pointer(modifiers) }.unwrap_or_default();
+    let descriptor = KeyDescriptor {
+        physical_key: physical_key_from_avalonia(physical_name),
+        logical_key: logical_key_from_avalonia(key_name, key_symbol),
+        key_location: KeyLocation::Standard,
+    };
+
+    if !dispatch_player_event(session, if is_down { PlayerEvent::KeyDown { key: descriptor } } else { PlayerEvent::KeyUp { key: descriptor } }) {
+        return false;
+    }
+    if is_down {
+        if let Some(code) = text_control_for_key(key_name, modifiers) {
+            return dispatch_player_event(session, PlayerEvent::TextControl { code });
+        }
+    }
+    true
+}
+
+/// Sends one committed Unicode code point to Ruffle.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn skua_ruffle_session_text_input(session: *mut c_void, codepoint: u32) -> bool {
+    let Some(codepoint) = char::from_u32(codepoint) else { return false; };
+    dispatch_player_event(session, PlayerEvent::TextInput { codepoint })
+}
+
+/// Notifies Ruffle that the movie surface gained or lost keyboard focus.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn skua_ruffle_session_focus(session: *mut c_void, focused: bool) -> bool {
+    dispatch_player_event(session, if focused { PlayerEvent::FocusGained } else { PlayerEvent::FocusLost })
 }
 
 /// Adds an explicit host:port socket permission to this session.
