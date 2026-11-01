@@ -3,6 +3,18 @@
 //! Keep Ruffle's Rust types behind this crate. Only expose a stable C ABI to .NET.
 
 use std::any::Any;
+use std::collections::HashSet;
+use std::fs::File;
+use std::io;
+use std::path::Path;
+use std::sync::{Arc, RwLock};
+use url::Url;
+
+use ruffle_core::backend::navigator::OwnedFuture;
+use ruffle_core::loader::Error;
+use ruffle_frontend_utils::backends::navigator::{
+    ExternalNavigatorBackend, FutureSpawner, NavigatorInterface,
+};
 
 /// Returns the native bridge ABI version.
 #[unsafe(no_mangle)]
@@ -11,13 +23,57 @@ pub extern "C" fn skua_ruffle_native_abi_version() -> u32 {
 }
 
 /// Compile-time probe for the pinned upstream Ruffle core API.
-///
-/// This intentionally does not create a player or initialize graphics/audio.
-/// It verifies that the selected Ruffle revision can be consumed by this crate.
 #[unsafe(no_mangle)]
 pub extern "C" fn skua_ruffle_core_api_probe() -> u32 {
     let _builder = ruffle_core::PlayerBuilder::new();
     1
+}
+
+/// Schedules Ruffle's non-Send navigator futures on the player thread's Tokio LocalSet.
+///
+/// Every call to spawn must occur while the session's LocalSet is entered.
+struct SkuaFutureSpawner;
+
+impl FutureSpawner<Error> for SkuaFutureSpawner {
+    fn spawn(&self, future: OwnedFuture<(), Error>) {
+        tokio::task::spawn_local(async move {
+            if let Err(error) = future.await {
+                tracing::error!("Ruffle navigator task failed: {error}");
+            }
+        });
+    }
+}
+
+/// Host callbacks and socket permissions shared with the Ruffle navigator.
+#[derive(Clone, Default)]
+struct SkuaNavigatorInterface {
+    allowed_sockets: Arc<RwLock<HashSet<String>>>,
+}
+
+impl SkuaNavigatorInterface {
+    fn allow_socket(&self, host: &str, port: u16) {
+        if let Ok(mut allowed_sockets) = self.allowed_sockets.write() {
+            allowed_sockets.insert(format!("{host}:{port}"));
+        }
+    }
+}
+
+impl NavigatorInterface for SkuaNavigatorInterface {
+    fn navigate_to_website(&self, url: Url) {
+        tracing::info!("SWF requested external navigation: {url}");
+    }
+
+    async fn open_file(&self, path: &Path) -> io::Result<File> {
+        File::open(path)
+    }
+
+    async fn confirm_socket(&self, host: &str, port: u16) -> bool {
+        let address = format!("{host}:{port}");
+        self.allowed_sockets
+            .read()
+            .map(|allowed_sockets| allowed_sockets.contains(&address))
+            .unwrap_or(false)
+    }
 }
 
 /// Compile-time probe for Ruffle's native offscreen WGPU renderer and player API.
@@ -63,15 +119,12 @@ fn _ruffle_player_api_probe(swf_bytes: &[u8]) {
 }
 
 /// Compile-time probe for the built-in native HTTP and raw TCP navigator.
-///
-/// Skua can provide its own FutureSpawner and NavigatorInterface while reusing
-/// Ruffle's existing URL, HTTP, and socket implementation.
 #[allow(dead_code)]
 fn _ruffle_navigator_api_probe<F, I>(
-    _navigator: &ruffle_frontend_utils::backends::navigator::ExternalNavigatorBackend<F, I>,
+    _navigator: &ExternalNavigatorBackend<F, I>,
 )
 where
-    F: ruffle_frontend_utils::backends::navigator::FutureSpawner<ruffle_core::loader::Error>,
-    I: ruffle_frontend_utils::backends::navigator::NavigatorInterface,
+    F: FutureSpawner<Error>,
+    I: NavigatorInterface,
 {
 }
