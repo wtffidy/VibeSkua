@@ -20,7 +20,7 @@ pub extern "C" fn skua_ruffle_core_api_probe() -> u32 {
     1
 }
 
-/// Compile-time probe for creating a player with Ruffle's offscreen WGPU renderer.
+/// Compile-time probe for Ruffle's native offscreen WGPU renderer and player API.
 ///
 /// This function is intentionally not called by the ABI probe, so CI can check
 /// the API without requiring an attached GPU or initializing a graphics device.
@@ -60,4 +60,18 @@ fn _ruffle_player_api_probe(swf_bytes: &[u8]) {
     .expect("Ruffle player must use the offscreen WGPU renderer");
 
     let _frame = renderer.capture_frame();
+}
+
+/// Compile-time probe for the built-in native HTTP and raw TCP navigator.
+///
+/// Skua can provide its own FutureSpawner and NavigatorInterface while reusing
+/// Ruffle's existing URL, HTTP, and socket implementation.
+#[allow(dead_code)]
+fn _ruffle_navigator_api_probe<F, I>(
+    _navigator: &ruffle_frontend_utils::backends::navigator::ExternalNavigatorBackend<F, I>,
+)
+where
+    F: ruffle_frontend_utils::backends::navigator::FutureSpawner<ruffle_core::loader::Error>,
+    I: ruffle_frontend_utils::backends::navigator::NavigatorInterface,
+{
 }
