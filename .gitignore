@@ -415,3 +415,6 @@ skua_global_*.txt
 
 
 *.sln
+
+# Rust build output
+**/target/
