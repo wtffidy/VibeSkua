@@ -99,6 +99,14 @@ impl ExternalInterfaceProvider for SkuaExternalInterfaceProvider {
         name: &str,
         args: &[ExternalValue],
     ) -> ExternalValue {
+        // Externalizer.call(name, ...rest) passes its rest array as one
+        // ExternalInterface argument. The existing ActiveX host exposed the
+        // array's elements as individual arguments, so preserve that contract.
+        let args = match args {
+            [ExternalValue::List(values)] => values.as_slice(),
+            _ => args,
+        };
+
         // Socket permissions are handled inside Rust to avoid re-entering the
         // native session from a managed callback while its player is borrowed.
         if name == "allowSocket" {
