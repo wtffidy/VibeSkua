@@ -184,9 +184,11 @@ impl RuffleSession {
 
         let pending_calls = Arc::new(Mutex::new(VecDeque::new()));
         let navigator_interface = SkuaNavigatorInterface::new(pending_calls.clone());
+        let game_base_url = Url::parse("https://game.aq.com/game/")
+            .map_err(|error| format!("Invalid AQW base URL: {error}"))?;
         let navigator = ExternalNavigatorBackend::new(
-            swf_url,
-            None,
+            game_base_url.clone(),
+            Some(game_base_url),
             None,
             SkuaFutureSpawner,
             None,
