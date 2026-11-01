@@ -364,10 +364,6 @@ public class FlashUtil : IFlashUtil
     [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_call", CallingConvention = CallingConvention.Cdecl)]
     private static extern nuint SessionCall(IntPtr session, [MarshalAs(UnmanagedType.LPUTF8Str)] string functionName, [MarshalAs(UnmanagedType.LPUTF8Str)] string argumentsJson, IntPtr output, nuint capacity);
 
-    [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_allow_socket", CallingConvention = CallingConvention.Cdecl)]
-    [return: MarshalAs(UnmanagedType.I1)]
-    private static extern bool SessionAllowSocket(IntPtr session, [MarshalAs(UnmanagedType.LPUTF8Str)] string host, ushort port);
-
     [DllImport("skua_ruffle_native", EntryPoint = "skua_ruffle_session_resize", CallingConvention = CallingConvention.Cdecl)]
     [return: MarshalAs(UnmanagedType.I1)]
     private static extern bool SessionResize(IntPtr session, uint width, uint height, double scaleFactor);
