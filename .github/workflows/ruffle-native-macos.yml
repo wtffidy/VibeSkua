@@ -25,9 +25,9 @@ jobs:
       matrix:
         include:
           - target: aarch64-apple-darwin
-            runner: macos-14
+            runner: macos-26
           - target: x86_64-apple-darwin
-            runner: macos-13
+            runner: macos-26-intel
 
     steps:
       - name: Checkout
@@ -40,4 +40,4 @@ jobs:
 
       - name: Check native Ruffle bridge
         working-directory: Skua.Ruffle.Native
-        run: cargo check --locked --target ${{ matrix.target }}
+        run: cargo check --target ${{ matrix.target }}
