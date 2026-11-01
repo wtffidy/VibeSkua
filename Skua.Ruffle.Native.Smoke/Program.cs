@@ -4,19 +4,20 @@ using System.Text.Json;
 using Skua.Core.Models;
 using Skua.Core.Services;
 
-if (args.Length != 2)
-    throw new ArgumentException("Expected the native library path and packaged SWF path.");
+if (args.Length != 3)
+    throw new ArgumentException("Expected the native library, packaged AQW SWF, and bridge fixture SWF paths.");
 
 string nativePath = Path.GetFullPath(args[0]);
 string swfPath = Path.GetFullPath(args[1]);
+string bridgeSwfPath = Path.GetFullPath(args[2]);
 byte[] swfData = File.ReadAllBytes(swfPath);
+byte[] bridgeSwfData = File.ReadAllBytes(bridgeSwfPath);
 
 UnifiedSettingsService settingsService = new();
 settingsService.Initialize(AppRole.Client);
 Console.WriteLine($"Initialized VibeSkua settings at {ClientFileSources.SkuaSettingsDIR}.");
 
 nint library = NativeLibrary.Load(nativePath);
-nint session = IntPtr.Zero;
 
 try
 {
@@ -67,46 +68,71 @@ try
     SessionTextInputDelegate textInput = GetExport<SessionTextInputDelegate>(library, "skua_ruffle_session_text_input");
     SessionFocusDelegate focus = GetExport<SessionFocusDelegate>(library, "skua_ruffle_session_focus");
 
-    byte[] errorBuffer = new byte[2048];
-    session = create(swfData, (nuint)swfData.Length, swfPath, 960, 540, errorBuffer, (nuint)errorBuffer.Length);
-    if (session == IntPtr.Zero)
-    {
-        string error = Encoding.UTF8.GetString(errorBuffer).TrimEnd('\0');
-        throw new InvalidOperationException($"Ruffle session creation failed: {error}");
-    }
-
+    nint gameSession = CreateSession(create, swfData, swfPath, 960, 540);
     try
     {
-        Require(mouseEnter(session), "mouse enter");
-        Require(mouseMove(session, 120, 90), "mouse move");
-        Require(mouseDown(session, 120, 90, 0), "mouse down");
-        Require(mouseUp(session, 120, 90, 0), "mouse up");
-        Require(mouseWheel(session, 1), "mouse wheel");
-        Require(mouseLeave(session), "mouse leave");
-        Require(focus(session, true), "focus gain");
-        Require(keyInput(session, "Space", "Space", " ", "", true), "space key down");
-        Require(keyInput(session, "Space", "Space", " ", "", false), "space key up");
-        Require(textInput(session, 32), "text input");
-        Require(focus(session, false), "focus loss");
-        Require(resize(session, 960, 540, 1.0), "resize");
-        Require(allowSocket(session, "game.aq.com", 843), "socket allow-list update");
+        Require(mouseEnter(gameSession), "mouse enter");
+        Require(mouseMove(gameSession, 120, 90), "mouse move");
+        Require(mouseDown(gameSession, 120, 90, 0), "mouse down");
+        Require(mouseUp(gameSession, 120, 90, 0), "mouse up");
+        Require(mouseWheel(gameSession, 1), "mouse wheel");
+        Require(mouseLeave(gameSession), "mouse leave");
+        Require(focus(gameSession, true), "focus gain");
+        Require(keyInput(gameSession, "Space", "Space", " ", "", true), "space key down");
+        Require(keyInput(gameSession, "Space", "Space", " ", "", false), "space key up");
+        Require(textInput(gameSession, 32), "text input");
+        Require(focus(gameSession, false), "focus loss");
+        Require(resize(gameSession, 960, 540, 1.0), "resize");
+        Require(allowSocket(gameSession, "game.aq.com", 843), "socket allow-list update");
 
-        for (int frame = 0; frame < 3; frame++)
-            if (tick(session, 16.0) != 0)
-                throw new InvalidOperationException($"Ruffle tick failed on frame {frame + 1}.");
+        TickFrames(tick, gameSession, 6);
+
+        if (!getSize(gameSession, out uint width, out uint height))
+            throw new InvalidOperationException("Ruffle did not return its viewport dimensions.");
+
+        int frameLength = checked((int)(width * height * 4));
+        nint frameBuffer = Marshal.AllocHGlobal(frameLength);
+        try
+        {
+            nuint written = render(gameSession, frameBuffer, (nuint)frameLength);
+            if (written != (nuint)frameLength)
+                throw new InvalidOperationException($"Ruffle rendered {written} bytes; expected {frameLength}.");
+
+            byte[] pixels = new byte[frameLength];
+            Marshal.Copy(frameBuffer, pixels, 0, frameLength);
+            Console.WriteLine($"AQW SWF rendered {width}x{height} RGBA frame ({pixels.Length} bytes).");
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(frameBuffer);
+        }
+    }
+    finally
+    {
+        destroy(gameSession);
+    }
+
+    nint bridgeSession = CreateSession(create, bridgeSwfData, bridgeSwfPath, 960, 540);
+    try
+    {
+        TickFrames(tick, bridgeSession, 6);
 
         nint callbackBuffer = Marshal.AllocHGlobal(64 * 1024);
         try
         {
-            nuint callbackLength = drainCallbacks(session, callbackBuffer, 64 * 1024);
+            nuint callbackLength = drainCallbacks(bridgeSession, callbackBuffer, 64 * 1024);
             string callbackJson = ReadUtf8Result(callbackBuffer, callbackLength);
             using JsonDocument callbacks = JsonDocument.Parse(callbackJson);
-            bool requestedLoad = callbacks.RootElement.EnumerateArray().Any(item =>
+            bool callbackReceived = callbacks.RootElement.EnumerateArray().Any(item =>
                 item.TryGetProperty("function", out JsonElement function) &&
-                function.GetString() == "requestLoadGame");
+                function.GetString() == "bridgeSmoke" &&
+                item.TryGetProperty("arguments", out JsonElement arguments) &&
+                arguments.ValueKind == JsonValueKind.Array &&
+                arguments.GetArrayLength() == 1 &&
+                arguments[0].GetString() == "ready");
 
-            if (!requestedLoad)
-                throw new InvalidOperationException("Ruffle did not forward the ActionScript requestLoadGame callback.");
+            if (!callbackReceived)
+                throw new InvalidOperationException($"ActionScript-to-host ExternalInterface callback was not delivered. Received: {callbackJson}");
 
             Console.WriteLine("Verified ActionScript-to-host ExternalInterface callback delivery.");
         }
@@ -118,7 +144,7 @@ try
         nint callBuffer = Marshal.AllocHGlobal(4096);
         try
         {
-            nuint callLength = callActionScript(session, "isTrue", "[]", callBuffer, 4096);
+            nuint callLength = callActionScript(bridgeSession, "isTrue", "[]", callBuffer, 4096);
             string resultJson = ReadUtf8Result(callBuffer, callLength);
             string? result = JsonSerializer.Deserialize<string>(resultJson);
 
@@ -131,44 +157,36 @@ try
         {
             Marshal.FreeHGlobal(callBuffer);
         }
-
-        if (!getSize(session, out uint width, out uint height))
-            throw new InvalidOperationException("Ruffle did not return its viewport dimensions.");
-
-        int frameLength = checked((int)(width * height * 4));
-        nint frameBuffer = Marshal.AllocHGlobal(frameLength);
-        try
-        {
-            nuint written = render(session, frameBuffer, (nuint)frameLength);
-            if (written != (nuint)frameLength)
-                throw new InvalidOperationException($"Ruffle rendered {written} bytes; expected {frameLength}.");
-
-            byte[] pixels = new byte[frameLength];
-            Marshal.Copy(frameBuffer, pixels, 0, frameLength);
-            Console.WriteLine($"Ruffle rendered {width}x{height} RGBA frame ({pixels.Length} bytes).");
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(frameBuffer);
-        }
     }
     finally
     {
-        destroy(session);
-        session = IntPtr.Zero;
+        destroy(bridgeSession);
     }
 
-    Console.WriteLine($"Loaded {Path.GetFileName(nativePath)}, opened {Path.GetFileName(swfPath)}, verified {requiredExports.Length} exports, input events, ticking, resize, and rendering.");
+    Console.WriteLine($"Loaded {Path.GetFileName(nativePath)}, opened {Path.GetFileName(swfPath)}, verified {requiredExports.Length} exports, input, socket allow-list, ticking, resize, rendering, and both ExternalInterface directions.");
 }
 finally
 {
-    if (session != IntPtr.Zero)
-    {
-        SessionDestroyDelegate destroy = GetExport<SessionDestroyDelegate>(library, "skua_ruffle_session_destroy");
-        destroy(session);
-    }
-
     NativeLibrary.Free(library);
+}
+
+static nint CreateSession(SessionCreateDelegate create, byte[] swfData, string swfPath, uint width, uint height)
+{
+    byte[] errorBuffer = new byte[2048];
+    nint session = create(swfData, (nuint)swfData.Length, swfPath, width, height, errorBuffer, (nuint)errorBuffer.Length);
+
+    if (session != IntPtr.Zero)
+        return session;
+
+    string error = Encoding.UTF8.GetString(errorBuffer).TrimEnd('\0');
+    throw new InvalidOperationException($"Ruffle initialization failed for '{Path.GetFileName(swfPath)}': {error}");
+}
+
+static void TickFrames(SessionTickDelegate tick, nint session, int frameCount)
+{
+    for (int frame = 0; frame < frameCount; frame++)
+        if (tick(session, 16.67) != 0)
+            throw new InvalidOperationException($"Ruffle tick failed on frame {frame + 1}.");
 }
 
 static T GetExport<T>(nint library, string name) where T : Delegate

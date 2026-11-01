@@ -98,6 +98,13 @@ jobs:
       - name: Compile ActionScript
         run: pwsh -NoProfile -File Skua.AS3/compile-as3.ps1
 
+      - name: Compile Ruffle ExternalInterface smoke fixture
+        run: |
+          smoke_swf="$RUNNER_TEMP/ruffle-bridge-smoke.swf"
+          mxmlc -source-path Skua.Ruffle.Native.Smoke/as3 -default-size 960 540 -output "$smoke_swf" Skua.Ruffle.Native.Smoke/as3/RuffleBridgeSmoke.as -target-player 28.0 -optimize
+          test -s "$smoke_swf"
+          echo "RUFFLE_BRIDGE_SMOKE_SWF=$smoke_swf" >> "$GITHUB_ENV"
+
       - name: Install Java for Ruffle
         uses: actions/setup-java@v6
         with:
@@ -127,7 +134,8 @@ jobs:
           esac
 
           otool -L "$native_library"
-          dotnet run --project Skua.Ruffle.Native.Smoke/Skua.Ruffle.Native.Smoke.csproj --configuration Release -- "$native_library" "$swf_path"
+          test -s "$RUFFLE_BRIDGE_SMOKE_SWF"
+          dotnet run --project Skua.Ruffle.Native.Smoke/Skua.Ruffle.Native.Smoke.csproj --configuration Release -- "$native_library" "$swf_path" "$RUFFLE_BRIDGE_SMOKE_SWF"
 
       - name: Build manager
         run: dotnet build Skua.Manager.Avalonia/Skua.Manager.Avalonia.csproj --configuration Release --runtime ${{ matrix.rid }}
