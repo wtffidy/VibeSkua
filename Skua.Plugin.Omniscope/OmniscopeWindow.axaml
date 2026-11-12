@@ -119,8 +119,26 @@
 
                     <Grid Grid.Column="2" RowDefinitions="Auto,*" RowSpacing="8">
                         <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="03" Foreground="#3DD7F2" FontSize="10" FontWeight="Bold"/><TextBlock Text="EVENT CHRONOLOGY" Foreground="#BCEAF5" FontSize="11" FontWeight="Bold"/></StackPanel>
-                        <Border Grid.Row="1" Background="#0D1724" BorderBrush="#203E51" BorderThickness="1" CornerRadius="8" Padding="12">
-                            <Grid RowDefinitions="Auto,*"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="Observed state transitions / newest first" Foreground="#628FA3" FontSize="9"/><TextBlock x:Name="EventCountText" Grid.Column="1" Text="0 EVENTS" Foreground="#4CCFEA" FontSize="9"/></Grid><ListBox x:Name="EventList" Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="0,8,0,0"><ListBox.ItemTemplate><DataTemplate><StackPanel Spacing="3" Margin="2,5"><Grid ColumnDefinitions="Auto,*"><TextBlock Text="{Binding Time}" Foreground="#4CCFEA" FontSize="9" FontFamily="Consolas"/><TextBlock Grid.Column="1" Text="{Binding DisplayCategory}" Foreground="#D9F2FA" FontSize="10" Margin="10,0,0,0"/></Grid><TextBlock Text="{Binding Detail}" Foreground="#719CAF" FontSize="9" TextWrapping="Wrap"/></StackPanel></DataTemplate></ListBox.ItemTemplate></ListBox></Grid>
+                        <Border Grid.Row="1" Height="360" MaxHeight="360" Background="#0D1724" BorderBrush="#203E51" BorderThickness="1" CornerRadius="8" Padding="12">
+                            <Grid RowDefinitions="Auto,*">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="Observed state transitions / newest first" Foreground="#628FA3" FontSize="9"/>
+                                    <TextBlock x:Name="EventCountText" Grid.Column="1" Text="0 EVENTS" Foreground="#4CCFEA" FontSize="9"/>
+                                </Grid>
+                                <ListBox x:Name="EventList" Grid.Row="1" Height="310" MaxHeight="310" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Background="Transparent" BorderThickness="0" Margin="0,8,0,0">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Spacing="3" Margin="2,5">
+                                                <Grid ColumnDefinitions="Auto,*">
+                                                    <TextBlock Text="{Binding Time}" Foreground="#4CCFEA" FontSize="9" FontFamily="Consolas"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding DisplayCategory}" Foreground="#D9F2FA" FontSize="10" Margin="10,0,0,0"/>
+                                                </Grid>
+                                                <TextBlock Text="{Binding Detail}" Foreground="#719CAF" FontSize="9" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
                         </Border>
                     </Grid>
                 </Grid>
