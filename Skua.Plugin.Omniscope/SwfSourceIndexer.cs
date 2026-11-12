@@ -85,8 +85,10 @@ internal static class SwfSourceIndexer
                 WorkingDirectory = ffdecDirectory
             };
             startInfo.Environment["FFDEC_MEMORY"] = "1536m";
+            startInfo.ArgumentList.Add("/d");
+            startInfo.ArgumentList.Add("/s");
             startInfo.ArgumentList.Add("/c");
-            startInfo.ArgumentList.Add($"call \"{ffdecPath}\" -export script \"{exportDirectory}\" \"{swfPath}\"");
+            startInfo.ArgumentList.Add($"\"\"{ffdecPath}\" -export script \"{exportDirectory}\" \"{swfPath}\"\"");
 
             using Process process = new() { StartInfo = startInfo };
             if (!process.Start())
