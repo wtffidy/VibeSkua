@@ -442,7 +442,7 @@ public partial class OmniscopeWindow : Window
 
         foreach (MapItem mapItem in _mapItemSnapshot)
         {
-            string questName = _bot.Quests.CachedDictionary.TryGetValue(mapItem.QuestID, out QuestData? questData)
+            string questName = _bot.Quests.CachedDictionary.TryGetValue(mapItem.QuestID, out QuestData? questData) && questData is not null
                 ? questData.Name
                 : "Quest not present in local cache";
             records.Add(CreateMapItemRecord(mapItem, questName));
@@ -728,7 +728,7 @@ public partial class OmniscopeWindow : Window
         {
             Category = "SHOP",
             Name = $"{NullLabel(item.Name)} [{item.ID}]",
-            Summary = $"{item.Cost:N0} {currency}  /  {NullLabel(item.Faction)}  /  {item.Requirements.Count:N0} materials",
+            Summary = $"{item.Cost:N0} {currency}  /  {NullLabel(item.Faction)}  /  {requirementItems.Length:N0} materials",
             Metadata = $"Shop {shopName} [{shopId}]  /  ShopItemID {item.ShopItemID}",
             Details = details,
             SearchText = $"{details} {requirements} {item.TokenName}",
@@ -868,13 +868,13 @@ public partial class OmniscopeWindow : Window
         if (item.ID <= 0)
             return;
 
-        if (!references.TryGetValue(item.ID, out List<string>? entries))
+        if (!references.TryGetValue(item.ID, out List<string>? entries) || entries is null)
         {
             entries = new List<string>();
             references[item.ID] = entries;
         }
 
-        entries.Add($"{item.Name} / {source}");
+        entries.Add($"{NullLabel(item.Name)} / {source}");
     }
 
     private void UpdateEntities(Monster[] monsters)
