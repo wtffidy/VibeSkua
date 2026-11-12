@@ -1,0 +1,18 @@
+OMNISCOPE PORTABLE JAVA RUNTIME
+
+VibeSkua packages the Azul Zulu Community Java 21 JRE for the FFDec decompiler.
+The runtime is downloaded by Build-FFDecRuntime.ps1 from Azul's official package
+metadata service, SHA-256 verified against Azul's package metadata, and copied
+without modification into FFDec\Runtime during packaging.
+
+The Java runtime contains its own LICENSE, legal, and third-party notice files.
+Those files are included in the distributed VibeSkua package. Do not remove
+or modify the runtime's accompanying legal notices.
+
+Azul Zulu download information:
+https://www.azul.com/downloads/?package=jre
+
+Azul Zulu licensing information:
+https://docs.azul.com/core/tpls/
+
+FFDec is only invoked when the user explicitly starts AQW client decompilation.
