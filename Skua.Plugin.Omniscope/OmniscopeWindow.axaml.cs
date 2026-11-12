@@ -633,7 +633,7 @@ public partial class OmniscopeWindow : Window
         if (AnalyzeMapButton is not null)
         {
             AnalyzeMapButton.IsEnabled = !running;
-            AnalyzeMapButton.Content = running ? "ANALYZING MAP..." : "ANALYZE CURRENT MAP";
+            AnalyzeMapButton.Content = running ? "READING MAP INDEX..." : "LOAD SAVED MAP INDEX";
         }
     }
 
