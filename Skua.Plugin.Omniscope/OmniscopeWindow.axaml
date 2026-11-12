@@ -4,8 +4,8 @@
         x:Class="Skua.Plugin.Omniscope.OmniscopeWindow"
         Classes="skua"
         Title="OMNISCOPE | Live Game Intelligence"
-        Width="1580" Height="1060"
-        MinWidth="1180" MinHeight="760"
+        Width="1660" Height="1160"
+        MinWidth="1180" MinHeight="820"
         Background="#070B14"
         SystemDecorations="BorderOnly"
         ExtendClientAreaToDecorationsHint="True"
@@ -158,7 +158,7 @@
                             <StackPanel Spacing="4">
                                 <TextBlock Text="FIND GAME INFORMATION" FontSize="23" FontWeight="Bold" Foreground="#E9FAFF"/>
                                 <TextBlock Text="Quests &amp; Rewards  /  ITEMS  /  Monsters  /  Observed Drops  /  MAPS" FontSize="9" Foreground="#58CDEB"/>
-                                <TextBlock Text="Search cached game information and live observations. Everything here is read-only." FontSize="11" Foreground="#66899D"/>
+                                <TextBlock Text="Find quests, shop items, map links and observations. Select a result to see the actions available for it." FontSize="11" Foreground="#66899D"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <Button Content="REFRESH DATA" Click="RefreshDataCatalog_Click" Padding="12,8"/>
@@ -175,10 +175,11 @@
                             <Border Grid.Column="3" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="13"><StackPanel Spacing="3"><TextBlock Text="MAP LINKS" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="MapItemRecordCountText" Text="0" Foreground="#E8F8FF" FontSize="22" FontWeight="Bold"/><TextBlock Text="Links found in saved map data" Foreground="#79B8CE" FontSize="9"/></StackPanel></Border>
                         </Grid>
 
-                        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                            <TextBox x:Name="DataSearchBox" Watermark="Search by name, item ID, quest, monster, shop, or keyword..." TextChanged="DataSearchBox_TextChanged" Background="#111F2D" Foreground="#D7F1FA" BorderBrush="#28536A" FontSize="14" Padding="12,10"/>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                                <ComboBox x:Name="DataCategoryBox" Width="200" FontSize="13" SelectedIndex="0" SelectionChanged="DataCategoryBox_SelectionChanged">
+                        <Grid Grid.Row="2" RowDefinitions="Auto,Auto" RowSpacing="9">
+                            <TextBox x:Name="DataSearchBox" Grid.Row="0" MinHeight="58" Watermark="SEARCH  /  Name, item ID, quest, monster, shop, or keyword..." TextChanged="DataSearchBox_TextChanged" Background="#111F2D" Foreground="#E5F8FF" BorderBrush="#39AFCB" FontSize="16" Padding="16,14"/>
+                            <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                <TextBlock Text="FILTER RESULTS" Foreground="#79B8CE" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
+                                <ComboBox x:Name="DataCategoryBox" Grid.Column="1" HorizontalAlignment="Stretch" MinHeight="42" FontSize="14" SelectedIndex="0" SelectionChanged="DataCategoryBox_SelectionChanged">
                                     <ComboBoxItem Content="Everything"/>
                                     <ComboBoxItem Content="Quests &amp; Rewards"/>
                                     <ComboBoxItem Content="Shop Items"/>
@@ -189,10 +190,10 @@
                                     <ComboBoxItem Content="Item Usage"/>
                                     <ComboBoxItem Content="AQW Client Code"/>
                                 </ComboBox>
-                            </StackPanel>
+                            </Grid>
                         </Grid>
 
-                        <Grid Grid.Row="3" ColumnDefinitions="0.9*,1.1*" ColumnSpacing="14" MinHeight="680">
+                        <Grid Grid.Row="3" ColumnDefinitions="0.9*,1.1*" ColumnSpacing="14" MinHeight="850">
                             <Border Grid.Column="0" Background="#0D1724" BorderBrush="#203E51" BorderThickness="1" CornerRadius="8" Padding="12">
                                 <Grid RowDefinitions="Auto,*">
                                     <Grid ColumnDefinitions="*,Auto" Margin="2,2,2,10">
@@ -225,14 +226,20 @@
                                         <TextBlock x:Name="DataDetailMeta" Text="Helpful details and where the information came from." Foreground="#76A8BB" FontSize="10" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <Border Grid.Row="1" Height="1" Background="#203E51" Margin="0,12,0,12"/>
-                                    <Button x:Name="EvaluateShopButton" Grid.Row="2" Content="CHECK WHY I CAN'T BUY THIS" Click="EvaluateShopGates_Click" IsEnabled="False" HorizontalAlignment="Left" Padding="12,7" Margin="0,0,0,10"/>
+                                    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
+                                        <Button x:Name="CheckQuestButton" Content="CHECK QUEST" Click="CheckQuest_Click" IsEnabled="False" Padding="12,8"/>
+                                        <Button x:Name="AcceptQuestButton" Content="ACCEPT QUEST" Click="AcceptQuest_Click" IsEnabled="False" Padding="12,8"/>
+                                        <Button x:Name="CompleteQuestButton" Content="TURN IN QUEST" Click="CompleteQuest_Click" IsEnabled="False" Padding="12,8"/>
+                                        <Button x:Name="LoadShopButton" Content="LOAD SHOP" Click="LoadShop_Click" IsEnabled="False" Padding="12,8"/>
+                                        <Button x:Name="EvaluateShopButton" Content="CHECK REQUIREMENTS" Click="EvaluateShopGates_Click" IsEnabled="False" Padding="12,8"/>
+                                    </StackPanel>
                                     <TextBox x:Name="DataDetailText" Grid.Row="3" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Background="#09131F" Foreground="#C9E1E9" BorderThickness="0" FontFamily="Segoe UI" FontSize="12" Padding="12" Text="No record selected."/>
                                 </Grid>
                             </Border>
                         </Grid>
 
                         <Grid Grid.Row="4" ColumnDefinitions="*,Auto">
-                            <TextBlock x:Name="DataStatusText" Text="Ready. Select Refresh Data to load saved quests and available shop data." Foreground="#527D91" FontSize="9"/>
+                            <TextBlock x:Name="DataStatusText" Text="Ready. Refresh the catalog, search, then select a result to see its available actions." Foreground="#527D91" FontSize="9"/>
                             <TextBlock x:Name="SwfSourceStatusText" Grid.Column="1" Text="CLIENT AQW Client Code NOT INDEXED" Foreground="#527D91" FontSize="9"/>
                         </Grid>
                     </Grid>
