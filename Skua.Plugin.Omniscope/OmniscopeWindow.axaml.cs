@@ -783,10 +783,11 @@ public partial class OmniscopeWindow : Window
         string currentMap = _bot.Map.FileName ?? string.Empty;
         IEnumerable<GameDataRecord> query = _mapSnapshot;
 
-        if (string.Equals(category, "Current map", StringComparison.OrdinalIgnoreCase) &&
-            !string.IsNullOrWhiteSpace(currentMap))
+        if (string.Equals(category, "Current map", StringComparison.OrdinalIgnoreCase))
         {
-            query = query.Where(record => record.Metadata.Contains(currentMap, StringComparison.OrdinalIgnoreCase));
+            query = string.IsNullOrWhiteSpace(currentMap)
+                ? Enumerable.Empty<GameDataRecord>()
+                : query.Where(record => record.Metadata.Contains(currentMap, StringComparison.OrdinalIgnoreCase));
         }
 
         if (!string.IsNullOrWhiteSpace(search))
