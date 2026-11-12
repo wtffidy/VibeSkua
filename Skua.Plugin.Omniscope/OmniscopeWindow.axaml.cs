@@ -351,7 +351,7 @@ public partial class OmniscopeWindow : Window
 
         DataDetailTitle.Text = record.Name;
         DataDetailMeta.Text = $"{record.DisplayCategory}  /  {record.Metadata}";
-        DataDetailText.Text = record.Details;
+        DataDetailText.Text = $"{record.Details}{Environment.NewLine}{Environment.NewLine}WHAT THIS RESULT MEANS:{Environment.NewLine}{GetRecordActionHint(record)}";
 
         bool isQuest = record.SourceQuestId is int;
         bool isShopItem = record.SourceObject is ShopItem;
@@ -1334,6 +1334,19 @@ public partial class OmniscopeWindow : Window
         if (bar.Parent is Border track)
             bar.Width = Math.Max(0, track.Bounds.Width * ratio);
     }
+
+    private static string GetRecordActionHint(GameDataRecord record) => record.Category switch
+    {
+        "QUEST" => "This is a saved quest definition. Use CHECK QUEST to inspect the live character state, ACCEPT QUEST when available, or TURN IN QUEST when all requirements are met.",
+        "SHOP" => "This item belongs to the shop shown above. LOAD SHOP opens that shop in the game. CHECK REQUIREMENTS inspects the live client-side purchase gates. Loading a shop does not buy the item.",
+        "MAP ITEM" => "This is a map-item to quest association read from saved map data. It is a reference, not an action button. Use the quest ID to find its quest record.",
+        "ITEM REFERENCE" => "This item ID is referenced by quests, rewards, shops, or runtime events. Select the related quest or shop result to use its available actions.",
+        "DROP" => "This is a drop observation or drop-related record, not a guaranteed loot table. It does not identify a verified source unless the details explicitly say so.",
+        "MONSTER" => "This is a monster snapshot or kill observation. It describes data Skua has seen, not a complete server-side monster database.",
+        "ACHIEVEMENT" => "This is achievement-related client or cache information. Complete server-side achievement requirements are not exposed here.",
+        _ when record.Category.EndsWith("SOURCE", StringComparison.Ordinal) || record.Category == "SWF SOURCE" => "This is decompiled AQW client source indexed for searching. It is reference material for investigation, not a directly executable game action.",
+        _ => "This is reference data. Its details show what OMNISCOPE found and where the information came from; no direct game action is available for this record."
+    };
 
     private static string GetPlayerState(int state) => state switch
     {
