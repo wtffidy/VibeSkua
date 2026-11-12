@@ -155,7 +155,11 @@ echo.
 echo ==========================================================
 echo Fast Build complete! Launching VibeSkua...
 echo ==========================================================
-start "" /D "%BUILDPROJECT_ROOT%\Build" "VibeSkua.exe"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $exe=Join-Path $env:BUILDPROJECT_ROOT 'Build\VibeSkua.exe'; $process=Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe) -PassThru; Start-Sleep -Milliseconds 500; if ($process.HasExited) { exit 1 }"
+if errorlevel 1 (
+    echo VibeSkua could not be started. Launch Build\VibeSkua.exe manually to inspect startup errors.
+    goto :Failure
+)
 set "BUILD_EXIT_CODE=0"
 goto :Finish
 
