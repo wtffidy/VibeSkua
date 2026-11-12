@@ -24,6 +24,25 @@ if (Test-Path $LocalCurrent) {
     $Targets += $LocalCurrent
 }
 
+# Stage a private Java 21 runtime beside FFDec so end users never need a system Java installation.
+if (-not (Test-Path (Join-Path $FFDecDir "ffdec.jar"))) {
+    throw "The bundled FFDec JAR is missing: $(Join-Path $FFDecDir 'ffdec.jar')"
+}
+
+$BundledJavaRuntime = Join-Path $RootDir "Build\FFDec\Runtime"
+$BundledJavaExecutable = Join-Path $BundledJavaRuntime "bin\java.exe"
+if (-not (Test-Path -LiteralPath $BundledJavaExecutable -PathType Leaf)) {
+    $RuntimeBuilder = Join-Path $RootDir "Build-FFDecRuntime.ps1"
+    if (-not (Test-Path -LiteralPath $RuntimeBuilder -PathType Leaf)) {
+        throw "The FFDec runtime setup script is missing: $RuntimeBuilder"
+    }
+
+    & $RuntimeBuilder -DestinationDirectory $BundledJavaRuntime
+    if (-not (Test-Path -LiteralPath $BundledJavaExecutable -PathType Leaf)) {
+        throw "The portable Java runtime was not staged successfully: $BundledJavaExecutable"
+    }
+}
+
 foreach ($Target in $Targets) {
     if (-not (Test-Path $Target)) {
         New-Item -ItemType Directory -Path $Target -Force | Out-Null
@@ -123,9 +142,21 @@ foreach ($Target in $Targets) {
         }
     }
 
-    # 7. Copy FFDec
+    # 7. Copy FFDec and its private Java runtime.
     if (Test-Path $FFDecDir) {
         Copy-Item (Join-Path $FFDecDir "*") $TargetFFDecDir -Recurse -Force
+    }
+
+    $TargetJavaRuntime = Join-Path $TargetFFDecDir "Runtime"
+    $TargetJavaExecutable = Join-Path $TargetJavaRuntime "bin\java.exe"
+    if (-not (Test-Path -LiteralPath $TargetJavaExecutable -PathType Leaf)) {
+        New-Item -ItemType Directory -Path $TargetJavaRuntime -Force | Out-Null
+        Get-ChildItem -LiteralPath $BundledJavaRuntime -Force |
+            Copy-Item -Destination $TargetJavaRuntime -Recurse -Force
+    }
+
+    if (-not (Test-Path -LiteralPath $TargetJavaExecutable -PathType Leaf)) {
+        throw "The packaged FFDec Java runtime is missing: $TargetJavaExecutable"
     }
 
     # 8. Copy Plugins
