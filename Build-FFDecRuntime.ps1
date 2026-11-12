@@ -61,9 +61,17 @@ try {
     }
 
     $JavaHome = Split-Path -Parent (Split-Path -Parent $JavaExecutable.FullName)
-    $VersionOutput = (& $JavaExecutable.FullName -version 2>&1 | Out-String).Trim()
-    if ($LASTEXITCODE -ne 0 -or $VersionOutput -notmatch 'version "21(?:\.|")') {
-        throw "The bundled Java runtime failed its version check. Output: $VersionOutput"
+    $VersionStdOutPath = Join-Path $TemporaryDirectory "java-version.stdout.txt"
+    $VersionStdErrPath = Join-Path $TemporaryDirectory "java-version.stderr.txt"
+    $JavaVersionProcess = Start-Process -FilePath $JavaExecutable.FullName -ArgumentList "-version" -WorkingDirectory $JavaHome -NoNewWindow -Wait -PassThru -RedirectStandardOutput $VersionStdOutPath -RedirectStandardError $VersionStdErrPath
+    $VersionOutput = @(
+        if (Test-Path -LiteralPath $VersionStdOutPath) { Get-Content -LiteralPath $VersionStdOutPath -Raw }
+        if (Test-Path -LiteralPath $VersionStdErrPath) { Get-Content -LiteralPath $VersionStdErrPath -Raw }
+    ) -join [Environment]::NewLine
+    $VersionOutput = $VersionOutput.Trim()
+
+    if ($JavaVersionProcess.ExitCode -ne 0 -or $VersionOutput -notmatch 'version "21(?:\.|")') {
+        throw "The bundled Java runtime failed its version check (exit code $($JavaVersionProcess.ExitCode)). Output: $VersionOutput"
     }
 
     if (Test-Path -LiteralPath $DestinationDirectory) {
