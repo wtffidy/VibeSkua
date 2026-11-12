@@ -45,18 +45,26 @@ public sealed class OmniscopePlugin : ISkuaPlugin
     {
         Dispatcher.UIThread.Post(() =>
         {
-            if (_provider is null)
-                return;
-
-            if (_window is null)
+            try
             {
-                IScriptInterface bot = _provider.GetRequiredService<IScriptInterface>();
-                _window = new OmniscopeWindow(bot);
-                _window.Closed += (_, _) => _window = null;
-            }
+                if (_provider is null)
+                    return;
 
-            _window.Show();
-            _window.Activate();
+                if (_window is null || !_window.IsVisible)
+                {
+                    IScriptInterface bot = _provider.GetRequiredService<IScriptInterface>();
+                    _window = new OmniscopeWindow(bot);
+                    _window.Closed += (_, _) => _window = null;
+                }
+
+                _window.Show();
+                _window.Activate();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.WriteLine($"OMNISCOPE window launch failed: {ex}");
+                _window = null;
+            }
         });
     }
 }
