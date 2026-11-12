@@ -809,8 +809,10 @@ public partial class OmniscopeWindow : Window
         MapResultMetric.Text = $"{matches.Length:N0} MAP REFERENCES";
         if (matches.Length == 0)
         {
-            MapDetailTitle.Text = "No map references loaded";
-            MapDetailMeta.Text = "Load the saved map SWF index, then search or filter its map-item references.";
+            MapDetailTitle.Text = _mapSnapshot.Count == 0 ? "Map index not loaded" : "No matching map links";
+            MapDetailMeta.Text = _mapSnapshot.Count == 0
+                ? "Choose LOAD SAVED MAP INDEX to browse every map Skua has saved."
+                : "Try a different search, choose All maps, or check the current map filter.";
             MapDetailText.Text = string.Empty;
         }
         else if (MapRecordList.SelectedItem is not GameDataRecord selected || !matches.Contains(selected))
@@ -975,7 +977,7 @@ public partial class OmniscopeWindow : Window
         if (DecompileSwfButton is not null)
         {
             DecompileSwfButton.IsEnabled = !running;
-            DecompileSwfButton.Content = running ? "DOWNLOADING / DECOMPILING..." : "DECOMPILE AQW GAME SWF";
+            DecompileSwfButton.Content = running ? "DOWNLOADING / INDEXING..." : "INDEX GAME SWF";
         }
     }
 
