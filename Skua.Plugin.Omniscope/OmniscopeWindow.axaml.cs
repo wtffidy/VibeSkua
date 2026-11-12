@@ -51,10 +51,24 @@ public partial class OmniscopeWindow : Window
     private int _lastKillCount = -1;
     private bool _refreshing;
 
+    /// <summary>
+    /// Provides the parameterless constructor required by Avalonia's runtime XAML loader.
+    /// </summary>
+    public OmniscopeWindow() : this(null!)
+    {
+    }
+
+    /// <summary>
+    /// Creates the live observatory for the active game client.
+    /// </summary>
+    /// <param name="bot">The scripting interface exposed by the current client.</param>
     public OmniscopeWindow(IScriptInterface bot)
     {
         InitializeComponent();
         _bot = bot;
+        if (_bot is null)
+            return;
+
         _bot.Events.MonsterKilled += OnMonsterKilled;
         _bot.Events.ItemDropped += OnItemDropped;
         _bot.Events.QuestAccepted += OnQuestAccepted;
@@ -79,6 +93,9 @@ public partial class OmniscopeWindow : Window
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
+        if (_bot is null)
+            return;
+
         RefreshTelemetry();
         _refreshTimer.Start();
     }
