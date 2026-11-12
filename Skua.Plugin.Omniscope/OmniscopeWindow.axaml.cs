@@ -508,7 +508,7 @@ public partial class OmniscopeWindow : Window
         foreach ((int itemId, List<string> references) in itemReferences.OrderBy(static pair => pair.Key))
         {
             string[] distinctReferences = references.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-            string title = $"Item reference [{itemId}]";
+            string title = $"Item #{itemId}";
             string details = $"ITEM ID: {itemId}{Environment.NewLine}" +
                 $"REFERENCE COUNT: {distinctReferences.Length:N0}{Environment.NewLine}{Environment.NewLine}" +
                 string.Join(Environment.NewLine, distinctReferences.Select(static reference => $"• {reference}"));
