@@ -17,7 +17,7 @@
         <TabControl Grid.Row="1" Background="#070B14" BorderThickness="0">
             <TabItem Header="LIVE OBSERVATORY">
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <Grid Margin="22" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="16">
+            <Grid Margin="22" MinWidth="0" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="16">
                 <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="18">
                     <StackPanel Spacing="4" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" Spacing="12">
@@ -52,34 +52,34 @@
                     </Border>
                 </Grid>
 
-                <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*" ColumnSpacing="12">
-                    <Border Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="15">
+                <Grid Grid.Row="1" MinWidth="0" ColumnDefinitions="*,*,*,*" ColumnSpacing="12">
+                    <Border MinWidth="0" ClipToBounds="True" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="15"/>
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                             <Border Width="34" Height="34" CornerRadius="8" Background="#17394A" VerticalAlignment="Center"><TextBlock Text="◈" Foreground="#55DDF4" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-                            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="WORLD / INSTANCE" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="MapMetric" Text="Awaiting world" Foreground="#E8F8FF" FontSize="17" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="RoomMetric" Text="Room --  /  -- players" Foreground="#79B8CE" FontSize="10"/></StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="WORLD / INSTANCE" Foreground="#6E9CB0" FontSize="9" TextWrapping="Wrap"/><TextBlock x:Name="MapMetric" Text="Awaiting world" Foreground="#E8F8FF" FontSize="17" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="RoomMetric" Text="Room --  /  -- players" Foreground="#79B8CE" FontSize="10" TextWrapping="Wrap"/></StackPanel>
                         </Grid>
                     </Border>
-                    <Border Grid.Column="1" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="15">
+                    <Border Grid.Column="1" MinWidth="0" ClipToBounds="True" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="15">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                             <Border Width="34" Height="34" CornerRadius="8" Background="#17394A" VerticalAlignment="Center"><TextBlock Text="♥" Foreground="#FF8297" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
                             <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="VITALITY" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="VitalsMetric" Text="-- / -- HP" Foreground="#E8F8FF" FontSize="17" FontWeight="Bold"/><Border Height="4" Background="#263847" CornerRadius="2"><Border x:Name="HealthProgressBar" HorizontalAlignment="Left" Width="0" Background="#F16F87" CornerRadius="2"/></Border></StackPanel>
                         </Grid>
                     </Border>
-                    <Border Grid.Column="2" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="15">
+                    <Border Grid.Column="2" MinWidth="0" ClipToBounds="True" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="15">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                             <Border Width="34" Height="34" CornerRadius="8" Background="#17394A" VerticalAlignment="Center"><TextBlock Text="⌖" Foreground="#6DDCFF" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-                            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="ENTITY FIELD" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="EntityMetric" Text="0" Foreground="#E8F8FF" FontSize="17" FontWeight="Bold"/><TextBlock x:Name="EntitySubMetric" Text="No entities observed" Foreground="#79B8CE" FontSize="10"/></StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="ENTITY FIELD" Foreground="#6E9CB0" FontSize="9" TextWrapping="Wrap"/><TextBlock x:Name="EntityMetric" Text="0" Foreground="#E8F8FF" FontSize="17" FontWeight="Bold"/><TextBlock x:Name="EntitySubMetric" Text="No entities observed" Foreground="#79B8CE" FontSize="10" TextWrapping="Wrap"/></StackPanel>
                         </Grid>
                     </Border>
-                    <Border Grid.Column="3" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="15">
+                    <Border Grid.Column="3" MinWidth="0" ClipToBounds="True" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="15">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                             <Border Width="34" Height="34" CornerRadius="8" Background="#17394A" VerticalAlignment="Center"><TextBlock Text="⌁" Foreground="#B49AFF" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-                            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="POSITION / CELL" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="PositionMetric" Text="X --  /  Y --" Foreground="#E8F8FF" FontSize="17" FontWeight="Bold"/><TextBlock x:Name="CellMetric" Text="Cell --  /  Pad --" Foreground="#79B8CE" FontSize="10"/></StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="POSITION / CELL" Foreground="#6E9CB0" FontSize="9" TextWrapping="Wrap"/><TextBlock x:Name="PositionMetric" Text="X --  /  Y --" Foreground="#E8F8FF" FontSize="17" FontWeight="Bold"/><TextBlock x:Name="CellMetric" Text="Cell --  /  Pad --" Foreground="#79B8CE" FontSize="10" TextWrapping="Wrap"/></StackPanel>
                         </Grid>
                     </Border>
                 </Grid>
 
-                <Grid Grid.Row="2" ColumnDefinitions="1.02*,1.28*,1.08*" ColumnSpacing="14" MinHeight="410">
+                <Grid Grid.Row="2" MinWidth="0" ColumnDefinitions="1.02*,1.28*,1.08*" ColumnSpacing="14" MinHeight="410">
                     <Grid Grid.Column="0" RowDefinitions="Auto,*" RowSpacing="8">
                         <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="01" Foreground="#3DD7F2" FontSize="10" FontWeight="Bold"/><TextBlock Text="AVATAR TELEMETRY" Foreground="#BCEAF5" FontSize="11" FontWeight="Bold"/><TextBlock Text="LIVE" Foreground="#4CCCA8" FontSize="9" VerticalAlignment="Center"/></StackPanel>
                         <Border Grid.Row="1" Background="#0D1724" BorderBrush="#203E51" BorderThickness="1" CornerRadius="8" Padding="16">
@@ -143,7 +143,7 @@
                     </Grid>
                 </Grid>
 
-                <Grid Grid.Row="3" ColumnDefinitions="*,*,*,*" ColumnSpacing="14" MinHeight="250">
+                <Grid Grid.Row="3" MinWidth="0" ColumnDefinitions="*,*,*,*" ColumnSpacing="14" MinHeight="250">
                     <Grid Grid.Column="0" RowDefinitions="Auto,*" RowSpacing="8">
                         <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="04" Foreground="#3DD7F2" FontSize="10" FontWeight="Bold"/><TextBlock Text="WORLD ROSTER" Foreground="#BCEAF5" FontSize="11" FontWeight="Bold"/></StackPanel>
                         <Border Grid.Row="1" Background="#0D1724" BorderBrush="#203E51" BorderThickness="1" CornerRadius="8" Padding="12"><Grid RowDefinitions="Auto,*"><TextBlock x:Name="RosterMetric" Text="Players in instance: --" Foreground="#628FA3" FontSize="9"/><ListBox x:Name="PlayerList" Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="0,6,0,0"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Foreground="#D7F1FA" FontSize="11" Margin="3,5"/></DataTemplate></ListBox.ItemTemplate></ListBox></Grid></Border>
@@ -171,29 +171,29 @@
             </TabItem>
             <TabItem Header="DATA INTELLIGENCE">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <Grid Margin="22" RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="15">
-                        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                    <Grid Margin="22" MinWidth="0" RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="15">
+                        <Grid Grid.Row="0" RowDefinitions="Auto,Auto" RowSpacing="10" MinWidth="0">
                             <StackPanel Spacing="4">
                                 <TextBlock Text="FIND GAME INFORMATION" FontSize="23" FontWeight="Bold" Foreground="#E9FAFF"/>
-                                <TextBlock Text="Quests &amp; Rewards  /  ITEMS  /  Monsters  /  Observed Drops  /  MAPS" FontSize="9" Foreground="#58CDEB"/>
-                                <TextBlock Text="Find quests, shop items, map links and observations. Select a result to see the actions available for it." FontSize="11" Foreground="#66899D"/>
+                                <TextBlock Text="Quests &amp; Rewards  /  ITEMS  /  Monsters  /  Observed Drops  /  MAPS" FontSize="9" Foreground="#58CDEB" TextWrapping="Wrap"/>
+                                <TextBlock Text="Find quests, shop items, map links and observations. Select a result to see the actions available for it." FontSize="11" Foreground="#66899D" TextWrapping="Wrap"/>
                             </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                <Button Content="REFRESH DATA" Click="RefreshDataCatalog_Click" Padding="12,8"/>
-                                <Button x:Name="AnalyzeMapButton" Content="LOAD MAP DATA" Click="AnalyzeMap_Click" Padding="12,8"/>
-                                <Button x:Name="DecompileSwfButton" Content="INDEX AQW CLIENT" Click="DecompileSwf_Click" Padding="12,8"/>
-                                <Button Content="EXPORT DATA" Click="ExportData_Click" Padding="12,8"/>
-                            </StackPanel>
+                            <WrapPanel Grid.Row="1">
+                                <Button Content="REFRESH DATA" Click="RefreshDataCatalog_Click" Padding="12,8" Margin="0,0,8,6"/>
+                                <Button x:Name="AnalyzeMapButton" Content="LOAD MAP DATA" Click="AnalyzeMap_Click" Padding="12,8" Margin="0,0,8,6"/>
+                                <Button x:Name="DecompileSwfButton" Content="INDEX AQW CLIENT" Click="DecompileSwf_Click" Padding="12,8" Margin="0,0,8,6"/>
+                                <Button Content="EXPORT DATA" Click="ExportData_Click" Padding="12,8" Margin="0,0,8,6"/>
+                            </WrapPanel>
                         </Grid>
 
-                        <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
-                            <Border Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="13"><StackPanel Spacing="3"><TextBlock Text="TOTAL RESULTS" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="DataRecordCountText" Text="0" Foreground="#E8F8FF" FontSize="22" FontWeight="Bold"/><TextBlock Text="Items you can browse" Foreground="#79B8CE" FontSize="9"/></StackPanel></Border>
-                            <Border Grid.Column="1" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="13"><StackPanel Spacing="3"><TextBlock Text="SAVED Quests &amp; Rewards" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="QuestRecordCountText" Text="0" Foreground="#E8F8FF" FontSize="22" FontWeight="Bold"/><TextBlock Text="Quest details on this PC" Foreground="#79B8CE" FontSize="9"/></StackPanel></Border>
-                            <Border Grid.Column="2" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="13"><StackPanel Spacing="3"><TextBlock Text="SHOP ITEMS" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="ShopRecordCountText" Text="0" Foreground="#E8F8FF" FontSize="22" FontWeight="Bold"/><TextBlock Text="Items from shops Skua has seen" Foreground="#79B8CE" FontSize="9"/></StackPanel></Border>
-                            <Border Grid.Column="3" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="13"><StackPanel Spacing="3"><TextBlock Text="MAP LINKS" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="MapItemRecordCountText" Text="0" Foreground="#E8F8FF" FontSize="22" FontWeight="Bold"/><TextBlock Text="Links found in saved map data" Foreground="#79B8CE" FontSize="9"/></StackPanel></Border>
+                        <Grid Grid.Row="1" MinWidth="0" ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
+                            <Border Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="13"><StackPanel Spacing="3"><TextBlock Text="TOTAL RESULTS" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="DataRecordCountText" Text="0" Foreground="#E8F8FF" FontSize="22" FontWeight="Bold"/><TextBlock Text="Items you can browse" Foreground="#79B8CE" FontSize="9" TextWrapping="Wrap"/></StackPanel></Border>
+                            <Border Grid.Column="1" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="13"><StackPanel Spacing="3"><TextBlock Text="SAVED Quests &amp; Rewards" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="QuestRecordCountText" Text="0" Foreground="#E8F8FF" FontSize="22" FontWeight="Bold"/><TextBlock Text="Quest details on this PC" Foreground="#79B8CE" FontSize="9" TextWrapping="Wrap"/></StackPanel></Border>
+                            <Border Grid.Column="2" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="13"><StackPanel Spacing="3"><TextBlock Text="SHOP ITEMS" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="ShopRecordCountText" Text="0" Foreground="#E8F8FF" FontSize="22" FontWeight="Bold"/><TextBlock Text="Items from shops Skua has seen" Foreground="#79B8CE" FontSize="9" TextWrapping="Wrap"/></StackPanel></Border>
+                            <Border Grid.Column="3" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="13"><StackPanel Spacing="3"><TextBlock Text="MAP LINKS" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="MapItemRecordCountText" Text="0" Foreground="#E8F8FF" FontSize="22" FontWeight="Bold"/><TextBlock Text="Links found in saved map data" Foreground="#79B8CE" FontSize="9" TextWrapping="Wrap"/></StackPanel></Border>
                         </Grid>
 
-                        <Grid Grid.Row="2" RowDefinitions="Auto,Auto" RowSpacing="9">
+                        <Grid Grid.Row="2" MinWidth="0" RowDefinitions="Auto,Auto" RowSpacing="9">
                             <TextBox x:Name="DataSearchBox" Grid.Row="0" MinHeight="58" Watermark="SEARCH  /  Name, item ID, quest, monster, shop, or keyword..." TextChanged="DataSearchBox_TextChanged" Background="#111F2D" Foreground="#E5F8FF" BorderBrush="#39AFCB" FontSize="16" Padding="16,14"/>
                             <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="12">
                                 <TextBlock Text="FILTER RESULTS" Foreground="#79B8CE" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
@@ -211,7 +211,7 @@
                             </Grid>
                         </Grid>
 
-                        <Grid Grid.Row="3" ColumnDefinitions="0.9*,1.1*" ColumnSpacing="14" MinHeight="850">
+                        <Grid Grid.Row="3" MinWidth="0" ColumnDefinitions="0.9*,1.1*" ColumnSpacing="14" MinHeight="850">
                             <Border Grid.Column="0" Background="#0D1724" BorderBrush="#203E51" BorderThickness="1" CornerRadius="8" Padding="12">
                                 <Grid RowDefinitions="Auto,*">
                                     <Grid ColumnDefinitions="*,Auto" Margin="2,2,2,10">
