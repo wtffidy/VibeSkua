@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Text.Json;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
@@ -6,6 +7,9 @@ using Skua.Core.Interfaces;
 using Skua.Core.Models.Auras;
 using Skua.Core.Models.Monsters;
 using Skua.Core.Models.Skills;
+using Skua.Core.Models.Items;
+using Skua.Core.Models.Quests;
+using Skua.Core.Models.Shops;
 
 namespace Skua.Plugin.Omniscope;
 
@@ -24,6 +28,12 @@ public partial class OmniscopeWindow : Window
     private readonly ObservableCollection<string> _quests = [];
     private readonly ObservableCollection<InventoryRow> _inventory = [];
     private readonly ObservableCollection<EventRow> _events = [];
+    private readonly ObservableCollection<GameDataRecord> _dataRecords = [];
+    private readonly List<GameDataRecord> _swfSourceRecords = [];
+    private List<GameDataRecord> _dataSnapshot = [];
+    private MapItem[] _mapItemSnapshot = [];
+    private bool _mapAnalysisRunning;
+    private bool _swfIndexRunning;
     private string _lastMap = string.Empty;
     private string _lastTarget = string.Empty;
     private string _lastPlayerState = string.Empty;
@@ -48,6 +58,7 @@ public partial class OmniscopeWindow : Window
         QuestList.ItemsSource = _quests;
         InventoryList.ItemsSource = _inventory;
         EventList.ItemsSource = _events;
+        DataRecordList.ItemsSource = _dataRecords;
 
         EntityList.SelectionChanged += EntityList_SelectionChanged;
         _refreshTimer.Tick += RefreshTimer_Tick;
@@ -59,6 +70,7 @@ public partial class OmniscopeWindow : Window
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
         RefreshTelemetry();
+        RefreshDataCatalog();
         _refreshTimer.Start();
     }
 
@@ -175,6 +187,461 @@ public partial class OmniscopeWindow : Window
         {
             _refreshing = false;
         }
+    }
+
+    private void RefreshDataCatalog_Click(object? sender, RoutedEventArgs e) => RefreshDataCatalog();
+
+    private void DataSearchBox_TextChanged(object? sender, TextChangedEventArgs e) => ApplyDataFilter();
+
+    private void DataCategoryBox_SelectionChanged(object? sender, SelectionChangedEventArgs e) => ApplyDataFilter();
+
+    private void DataRecordList_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (DataRecordList.SelectedItem is not GameDataRecord record)
+            return;
+
+        DataDetailTitle.Text = record.Name;
+        DataDetailMeta.Text = $"{record.Category}  /  {record.Metadata}";
+        DataDetailText.Text = record.Details;
+    }
+
+    private void RefreshDataCatalog()
+    {
+        List<GameDataRecord> records = new();
+        Dictionary<int, List<string>> itemReferences = new();
+
+        try
+        {
+            _bot.Quests.LoadCachedQuests();
+            QuestData[] cachedQuests = _bot.Quests.Cached.ToArray();
+            foreach (QuestData quest in cachedQuests)
+            {
+                records.Add(CreateQuestRecord(quest));
+                AddItemReferences(itemReferences, quest.AcceptRequirements, $"Quest {quest.Name} [{quest.ID}] / accept");
+                AddItemReferences(itemReferences, quest.Requirements, $"Quest {quest.Name} [{quest.ID}] / turn-in");
+                AddItemReferences(itemReferences, quest.Rewards, $"Quest {quest.Name} [{quest.ID}] / reward");
+                AddItemReferences(itemReferences, quest.SimpleRewards, $"Quest {quest.Name} [{quest.ID}] / reward roll");
+            }
+
+            QuestRecordCountText.Text = cachedQuests.Length.ToString("N0");
+        }
+        catch (Exception ex)
+        {
+            QuestRecordCountText.Text = "0";
+            records.Add(CreateStatusRecord("Quest database unavailable", ex.Message, "QUESTS"));
+        }
+
+        try
+        {
+            HashSet<int> loadedShopIds = new();
+            foreach (ShopInfo shop in _bot.Shops.LoadedCache.ToArray())
+            {
+                if (!loadedShopIds.Add(shop.ID))
+                    continue;
+
+                foreach (ShopItem item in shop.Items.ToArray())
+                {
+                    records.Add(CreateShopRecord(shop.ID, shop.Name, item));
+                    AddItemReferences(itemReferences, item.Requirements, $"Shop {shop.Name} [{shop.ID}] / {item.Name}");
+                    AddItemReference(itemReferences, item, $"Shop {shop.Name} [{shop.ID}] / listed item");
+                }
+            }
+
+            if (_bot.Shops.IsLoaded && loadedShopIds.Add(_bot.Shops.ID))
+            {
+                foreach (ShopItem item in _bot.Shops.Items.ToArray())
+                {
+                    records.Add(CreateShopRecord(_bot.Shops.ID, _bot.Shops.Name, item));
+                    AddItemReferences(itemReferences, item.Requirements, $"Shop {_bot.Shops.Name} [{_bot.Shops.ID}] / {item.Name}");
+                    AddItemReference(itemReferences, item, $"Shop {_bot.Shops.Name} [{_bot.Shops.ID}] / listed item");
+                }
+            }
+
+            ShopRecordCountText.Text = records.Count(static record => record.Category == "SHOP").ToString("N0");
+        }
+        catch (Exception ex)
+        {
+            ShopRecordCountText.Text = "0";
+            records.Add(CreateStatusRecord("Loaded shop data unavailable", ex.Message, "SHOPS"));
+        }
+
+        foreach (MapItem mapItem in _mapItemSnapshot)
+        {
+            records.Add(CreateMapItemRecord(mapItem));
+        }
+
+        MapItemRecordCountText.Text = _mapItemSnapshot.Length.ToString("N0");
+
+        try
+        {
+            foreach (ItemBase drop in _bot.Drops.CurrentDropInfos.ToArray())
+            {
+                records.Add(CreateDropRecord(drop));
+                AddItemReference(itemReferences, drop, "Current runtime drop queue");
+            }
+        }
+        catch (Exception ex)
+        {
+            records.Add(CreateStatusRecord("Runtime drop queue unavailable", ex.Message, "DROPS"));
+        }
+
+        try
+        {
+            Monster[] monsters = _bot.Monsters.MapMonsters.ToArray();
+            foreach (Monster monster in monsters)
+                records.Add(CreateMonsterRecord(monster));
+        }
+        catch (Exception ex)
+        {
+            records.Add(CreateStatusRecord("Current monster field unavailable", ex.Message, "MONSTERS"));
+        }
+
+        foreach ((int itemId, List<string> references) in itemReferences.OrderBy(static pair => pair.Key))
+        {
+            string[] distinctReferences = references.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            string title = $"Item reference [{itemId}]";
+            string details = $"ITEM ID: {itemId}{Environment.NewLine}" +
+                $"REFERENCE COUNT: {distinctReferences.Length:N0}{Environment.NewLine}{Environment.NewLine}" +
+                string.Join(Environment.NewLine, distinctReferences.Select(static reference => $"• {reference}"));
+            records.Add(new GameDataRecord
+            {
+                Category = "ITEM REFERENCE",
+                Name = title,
+                Summary = $"{distinctReferences.Length:N0} quest, shop, reward or runtime references",
+                Metadata = $"Item ID {itemId}",
+                Details = details,
+                SearchText = $"{title} {details}"
+            });
+        }
+
+        records.AddRange(_swfSourceRecords);
+        _dataSnapshot = records.OrderBy(static record => record.Category).ThenBy(static record => record.Name).ToList();
+        DataRecordCountText.Text = _dataSnapshot.Count.ToString("N0");
+        DataStatusText.Text = $"CATALOG UPDATED  /  {_dataSnapshot.Count:N0} RECORDS  /  QUESTS, SHOPS, MAP ITEMS, DROPS, MONSTERS AND SOURCE";
+        SwfSourceStatusText.Text = _swfSourceRecords.Count > 0
+            ? $"CLIENT SWF INDEXED  /  {_swfSourceRecords.Count:N0} SOURCE FILES"
+            : "CLIENT SWF SOURCE NOT INDEXED";
+
+        ApplyDataFilter();
+    }
+
+    private void ApplyDataFilter()
+    {
+        string search = DataSearchBox?.Text?.Trim() ?? string.Empty;
+        string category = (DataCategoryBox?.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "ALL DATA";
+        IEnumerable<GameDataRecord> query = _dataSnapshot;
+
+        if (!string.Equals(category, "ALL DATA", StringComparison.OrdinalIgnoreCase))
+        {
+            query = category switch
+            {
+                "QUESTS" => query.Where(static record => record.Category == "QUEST" || record.Category == "QUEST SOURCE"),
+                "SHOPS" => query.Where(static record => record.Category == "SHOP" || record.Category == "SHOP SOURCE"),
+                "MAP ITEMS" => query.Where(static record => record.Category == "MAP ITEM" || record.Category == "MAP SOURCE"),
+                "DROPS" => query.Where(static record => record.Category == "DROP" || record.Category == "DROP SOURCE"),
+                "MONSTERS" => query.Where(static record => record.Category == "MONSTER"),
+                "ACHIEVEMENTS" => query.Where(static record => record.Category == "ACHIEVEMENT"),
+                "ITEM REFERENCES" => query.Where(static record => record.Category == "ITEM REFERENCE"),
+                "SWF SOURCE" => query.Where(static record => record.Category.EndsWith("SOURCE", StringComparison.Ordinal)),
+                _ => query
+            };
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+            query = query.Where(record => record.SearchText.Contains(search, StringComparison.OrdinalIgnoreCase));
+
+        GameDataRecord[] matches = query.Take(2000).ToArray();
+        _dataRecords.Clear();
+        foreach (GameDataRecord record in matches)
+            _dataRecords.Add(record);
+
+        DataResultMetric.Text = $"{matches.Length:N0} MATCHES";
+        if (matches.Length == 0)
+        {
+            DataDetailTitle.Text = "No matching records";
+            DataDetailMeta.Text = "Try a broader search or refresh the source catalog.";
+            DataDetailText.Text = string.Empty;
+        }
+        else if (DataRecordList.SelectedItem is not GameDataRecord selected || !matches.Contains(selected))
+        {
+            DataRecordList.SelectedIndex = 0;
+        }
+    }
+
+    private async void AnalyzeMap_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_mapAnalysisRunning)
+            return;
+
+        if (!_bot.Map.Loaded)
+        {
+            DataStatusText.Text = "MAP ANALYSIS UNAVAILABLE  /  LOAD INTO A MAP FIRST";
+            return;
+        }
+
+        string ffdecDirectory = Path.Combine(AppContext.BaseDirectory, "FFDec");
+        if (!File.Exists(Path.Combine(ffdecDirectory, "ffdec.bat")))
+        {
+            DataStatusText.Text = $"FFDEC NOT FOUND  /  {ffdecDirectory}";
+            return;
+        }
+
+        _mapAnalysisRunning = true;
+        AnalyzeMapButtonState(true);
+        DataStatusText.Text = "ANALYZING CURRENT MAP SWF  /  FIRST RUN MAY DOWNLOAD AND DECOMPILE THE MAP FILE";
+        try
+        {
+            MapItem[] mapItems = await Task.Run(() => _bot.Map.FindMapItems()?.ToArray() ?? []);
+            _mapItemSnapshot = mapItems;
+            RefreshDataCatalog();
+            DataStatusText.Text = $"MAP ANALYSIS COMPLETE  /  {mapItems.Length:N0} MAP ITEM REFERENCES FOUND";
+        }
+        catch (Exception ex)
+        {
+            DataStatusText.Text = $"MAP ANALYSIS FAILED  /  {ex.Message}";
+            System.Diagnostics.Trace.WriteLine($"OMNISCOPE map analysis failed: {ex}");
+        }
+        finally
+        {
+            _mapAnalysisRunning = false;
+            AnalyzeMapButtonState(false);
+        }
+    }
+
+    private void AnalyzeMapButtonState(bool running)
+    {
+        if (AnalyzeMapButton is not null)
+        {
+            AnalyzeMapButton.IsEnabled = !running;
+            AnalyzeMapButton.Content = running ? "ANALYZING MAP..." : "ANALYZE CURRENT MAP";
+        }
+    }
+
+    private async void DecompileSwf_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_swfIndexRunning)
+            return;
+
+        string swfPath = Path.Combine(AppContext.BaseDirectory, "skua.swf");
+        string ffdecDirectory = Path.Combine(AppContext.BaseDirectory, "FFDec");
+        _swfIndexRunning = true;
+        DecompileSwfButtonState(true);
+        DataStatusText.Text = "DECOMPILING CLIENT SWF  /  FFDEC IS RUNNING IN THE BACKGROUND";
+        try
+        {
+            SwfSourceIndexResult result = await SwfSourceIndexer.DecompileAsync(swfPath, ffdecDirectory);
+            _swfSourceRecords.Clear();
+            _swfSourceRecords.AddRange(result.Records);
+            RefreshDataCatalog();
+            SwfSourceStatusText.Text = $"CLIENT SWF INDEXED  /  {_swfSourceRecords.Count:N0} FILES  /  {result.ExportDirectory}";
+            DataStatusText.Text = $"CLIENT SWF DECOMPILED  /  {_swfSourceRecords.Count:N0} SOURCE FILES INDEXED";
+        }
+        catch (Exception ex)
+        {
+            DataStatusText.Text = $"SWF DECOMPILATION FAILED  /  {ex.Message}";
+            SwfSourceStatusText.Text = "SWF SOURCE INDEX FAILED";
+            System.Diagnostics.Trace.WriteLine($"OMNISCOPE SWF indexing failed: {ex}");
+        }
+        finally
+        {
+            _swfIndexRunning = false;
+            DecompileSwfButtonState(false);
+        }
+    }
+
+    private void DecompileSwfButtonState(bool running)
+    {
+        if (DecompileSwfButton is not null)
+        {
+            DecompileSwfButton.IsEnabled = !running;
+            DecompileSwfButton.Content = running ? "DECOMPILING SWF..." : "DECOMPILE CLIENT SWF";
+        }
+    }
+
+    private async void ExportData_Click(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            string exportDirectory = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "VibeSkua",
+                "Omniscope",
+                "Exports");
+            Directory.CreateDirectory(exportDirectory);
+            string exportPath = Path.Combine(exportDirectory, $"game-data-{DateTime.Now:yyyyMMdd-HHmmss}.json");
+            string json = JsonSerializer.Serialize(_dataSnapshot, new JsonSerializerOptions { WriteIndented = true });
+            await File.WriteAllTextAsync(exportPath, json);
+            DataStatusText.Text = $"EXPORTED {_dataSnapshot.Count:N0} RECORDS  /  {exportPath}";
+        }
+        catch (Exception ex)
+        {
+            DataStatusText.Text = $"CATALOG EXPORT FAILED  /  {ex.Message}";
+        }
+    }
+
+    private static GameDataRecord CreateQuestRecord(QuestData quest)
+    {
+        string acceptRequirements = FormatItems(quest.AcceptRequirements);
+        string turnInRequirements = FormatItems(quest.Requirements);
+        string rewards = FormatItems(quest.Rewards);
+        string rewardRates = quest.SimpleRewards.Count == 0
+            ? "No simple reward-rate entries."
+            : string.Join(Environment.NewLine, quest.SimpleRewards.Select(static item => $"{item.Name} [ID {item.ID}] ×{item.Quantity} / {item.Rate:0.###}% / type {item.Type}"));
+        string details =
+            $"QUEST: {quest.Name}{Environment.NewLine}" +
+            $"QUEST ID: {quest.ID}{Environment.NewLine}" +
+            $"LEVEL GATE: {quest.Level}{Environment.NewLine}" +
+            $"MEMBERSHIP: {(quest.Upgrade ? "Member" : "Free")}{Environment.NewLine}" +
+            $"CLASS GATE: {quest.RequiredClassID} / {quest.RequiredClassPoints:N0} class points{Environment.NewLine}" +
+            $"FACTION GATE: {quest.RequiredFactionId} / {quest.RequiredFactionRep:N0} reputation{Environment.NewLine}" +
+            $"REPEATABLE: {!quest.Once}{Environment.NewLine}" +
+            $"GOLD REWARD: {quest.Gold:N0}{Environment.NewLine}" +
+            $"XP REWARD: {quest.XP:N0}{Environment.NewLine}{Environment.NewLine}" +
+            $"ACCEPT REQUIREMENTS:{Environment.NewLine}{acceptRequirements}{Environment.NewLine}{Environment.NewLine}" +
+            $"TURN-IN REQUIREMENTS:{Environment.NewLine}{turnInRequirements}{Environment.NewLine}{Environment.NewLine}" +
+            $"REWARDS:{Environment.NewLine}{rewards}{Environment.NewLine}{Environment.NewLine}" +
+            $"SIMPLE REWARD RATES:{Environment.NewLine}{rewardRates}";
+
+        return new GameDataRecord
+        {
+            Category = "QUEST",
+            Name = $"{quest.Name} [{quest.ID}]",
+            Summary = $"Level {quest.Level}  /  {quest.AcceptRequirements.Count:N0} accept items  /  {quest.Requirements.Count:N0} turn-in items  /  {quest.Rewards.Count:N0} rewards",
+            Metadata = $"QuestData.json  /  ID {quest.ID}",
+            Details = details,
+            SearchText = $"{details} {acceptRequirements} {turnInRequirements} {rewards} {rewardRates}"
+        };
+    }
+
+    private static GameDataRecord CreateShopRecord(int shopId, string shopName, ShopItem item)
+    {
+        string requirements = FormatItems(item.Requirements);
+        string currency = item.Coins ? "Adventure Coins" : "Gold";
+        string token = item.TokenID > 0 || !string.IsNullOrWhiteSpace(item.TokenName)
+            ? $"{item.TokenName} [ID {item.TokenID}] ×{item.TokenQuantity:0.###}"
+            : "None";
+        string details =
+            $"SHOP: {shopName} [{shopId}]{Environment.NewLine}" +
+            $"ITEM: {item.Name}{Environment.NewLine}" +
+            $"ITEM ID: {item.ID}  /  SHOP ITEM ID: {item.ShopItemID}{Environment.NewLine}" +
+            $"COST: {item.Cost:N0} {currency}{Environment.NewLine}" +
+            $"REQUIRED LEVEL: {item.Level}{Environment.NewLine}" +
+            $"FACTION: {NullLabel(item.Faction)}{Environment.NewLine}" +
+            $"REQUIRED REPUTATION: {item.RequiredReputation:N0}{Environment.NewLine}" +
+            $"TOKEN: {token}{Environment.NewLine}" +
+            $"MERGE / TURN-IN MATERIALS:{Environment.NewLine}{requirements}";
+
+        return new GameDataRecord
+        {
+            Category = "SHOP",
+            Name = $"{item.Name} [{item.ID}]",
+            Summary = $"{item.Cost:N0} {currency}  /  {NullLabel(item.Faction)}  /  {item.Requirements.Count:N0} materials",
+            Metadata = $"Shop {shopName} [{shopId}]  /  ShopItemID {item.ShopItemID}",
+            Details = details,
+            SearchText = $"{details} {requirements} {item.TokenName}"
+        };
+    }
+
+    private static GameDataRecord CreateMapItemRecord(MapItem mapItem)
+    {
+        string details =
+            $"MAP ITEM ID: {mapItem.ID}{Environment.NewLine}" +
+            $"QUEST ID: {mapItem.QuestID}{Environment.NewLine}" +
+            $"MAP: {mapItem.MapName}{Environment.NewLine}" +
+            $"MAP FILE: {mapItem.MapFilePath}{Environment.NewLine}" +
+            $"{Environment.NewLine}This association was extracted from the current map SWF by VibeSkua's map-item parser.";
+        return new GameDataRecord
+        {
+            Category = "MAP ITEM",
+            Name = $"Map item [{mapItem.ID}]",
+            Summary = $"Quest {mapItem.QuestID}  /  {mapItem.MapName}",
+            Metadata = mapItem.MapFilePath,
+            Details = details,
+            SearchText = $"{details} {mapItem.ID} {mapItem.QuestID} {mapItem.MapName}"
+        };
+    }
+
+    private static GameDataRecord CreateDropRecord(ItemBase item)
+    {
+        string details =
+            $"CURRENT DROP: {item.Name}{Environment.NewLine}" +
+            $"ITEM ID: {item.ID}{Environment.NewLine}" +
+            $"QUANTITY: {item.Quantity:N0}{Environment.NewLine}" +
+            $"CATEGORY: {item.CategoryString}{Environment.NewLine}" +
+            $"TEMPORARY: {item.Temp}{Environment.NewLine}" +
+            $"AC ITEM: {item.Coins}{Environment.NewLine}" +
+            $"{Environment.NewLine}This is an observed runtime drop queue entry, not a complete monster drop table.";
+        return new GameDataRecord
+        {
+            Category = "DROP",
+            Name = $"{item.Name} [{item.ID}]",
+            Summary = $"Observed quantity ×{item.Quantity:N0}  /  {item.CategoryString}",
+            Metadata = "Runtime drop queue",
+            Details = details,
+            SearchText = details
+        };
+    }
+
+    private static GameDataRecord CreateMonsterRecord(Monster monster)
+    {
+        string details =
+            $"MONSTER: {monster.Name}{Environment.NewLine}" +
+            $"ENTITY ID: {monster.ID}{Environment.NewLine}" +
+            $"MAP ID: {monster.MapID}{Environment.NewLine}" +
+            $"RACE: {NullLabel(monster.Race)}{Environment.NewLine}" +
+            $"CELL: {NullLabel(monster.Cell)}{Environment.NewLine}" +
+            $"STATE: {monster.State}  /  ALIVE: {monster.Alive}{Environment.NewLine}" +
+            $"HEALTH: {monster.HP:N0} / {monster.MaxHP:N0}{Environment.NewLine}" +
+            $"CLIENT ASSET: {NullLabel(monster.FileName)}{Environment.NewLine}{Environment.NewLine}" +
+            "A complete mob loot table is not supplied by the public monster snapshot.";
+        return new GameDataRecord
+        {
+            Category = "MONSTER",
+            Name = $"{monster.Name} [{monster.ID}]",
+            Summary = $"Map ID {monster.MapID}  /  {NullLabel(monster.Cell)}  /  {(monster.Alive ? "ALIVE" : "DOWN")}",
+            Metadata = "Current map monster snapshot",
+            Details = details,
+            SearchText = details
+        };
+    }
+
+    private static GameDataRecord CreateStatusRecord(string name, string message, string category)
+    {
+        return new GameDataRecord
+        {
+            Category = category,
+            Name = name,
+            Summary = message,
+            Metadata = "Source status",
+            Details = message,
+            SearchText = $"{name} {message}"
+        };
+    }
+
+    private static string FormatItems(IEnumerable<ItemBase> items)
+    {
+        string[] lines = items.Select(static item => $"{item.Name} [ID {item.ID}] ×{item.Quantity:N0}").ToArray();
+        return lines.Length == 0 ? "None" : string.Join(Environment.NewLine, lines);
+    }
+
+    private static void AddItemReferences(Dictionary<int, List<string>> references, IEnumerable<ItemBase> items, string source)
+    {
+        foreach (ItemBase item in items)
+            AddItemReference(references, item, source);
+    }
+
+    private static void AddItemReference(Dictionary<int, List<string>> references, ItemBase item, string source)
+    {
+        if (item.ID <= 0)
+            return;
+
+        if (!references.TryGetValue(item.ID, out List<string>? entries))
+        {
+            entries = new List<string>();
+            references[item.ID] = entries;
+        }
+
+        entries.Add($"{item.Name} / {source}");
     }
 
     private void UpdateEntities(Monster[] monsters)
