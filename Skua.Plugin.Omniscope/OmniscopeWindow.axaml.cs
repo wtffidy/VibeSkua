@@ -319,12 +319,12 @@ public partial class OmniscopeWindow : Window
 
         InventoryRow[] inventoryRows = loggedIn
             ? _bot.Inventory.Items
-                .OrderByDescending(static item => item.Wearing)
+                .OrderByDescending(static item => item.Equipped)
                 .ThenBy(static item => item.Name)
                 .Take(12)
                 .Select(item => new InventoryRow
                 {
-                    Name = $"{(item.Wearing ? "EQUIPPED  /  " : string.Empty)}{(item is Skua.Core.Models.Items.InventoryItem inventoryItem && _bot.Inventory.IsFavorited(inventoryItem.ID) ? "★  " : string.Empty)}{item.Name}",
+                    Name = $"{(item.Equipped ? "EQUIPPED  /  " : string.Empty)}{(_bot.Inventory.IsFavorited(item.ID) ? "★  " : string.Empty)}{item.Name}",
                     Quantity = $"×{item.Quantity:N0}"
                 })
                 .ToArray()
