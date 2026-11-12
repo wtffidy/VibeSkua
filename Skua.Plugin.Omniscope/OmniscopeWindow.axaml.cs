@@ -80,7 +80,6 @@ public partial class OmniscopeWindow : Window
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
         RefreshTelemetry();
-        RefreshDataCatalog();
         _refreshTimer.Start();
     }
 
@@ -561,33 +560,66 @@ public partial class OmniscopeWindow : Window
         if (_mapAnalysisRunning)
             return;
 
-        if (!_bot.Map.Loaded)
+        string mapFileName = _bot.Map.FileName;
+        if (string.IsNullOrWhiteSpace(mapFileName))
         {
-            DataStatusText.Text = "MAP ANALYSIS UNAVAILABLE  /  LOAD INTO A MAP FIRST";
+            DataStatusText.Text = "MAP REFERENCES UNAVAILABLE  /  LOAD INTO A MAP FIRST";
             return;
         }
 
-        string ffdecDirectory = Path.Combine(AppContext.BaseDirectory, "FFDec");
-        if (!File.Exists(Path.Combine(ffdecDirectory, "ffdec.bat")))
-        {
-            DataStatusText.Text = $"FFDEC NOT FOUND  /  {ffdecDirectory}";
-            return;
-        }
+        string cachePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "VibeSkua",
+            "cache",
+            "0SavedMaps.json");
 
         _mapAnalysisRunning = true;
         AnalyzeMapButtonState(true);
-        DataStatusText.Text = "ANALYZING CURRENT MAP SWF  /  FIRST RUN MAY DOWNLOAD AND DECOMPILE THE MAP FILE";
+        DataStatusText.Text = $"READING SAVED MAP REFERENCES  /  {mapFileName}";
         try
         {
-            MapItem[] mapItems = await Task.Run(() => _bot.Map.FindMapItems()?.ToArray() ?? []);
-            _mapItemSnapshot = mapItems;
-            RefreshDataCatalog();
-            DataStatusText.Text = $"MAP ANALYSIS COMPLETE  /  {mapItems.Length:N0} MAP ITEM REFERENCES FOUND";
+            if (!File.Exists(cachePath))
+            {
+                DataStatusText.Text = "NO SAVED MAP INDEX EXISTS YET  /  LIVE MAP DECOMPILATION IS PAUSED TO PROTECT THE GAME VIEW";
+                return;
+            }
+
+            string json = await File.ReadAllTextAsync(cachePath);
+            Dictionary<string, List<MapItem>>? savedMaps = JsonSerializer.Deserialize<Dictionary<string, List<MapItem>>>(
+                json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            KeyValuePair<string, List<MapItem>> mapEntry = savedMaps?
+                .FirstOrDefault(pair => string.Equals(pair.Key, mapFileName, StringComparison.OrdinalIgnoreCase))
+                ?? default;
+
+            if (mapEntry.Value is null)
+            {
+                DataStatusText.Text = $"NO SAVED REFERENCES FOR {mapFileName}  /  LIVE MAP DECOMPILATION IS PAUSED TO PROTECT THE GAME VIEW";
+                return;
+            }
+
+            _mapItemSnapshot = mapEntry.Value.ToArray();
+            GameDataRecord[] mapRecords = _mapItemSnapshot
+                .Select(item => CreateMapItemRecord(item, $"Quest ID {item.QuestID}"))
+                .ToArray();
+
+            _dataSnapshot = _dataSnapshot
+                .Where(static record => record.Category != "MAP ITEM")
+                .Concat(mapRecords)
+                .OrderBy(static record => record.Category)
+                .ThenBy(static record => record.Name)
+                .ToList();
+
+            MapItemRecordCountText.Text = _mapItemSnapshot.Length.ToString("N0");
+            DataRecordCountText.Text = _dataSnapshot.Count.ToString("N0");
+            ApplyDataFilter();
+            DataStatusText.Text = $"LOADED {_mapItemSnapshot.Length:N0} SAVED MAP REFERENCES  /  {mapFileName}";
         }
         catch (Exception ex)
         {
-            DataStatusText.Text = $"MAP ANALYSIS FAILED  /  {ex.Message}";
-            System.Diagnostics.Trace.WriteLine($"OMNISCOPE map analysis failed: {ex}");
+            DataStatusText.Text = $"SAVED MAP INDEX READ FAILED  /  {ex.Message}";
+            System.Diagnostics.Trace.WriteLine($"OMNISCOPE saved map index read failed: {ex}");
         }
         finally
         {
@@ -635,7 +667,15 @@ public partial class OmniscopeWindow : Window
                 SearchText = $"AQW game client {clientFile.FileName} {clientFile.SourceUri} {clientFile.LocalPath}"
             });
             _swfSourceRecords.AddRange(result.Records);
-            RefreshDataCatalog();
+            _dataSnapshot = _dataSnapshot
+                .Where(static record => !record.Metadata.EndsWith(".as", StringComparison.OrdinalIgnoreCase) &&
+                    !record.Name.StartsWith("AQW game client / ", StringComparison.OrdinalIgnoreCase))
+                .Concat(_swfSourceRecords)
+                .OrderBy(static record => record.Category)
+                .ThenBy(static record => record.Name)
+                .ToList();
+            DataRecordCountText.Text = _dataSnapshot.Count.ToString("N0");
+            ApplyDataFilter();
             SwfSourceStatusText.Text = $"AQW CLIENT INDEXED  /  {clientFile.FileName}  /  {_swfSourceRecords.Count:N0} RECORDS";
             DataStatusText.Text = $"AQW GAME CLIENT DECOMPILED  /  {result.Records.Count:N0} ACTIONSCRIPT FILES INDEXED";
         }
