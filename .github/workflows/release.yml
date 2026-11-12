@@ -56,6 +56,18 @@ jobs:
         run: |
           call BuildProject.bat --no-pause
 
+      - name: Verify bundled FFDec Java runtime
+        shell: pwsh
+        run: |
+          $javaPath = Join-Path $PWD "Build/FFDec/Runtime/bin/java.exe"
+          if (-not (Test-Path $javaPath)) {
+            throw "The portable FFDec Java runtime was not staged: $javaPath"
+          }
+          & $javaPath -version
+          if ($LASTEXITCODE -ne 0) {
+            throw "The portable FFDec Java runtime failed its startup check."
+          }
+
       - name: Package Release with Velopack
         shell: pwsh
         run: |
