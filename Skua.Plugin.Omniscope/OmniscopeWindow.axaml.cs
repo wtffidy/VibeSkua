@@ -341,7 +341,7 @@ public partial class OmniscopeWindow : Window
             return;
 
         DataDetailTitle.Text = record.Name;
-        DataDetailMeta.Text = $"{record.Category}  /  {record.Metadata}";
+        DataDetailMeta.Text = $"{record.DisplayCategory}  /  {record.Metadata}";
         DataDetailText.Text = record.Details;
         EvaluateShopButton.IsEnabled = record.SourceObject is ShopItem shopItem &&
             record.SourceShopId == _bot.Shops.ID &&
@@ -535,7 +535,7 @@ public partial class OmniscopeWindow : Window
         records.AddRange(_swfSourceRecords);
         _dataSnapshot = records.OrderBy(static record => record.Category).ThenBy(static record => record.Name).ToList();
         DataRecordCountText.Text = _dataSnapshot.Count.ToString("N0");
-        DataStatusText.Text = $"CATALOG UPDATED  /  {_dataSnapshot.Count:N0} RECORDS  /  QUESTS, SHOPS, MAP ITEMS, DROPS, MONSTERS AND SOURCE";
+        DataStatusText.Text = $"Data refreshed  /  {_dataSnapshot.Count:N0} results available across quests, shops, maps, drops and monsters.";
         SwfSourceStatusText.Text = _swfSourceRecords.Count > 0
             ? $"CLIENT SWF INDEXED  /  {_swfSourceRecords.Count:N0} SOURCE FILES"
             : "CLIENT SWF SOURCE NOT INDEXED";
@@ -559,14 +559,14 @@ public partial class OmniscopeWindow : Window
         {
             query = category switch
             {
-                "QUESTS" => query.Where(static record => record.Category == "QUEST" || record.Category == "QUEST SOURCE"),
-                "SHOPS" => query.Where(static record => record.Category == "SHOP" || record.Category == "SHOP SOURCE"),
-                "MAP ITEMS" => query.Where(static record => record.Category == "MAP ITEM" || record.Category == "MAP SOURCE"),
-                "DROPS" => query.Where(static record => record.Category == "DROP" || record.Category == "DROP SOURCE"),
+                "QUESTS & REWARDS" => query.Where(static record => record.Category == "QUEST" || record.Category == "QUEST SOURCE"),
+                "SHOP ITEMS" => query.Where(static record => record.Category == "SHOP" || record.Category == "SHOP SOURCE"),
+                "MAP LINKS" => query.Where(static record => record.Category == "MAP ITEM" || record.Category == "MAP SOURCE"),
+                "OBSERVED DROPS" => query.Where(static record => record.Category == "DROP" || record.Category == "DROP SOURCE"),
                 "MONSTERS" => query.Where(static record => record.Category == "MONSTER"),
                 "ACHIEVEMENTS" => query.Where(static record => record.Category == "ACHIEVEMENT"),
-                "ITEM REFERENCES" => query.Where(static record => record.Category == "ITEM REFERENCE"),
-                "SWF SOURCE" => query.Where(static record => record.Category.EndsWith("SOURCE", StringComparison.Ordinal)),
+                "ITEM USAGE" => query.Where(static record => record.Category == "ITEM REFERENCE"),
+                "AQW CLIENT CODE" => query.Where(static record => record.Category.EndsWith("SOURCE", StringComparison.Ordinal)),
                 _ => query
             };
         }
@@ -790,7 +790,7 @@ public partial class OmniscopeWindow : Window
         return new GameDataRecord
         {
             Category = "QUEST",
-            Name = $"{quest.Name} [{quest.ID}]",
+            Name = NullLabel(quest.Name),
             Summary = $"Level {quest.Level}  /  {acceptItems.Length:N0} accept items  /  {turnInItems.Length:N0} turn-in items  /  {rewardsItems.Length:N0} rewards",
             Metadata = $"QuestData.json  /  ID {quest.ID}",
             Details = details,
@@ -820,7 +820,7 @@ public partial class OmniscopeWindow : Window
         return new GameDataRecord
         {
             Category = "SHOP",
-            Name = $"{NullLabel(item.Name)} [{item.ID}]",
+            Name = NullLabel(item.Name),
             Summary = $"{item.Cost:N0} {currency}  /  {NullLabel(item.Faction)}  /  {requirementItems.Length:N0} materials",
             Metadata = $"Shop {shopName} [{shopId}]  /  ShopItemID {item.ShopItemID}",
             Details = details,
@@ -842,7 +842,7 @@ public partial class OmniscopeWindow : Window
         return new GameDataRecord
         {
             Category = "MAP ITEM",
-            Name = $"Map item [{mapItem.ID}]",
+            Name = $"Map link #{mapItem.ID}",
             Summary = $"Quest {mapItem.QuestID}  /  {mapItem.MapName}",
             Metadata = mapItem.MapFilePath,
             Details = details,
@@ -863,7 +863,7 @@ public partial class OmniscopeWindow : Window
         return new GameDataRecord
         {
             Category = "DROP",
-            Name = $"{item.Name} [{item.ID}]",
+            Name = NullLabel(item.Name),
             Summary = $"Observed quantity ×{item.Quantity:N0}  /  {item.CategoryString}",
             Metadata = "Runtime drop queue",
             Details = details,
@@ -888,7 +888,7 @@ public partial class OmniscopeWindow : Window
         return new GameDataRecord
         {
             Category = "DROP",
-            Name = $"{observation.Name} [{observation.ItemId}]",
+            Name = NullLabel(observation.Name),
             Summary = $"{observation.Timestamp:HH:mm:ss}  /  ×{observation.ItemQuantity:N0}  /  Added: {observation.AddedToInventory}",
             Metadata = "Runtime ItemDropped event history",
             Details = details,
@@ -911,7 +911,7 @@ public partial class OmniscopeWindow : Window
         return new GameDataRecord
         {
             Category = "MONSTER",
-            Name = $"{monster.Name} [{monster.ID}]",
+            Name = NullLabel(monster.Name),
             Summary = $"Map ID {monster.MapID}  /  {NullLabel(monster.Cell)}  /  {(monster.Alive ? "ALIVE" : "DOWN")}",
             Metadata = "Current map monster snapshot",
             Details = details,
