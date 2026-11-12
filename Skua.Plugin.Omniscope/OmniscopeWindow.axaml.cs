@@ -352,10 +352,139 @@ public partial class OmniscopeWindow : Window
         DataDetailTitle.Text = record.Name;
         DataDetailMeta.Text = $"{record.DisplayCategory}  /  {record.Metadata}";
         DataDetailText.Text = record.Details;
-        EvaluateShopButton.IsEnabled = record.SourceObject is ShopItem shopItem &&
+
+        bool isQuest = record.SourceQuestId is int;
+        bool isShopItem = record.SourceObject is ShopItem;
+        CheckQuestButton.IsEnabled = isQuest;
+        AcceptQuestButton.IsEnabled = false;
+        CompleteQuestButton.IsEnabled = false;
+        LoadShopButton.IsEnabled = isShopItem && record.SourceShopId is > 0;
+        EvaluateShopButton.IsEnabled = isShopItem &&
             record.SourceShopId == _bot.Shops.ID &&
             _bot.Shops.IsLoaded &&
-            _bot.Shops.Items.Any(item => item.ID == shopItem.ID && item.ShopItemID == shopItem.ShopItemID);
+            _bot.Shops.Items.Any(item => item.ID == ((ShopItem)record.SourceObject!).ID &&
+                item.ShopItemID == ((ShopItem)record.SourceObject!).ShopItemID);
+
+        if (record.SourceQuestId is int questId)
+            UpdateQuestActionState(questId);
+    }
+
+    private void UpdateQuestActionState(int questId)
+    {
+        bool inProgress = _bot.Quests.IsInProgress(questId);
+        bool available = !inProgress && _bot.Quests.IsAvailable(questId);
+        bool canTurnIn = inProgress && _bot.Quests.CanCompleteFullCheck(questId);
+        AcceptQuestButton.IsEnabled = available;
+        CompleteQuestButton.IsEnabled = canTurnIn;
+    }
+
+    private void CheckQuest_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataRecordList.SelectedItem is not GameDataRecord { SourceQuestId: int questId } record)
+            return;
+
+        try
+        {
+            bool inProgress = _bot.Quests.IsInProgress(questId);
+            bool available = !inProgress && _bot.Quests.IsAvailable(questId);
+            bool canTurnIn = inProgress && _bot.Quests.CanCompleteFullCheck(questId);
+            string status = $"LIVE QUEST STATUS:{Environment.NewLine}" +
+                $"In progress: {inProgress}{Environment.NewLine}" +
+                $"Available to accept: {available}{Environment.NewLine}" +
+                $"Turn-in requirements met: {canTurnIn}{Environment.NewLine}" +
+                $"Registered for auto-completion: {_bot.Quests.Registered.Contains(questId)}";
+            DataDetailText.Text = $"{record.Details}{Environment.NewLine}{Environment.NewLine}{status}";
+            UpdateQuestActionState(questId);
+            DataStatusText.Text = $"QUEST CHECKED  /  {record.Name} [{questId}]";
+        }
+        catch (Exception ex)
+        {
+            DataStatusText.Text = $"QUEST CHECK FAILED  /  {ex.Message}";
+        }
+    }
+
+    private void AcceptQuest_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataRecordList.SelectedItem is not GameDataRecord { SourceQuestId: int questId } record)
+            return;
+
+        try
+        {
+            if (!_bot.Quests.IsAvailable(questId) || _bot.Quests.IsInProgress(questId))
+            {
+                DataStatusText.Text = $"QUEST NOT AVAILABLE TO ACCEPT  /  {record.Name} [{questId}]";
+                UpdateQuestActionState(questId);
+                return;
+            }
+
+            bool accepted = _bot.Quests.Accept(questId);
+            DataStatusText.Text = accepted
+                ? $"QUEST ACCEPT REQUEST SENT  /  {record.Name} [{questId}]"
+                : $"QUEST ACCEPT FAILED  /  {record.Name} [{questId}]";
+            UpdateQuestActionState(questId);
+        }
+        catch (Exception ex)
+        {
+            DataStatusText.Text = $"QUEST ACCEPT FAILED  /  {ex.Message}";
+        }
+    }
+
+    private void CompleteQuest_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataRecordList.SelectedItem is not GameDataRecord { SourceQuestId: int questId } record)
+            return;
+
+        try
+        {
+            if (!_bot.Quests.IsInProgress(questId) || !_bot.Quests.CanCompleteFullCheck(questId))
+            {
+                DataStatusText.Text = $"QUEST NOT READY TO TURN IN  /  {record.Name} [{questId}]";
+                UpdateQuestActionState(questId);
+                return;
+            }
+
+            bool completed = _bot.Quests.Complete(questId);
+            DataStatusText.Text = completed
+                ? $"QUEST TURN-IN REQUEST SENT  /  {record.Name} [{questId}]"
+                : $"QUEST TURN-IN FAILED  /  {record.Name} [{questId}]";
+            UpdateQuestActionState(questId);
+        }
+        catch (Exception ex)
+        {
+            DataStatusText.Text = $"QUEST TURN-IN FAILED  /  {ex.Message}";
+        }
+    }
+
+    private void LoadShop_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataRecordList.SelectedItem is not GameDataRecord { SourceObject: ShopItem item, SourceShopId: int shopId } record ||
+            shopId <= 0)
+            return;
+
+        try
+        {
+            DataStatusText.Text = $"LOADING SHOP  /  {record.Metadata}";
+            _bot.Shops.Load(shopId);
+            if (!_bot.Shops.IsLoaded || _bot.Shops.ID != shopId)
+            {
+                DataStatusText.Text = $"SHOP DID NOT LOAD  /  SHOP {shopId}";
+                return;
+            }
+
+            RefreshDataCatalog();
+            GameDataRecord? refreshedRecord = _dataSnapshot.FirstOrDefault(candidate =>
+                candidate.Category == "SHOP" && candidate.SourceShopId == shopId &&
+                candidate.SourceObject is ShopItem loadedItem &&
+                loadedItem.ID == item.ID && loadedItem.ShopItemID == item.ShopItemID);
+            if (refreshedRecord is not null)
+                DataRecordList.SelectedItem = refreshedRecord;
+
+            DataStatusText.Text = $"SHOP LOADED  /  {_bot.Shops.Name} [{shopId}]  /  NO PURCHASE MADE";
+        }
+        catch (Exception ex)
+        {
+            DataStatusText.Text = $"SHOP LOAD FAILED  /  {ex.Message}";
+        }
     }
 
     private void EvaluateShopGates_Click(object? sender, RoutedEventArgs e)
@@ -557,7 +686,8 @@ public partial class OmniscopeWindow : Window
         // Avalonia can raise SelectionChanged while InitializeComponent is still populating controls.
         if (!_xamlInitialized || DataSearchBox is null || DataCategoryBox is null || DataRecordList is null ||
             DataResultMetric is null || DataDetailTitle is null || DataDetailMeta is null || DataDetailText is null ||
-            EvaluateShopButton is null)
+            EvaluateShopButton is null || CheckQuestButton is null || AcceptQuestButton is null ||
+            CompleteQuestButton is null || LoadShopButton is null)
             return;
 
         string search = DataSearchBox?.Text?.Trim() ?? string.Empty;
@@ -595,6 +725,10 @@ public partial class OmniscopeWindow : Window
             DataDetailMeta.Text = "Try a broader search or refresh the source catalog.";
             DataDetailText.Text = string.Empty;
             EvaluateShopButton.IsEnabled = false;
+            CheckQuestButton.IsEnabled = false;
+            AcceptQuestButton.IsEnabled = false;
+            CompleteQuestButton.IsEnabled = false;
+            LoadShopButton.IsEnabled = false;
         }
         else if (DataRecordList.SelectedItem is not GameDataRecord selected || !matches.Contains(selected))
         {
@@ -803,7 +937,8 @@ public partial class OmniscopeWindow : Window
             Summary = $"Level {quest.Level}  /  {acceptItems.Length:N0} accept items  /  {turnInItems.Length:N0} turn-in items  /  {rewardsItems.Length:N0} rewards",
             Metadata = $"QuestData.json  /  ID {quest.ID}",
             Details = details,
-            SearchText = $"{details} {acceptRequirements} {turnInRequirements} {rewards} {rewardRates}"
+            SearchText = $"{details} {acceptRequirements} {turnInRequirements} {rewards} {rewardRates}",
+            SourceQuestId = quest.ID
         };
     }
 
