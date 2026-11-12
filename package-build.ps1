@@ -150,12 +150,16 @@ foreach ($Target in $Targets) {
         }
     }
 
-    # 9. Copy OMNISCOPE into the final client plugin folder.
-    $OmniscopeDll = Join-Path $RootDir "Skua.Plugin.Omniscope\bin\Release\net10.0\Skua.Plugin.Omniscope.dll"
+    # 9. Copy the OMNISCOPE DLL staged by its MSBuild target.
+    $OmniscopeDll = Join-Path $RootDir "Build\plugins\Skua.Plugin.Omniscope.dll"
     if (-not (Test-Path $OmniscopeDll)) {
-        throw "OMNISCOPE build output is missing: $OmniscopeDll"
+        throw "OMNISCOPE was not staged by its Release build: $OmniscopeDll. Build Skua.Plugin.Omniscope.csproj before packaging."
     }
-    Copy-Item $OmniscopeDll (Join-Path $PluginsDir "Skua.Plugin.Omniscope.dll") -Force
+
+    $OmniscopeTargetDll = Join-Path $PluginsDir "Skua.Plugin.Omniscope.dll"
+    if ([System.IO.Path]::GetFullPath($OmniscopeDll) -ne [System.IO.Path]::GetFullPath($OmniscopeTargetDll)) {
+        Copy-Item $OmniscopeDll $OmniscopeTargetDll -Force
+    }
 
     # 10. Clean up stray files from target root
     $AllowedRootFiles = @(
