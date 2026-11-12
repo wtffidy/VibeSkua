@@ -229,6 +229,9 @@ public partial class OmniscopeWindow : Window
     private void OnItemDropped(ItemBase item, bool addedToInventory, int quantityNow)
     {
         DateTimeOffset timestamp = DateTimeOffset.Now;
+        int itemId = item.ID;
+        string itemName = NullLabel(item.Name);
+        int itemQuantity = item.Quantity;
         int? precedingKillMapId = null;
         double? secondsAfterKill = null;
 
@@ -246,9 +249,9 @@ public partial class OmniscopeWindow : Window
 
             _dropHistory.Enqueue(new DropObservation(
                 timestamp,
-                item.ID,
-                item.Name,
-                item.Quantity,
+                itemId,
+                itemName,
+                itemQuantity,
                 addedToInventory,
                 quantityNow,
                 precedingKillMapId,
@@ -264,7 +267,7 @@ public partial class OmniscopeWindow : Window
         Dispatcher.UIThread.Post(() =>
         {
             if (IsVisible)
-                AddEvent("ITEM DROP", $"{item.Name} [{item.ID}] ×{item.Quantity}  /  Added to inventory: {addedToInventory}  /  quantity now: {quantityNow}{context}");
+                AddEvent("ITEM DROP", $"{itemName} [{itemId}] ×{itemQuantity}  /  Added to inventory: {addedToInventory}  /  quantity now: {quantityNow}{context}");
         });
     }
 
@@ -378,7 +381,7 @@ public partial class OmniscopeWindow : Window
                 if (!loadedShopIds.Add(shop.ID))
                     continue;
 
-                foreach (ShopItem item in shop.Items.ToArray())
+                foreach (ShopItem item in shop.Items?.ToArray() ?? [])
                 {
                     records.Add(CreateShopRecord(shop.ID, shop.Name, item));
                     AddItemReferences(itemReferences, item.Requirements, $"Shop {shop.Name} [{shop.ID}] / {item.Name}");
@@ -388,7 +391,7 @@ public partial class OmniscopeWindow : Window
 
             if (_bot.Shops.IsLoaded && loadedShopIds.Add(_bot.Shops.ID))
             {
-                foreach (ShopItem item in _bot.Shops.Items.ToArray())
+                foreach (ShopItem item in _bot.Shops.Items?.ToArray() ?? [])
                 {
                     records.Add(CreateShopRecord(_bot.Shops.ID, _bot.Shops.Name, item));
                     AddItemReferences(itemReferences, item.Requirements, $"Shop {_bot.Shops.Name} [{_bot.Shops.ID}] / {item.Name}");
@@ -666,12 +669,16 @@ public partial class OmniscopeWindow : Window
 
     private static GameDataRecord CreateQuestRecord(QuestData quest)
     {
-        string acceptRequirements = FormatItems(quest.AcceptRequirements);
-        string turnInRequirements = FormatItems(quest.Requirements);
-        string rewards = FormatItems(quest.Rewards);
-        string rewardRates = quest.SimpleRewards.Count == 0
+        ItemBase[] acceptItems = quest.AcceptRequirements?.ToArray() ?? [];
+        ItemBase[] turnInItems = quest.Requirements?.ToArray() ?? [];
+        ItemBase[] rewardsItems = quest.Rewards?.ToArray() ?? [];
+        SimpleReward[] simpleRewards = quest.SimpleRewards?.ToArray() ?? [];
+        string acceptRequirements = FormatItems(acceptItems);
+        string turnInRequirements = FormatItems(turnInItems);
+        string rewards = FormatItems(rewardsItems);
+        string rewardRates = simpleRewards.Length == 0
             ? "No simple reward-rate entries."
-            : string.Join(Environment.NewLine, quest.SimpleRewards.Select(static item => $"{item.Name} [ID {item.ID}] ×{item.Quantity} / {item.Rate:0.###}% / type {item.Type}"));
+            : string.Join(Environment.NewLine, simpleRewards.Select(static item => $"{NullLabel(item.Name)} [ID {item.ID}] ×{item.Quantity} / {item.Rate:0.###}% / type {item.Type}"));
         string details =
             $"QUEST: {quest.Name}{Environment.NewLine}" +
             $"QUEST ID: {quest.ID}{Environment.NewLine}" +
@@ -691,7 +698,7 @@ public partial class OmniscopeWindow : Window
         {
             Category = "QUEST",
             Name = $"{quest.Name} [{quest.ID}]",
-            Summary = $"Level {quest.Level}  /  {quest.AcceptRequirements.Count:N0} accept items  /  {quest.Requirements.Count:N0} turn-in items  /  {quest.Rewards.Count:N0} rewards",
+            Summary = $"Level {quest.Level}  /  {acceptItems.Length:N0} accept items  /  {turnInItems.Length:N0} turn-in items  /  {rewardsItems.Length:N0} rewards",
             Metadata = $"QuestData.json  /  ID {quest.ID}",
             Details = details,
             SearchText = $"{details} {acceptRequirements} {turnInRequirements} {rewards} {rewardRates}"
@@ -700,7 +707,8 @@ public partial class OmniscopeWindow : Window
 
     private static GameDataRecord CreateShopRecord(int shopId, string shopName, ShopItem item)
     {
-        string requirements = FormatItems(item.Requirements);
+        ItemBase[] requirementItems = item.Requirements?.ToArray() ?? [];
+        string requirements = FormatItems(requirementItems);
         string currency = item.Coins ? "Adventure Coins" : "Gold";
         string token = item.TokenID > 0 || !string.IsNullOrWhiteSpace(item.TokenName)
             ? $"{item.TokenName} [ID {item.TokenID}] ×{item.TokenQuantity:0.###}"
@@ -719,7 +727,7 @@ public partial class OmniscopeWindow : Window
         return new GameDataRecord
         {
             Category = "SHOP",
-            Name = $"{item.Name} [{item.ID}]",
+            Name = $"{NullLabel(item.Name)} [{item.ID}]",
             Summary = $"{item.Cost:N0} {currency}  /  {NullLabel(item.Faction)}  /  {item.Requirements.Count:N0} materials",
             Metadata = $"Shop {shopName} [{shopId}]  /  ShopItemID {item.ShopItemID}",
             Details = details,
@@ -752,7 +760,7 @@ public partial class OmniscopeWindow : Window
     private static GameDataRecord CreateDropRecord(ItemBase item)
     {
         string details =
-            $"CURRENT DROP: {item.Name}{Environment.NewLine}" +
+            $"CURRENT DROP: {NullLabel(item.Name)}{Environment.NewLine}" +
             $"ITEM ID: {item.ID}{Environment.NewLine}" +
             $"QUANTITY: {item.Quantity:N0}{Environment.NewLine}" +
             $"CATEGORY: {item.CategoryString}{Environment.NewLine}" +
@@ -831,16 +839,28 @@ public partial class OmniscopeWindow : Window
         };
     }
 
-    private static string FormatItems(IEnumerable<ItemBase> items)
+    private static string FormatItems(IEnumerable<ItemBase>? items)
     {
-        string[] lines = items.Select(static item => $"{item.Name} [ID {item.ID}] ×{item.Quantity:N0}").ToArray();
+        if (items is null)
+            return "None";
+
+        string[] lines = items
+            .Where(static item => item is not null)
+            .Select(static item => $"{NullLabel(item.Name)} [ID {item.ID}] ×{item.Quantity:N0}")
+            .ToArray();
         return lines.Length == 0 ? "None" : string.Join(Environment.NewLine, lines);
     }
 
-    private static void AddItemReferences(Dictionary<int, List<string>> references, IEnumerable<ItemBase> items, string source)
+    private static void AddItemReferences(Dictionary<int, List<string>> references, IEnumerable<ItemBase>? items, string source)
     {
+        if (items is null)
+            return;
+
         foreach (ItemBase item in items)
-            AddItemReference(references, item, source);
+        {
+            if (item is not null)
+                AddItemReference(references, item, source);
+        }
     }
 
     private static void AddItemReference(Dictionary<int, List<string>> references, ItemBase item, string source)
