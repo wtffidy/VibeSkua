@@ -141,7 +141,7 @@
             </TabItem>
             <TabItem Header="DATA INTELLIGENCE">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <Grid Margin="22" RowDefinitions="Auto,Auto,Auto,*" RowSpacing="15">
+                    <Grid Margin="22" RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="15">
                         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="16">
                             <StackPanel Spacing="4">
                                 <TextBlock Text="GAME DATA INTELLIGENCE" FontSize="23" FontWeight="Bold" Foreground="#E9FAFF"/>
