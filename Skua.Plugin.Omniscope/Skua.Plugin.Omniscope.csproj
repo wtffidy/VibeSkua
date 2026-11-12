@@ -16,8 +16,8 @@
     <ProjectReference Include="..\Skua.Core.Models\Skua.Core.Models.csproj" />
     <ProjectReference Include="..\Skua.Shared.Avalonia\Skua.Shared.Avalonia.csproj" />
   </ItemGroup>
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <MakeDir Directories="..\Build\plugins" Condition="'$(Configuration)' == 'Release'" />
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="..\Build\plugins" Condition="'$(Configuration)' == 'Release'" />
+  <Target Name="StageOmniscopePlugin" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <MakeDir Directories="$(MSBuildProjectDirectory)\..\Build\plugins" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(MSBuildProjectDirectory)\..\Build\plugins" />
   </Target>
 </Project>
