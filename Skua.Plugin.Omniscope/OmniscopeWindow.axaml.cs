@@ -696,7 +696,7 @@ public partial class OmniscopeWindow : Window
         records.AddRange(_swfSourceRecords);
         _dataSnapshot = records.OrderBy(static record => record.Category).ThenBy(static record => record.Name).ToList();
         DataRecordCountText.Text = _dataSnapshot.Count.ToString("N0");
-        DataStatusText.Text = $"Data refreshed  /  {_dataSnapshot.Count:N0} results available across quests, shops, maps, drops and monsters.";
+        DataStatusText.Text = $"GAME DATA READY  /  {_dataSnapshot.Count:N0} records across quests, shops, drops, monsters and client code.";
         SwfSourceStatusText.Text = _swfSourceRecords.Count > 0
             ? $"CLIENT SWF INDEXED  /  {_swfSourceRecords.Count:N0} SOURCE FILES"
             : "CLIENT SWF SOURCE NOT INDEXED";
@@ -989,10 +989,16 @@ public partial class OmniscopeWindow : Window
                 "Omniscope",
                 "Exports");
             Directory.CreateDirectory(exportDirectory);
-            string exportPath = Path.Combine(exportDirectory, $"game-data-{DateTime.Now:yyyyMMdd-HHmmss}.json");
-            string json = JsonSerializer.Serialize(_dataSnapshot, new JsonSerializerOptions { WriteIndented = true });
+            string exportPath = Path.Combine(exportDirectory, $"omniscope-data-{DateTime.Now:yyyyMMdd-HHmmss}.json");
+            object export = new
+            {
+                ExportedAt = DateTimeOffset.Now,
+                GameData = _dataSnapshot,
+                MapData = _mapSnapshot
+            };
+            string json = JsonSerializer.Serialize(export, new JsonSerializerOptions { WriteIndented = true });
             await File.WriteAllTextAsync(exportPath, json);
-            DataStatusText.Text = $"EXPORTED {_dataSnapshot.Count:N0} RECORDS  /  {exportPath}";
+            DataStatusText.Text = $"EXPORTED {_dataSnapshot.Count:N0} GAME RECORDS + {_mapSnapshot.Count:N0} MAP REFERENCES  /  {exportPath}";
         }
         catch (Exception ex)
         {
