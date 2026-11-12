@@ -50,6 +50,7 @@ public partial class OmniscopeWindow : Window
     private int _lastPlayerCount = -1;
     private int _lastKillCount = -1;
     private bool _refreshing;
+    private bool _xamlInitialized;
 
     /// <summary>
     /// Provides the parameterless constructor required by Avalonia's runtime XAML loader.
@@ -65,6 +66,7 @@ public partial class OmniscopeWindow : Window
     public OmniscopeWindow(IScriptInterface bot)
     {
         InitializeComponent();
+        _xamlInitialized = true;
         _bot = bot;
         if (_bot is null)
             return;
@@ -543,6 +545,12 @@ public partial class OmniscopeWindow : Window
 
     private void ApplyDataFilter()
     {
+        // Avalonia can raise SelectionChanged while InitializeComponent is still populating controls.
+        if (!_xamlInitialized || DataSearchBox is null || DataCategoryBox is null || DataRecordList is null ||
+            DataResultMetric is null || DataDetailTitle is null || DataDetailMeta is null || DataDetailText is null ||
+            EvaluateShopButton is null)
+            return;
+
         string search = DataSearchBox?.Text?.Trim() ?? string.Empty;
         string category = (DataCategoryBox?.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "ALL DATA";
         IEnumerable<GameDataRecord> query = _dataSnapshot;
