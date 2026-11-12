@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $JavaMajorVersion = 21
-$MetadataUri = "https://api.azul.com/metadata/v1/zulu/packages/?java_version=$JavaMajorVersion&os=windows&arch=x64&java_package_type=jre&javafx_bundled=false&archive_type=zip&release_status=ga&availability_types=CA&latest=true&page=1&page_size=20"
+$MetadataUri = "https://api.adoptium.net/v3/assets/latest/$JavaMajorVersion/hotspot?architecture=x64&image_type=jre&os=windows&vendor=eclipse"
 $DestinationDirectory = [System.IO.Path]::GetFullPath($DestinationDirectory)
 $BundledJava = Join-Path $DestinationDirectory "bin\java.exe"
 
@@ -19,37 +19,30 @@ if (Test-Path -LiteralPath $BundledJava -PathType Leaf) {
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $TemporaryDirectory = Join-Path ([System.IO.Path]::GetTempPath()) "VibeSkua-FFDec-Java-$([Guid]::NewGuid().ToString('N'))"
-$ArchivePath = Join-Path $TemporaryDirectory "zulu-jre.zip"
+$ArchivePath = Join-Path $TemporaryDirectory "temurin-jre.zip"
 $ExtractionDirectory = Join-Path $TemporaryDirectory "Extracted"
 
 try {
     New-Item -ItemType Directory -Path $TemporaryDirectory -Force | Out-Null
 
-    Write-Host "Resolving the latest Azul Zulu Java $JavaMajorVersion x64 JRE package..."
-    $Packages = @(Invoke-RestMethod -Uri $MetadataUri -Method Get -Headers @{ Accept = "application/json" } -TimeoutSec 60)
-    $Package = $Packages |
+    Write-Host "Resolving the latest Eclipse Temurin Java $JavaMajorVersion x64 JRE package..."
+    $Assets = @(Invoke-RestMethod -Uri $MetadataUri -Method Get -Headers @{ Accept = "application/json" } -TimeoutSec 60)
+    $Asset = $Assets |
         Where-Object {
-            $_.java_version.Count -gt 0 -and
-            $_.java_version[0] -eq $JavaMajorVersion -and
-            $_.name -match "win_x64\.zip$" -and
-            $_.package_uuid -and
-            $_.download_url -match "^https://"
+            $_.binary.package.name -match "\.zip$" -and
+            $_.binary.package.link -match "^https://" -and
+            $_.binary.package.checksum -match "^[a-fA-F0-9]{64}$"
         } |
         Select-Object -First 1
 
-    if ($null -eq $Package) {
-        throw "Azul did not return a Java $JavaMajorVersion Windows x64 JRE ZIP package. Metadata endpoint: $MetadataUri"
+    if ($null -eq $Asset) {
+        throw "Adoptium did not return a Java $JavaMajorVersion Windows x64 JRE ZIP package with a SHA-256 checksum. Metadata endpoint: $MetadataUri"
     }
 
-    $PackageDetailsUri = "https://api.azul.com/metadata/v1/zulu/packages/$($Package.package_uuid)"
-    $PackageDetails = Invoke-RestMethod -Uri $PackageDetailsUri -Method Get -Headers @{ Accept = "application/json" } -TimeoutSec 60
-    $ExpectedHash = [string]$PackageDetails.sha256_hash
-    if ($ExpectedHash -notmatch "^[a-fA-F0-9]{64}$") {
-        throw "Azul did not provide a valid SHA-256 checksum for package $($Package.name)."
-    }
-
+    $Package = $Asset.binary.package
+    $ExpectedHash = [string]$Package.checksum
     Write-Host "Downloading $($Package.name)..."
-    Invoke-WebRequest -Uri $Package.download_url -OutFile $ArchivePath -UseBasicParsing -TimeoutSec 900
+    Invoke-WebRequest -Uri $Package.link -OutFile $ArchivePath -UseBasicParsing -TimeoutSec 900
 
     $ActualHash = (Get-FileHash -LiteralPath $ArchivePath -Algorithm SHA256).Hash
     if (-not [string]::Equals($ActualHash, $ExpectedHash, [StringComparison]::OrdinalIgnoreCase)) {
@@ -64,7 +57,7 @@ try {
         Select-Object -First 1
 
     if ($null -eq $JavaExecutable) {
-        throw "The verified Azul archive did not contain bin\java.exe."
+        throw "The verified Temurin archive did not contain bin\java.exe."
     }
 
     $JavaHome = Split-Path -Parent (Split-Path -Parent $JavaExecutable.FullName)
@@ -86,11 +79,11 @@ try {
     }
 
     @"
-Distribution: Azul Zulu Community JRE
+Distribution: Eclipse Temurin JRE
 Java major version: $JavaMajorVersion
 Package: $($Package.name)
 SHA-256: $ActualHash
-Download: $($Package.download_url)
+Download: $($Package.link)
 "@ | Set-Content -LiteralPath (Join-Path $DestinationDirectory "VibeSkua-Runtime-Info.txt") -Encoding UTF8
 
     Write-Host "Bundled Java runtime ready: $BundledJava"
