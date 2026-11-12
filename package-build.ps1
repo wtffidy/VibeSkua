@@ -138,7 +138,14 @@ foreach ($Target in $Targets) {
         }
     }
 
-    # 9. Clean up stray files from target root
+    # 9. Copy OMNISCOPE into the final client plugin folder.
+    $OmniscopeDll = Join-Path $RootDir "Skua.Plugin.Omniscope\bin\Release\net10.0\Skua.Plugin.Omniscope.dll"
+    if (-not (Test-Path $OmniscopeDll)) {
+        throw "OMNISCOPE build output is missing: $OmniscopeDll"
+    }
+    Copy-Item $OmniscopeDll (Join-Path $PluginsDir "Skua.Plugin.Omniscope.dll") -Force
+
+    # 10. Clean up stray files from target root
     $AllowedRootFiles = @(
         "VibeSkua.exe", "VibeSkua.dll", "VibeSkua.runtimeconfig.json", "VibeSkua.deps.json",
         "VibeSkua.Manager.exe", "VibeSkua.Manager.dll", "VibeSkua.Manager.runtimeconfig.json", "VibeSkua.Manager.deps.json",
