@@ -9,6 +9,18 @@ namespace Skua.Plugin.Omniscope;
 internal sealed class GameDataRecord
 {
     public string Category { get; init; } = string.Empty;
+    public string DisplayCategory => Category switch
+    {
+        "QUEST" or "QUEST SOURCE" => "Quest / Reward",
+        "SHOP" or "SHOP SOURCE" => "Shop Item",
+        "MAP ITEM" or "MAP SOURCE" => "Map Link",
+        "DROP" or "DROP SOURCE" => "Drop / Loot",
+        "MONSTER" => "Monster",
+        "ACHIEVEMENT" => "Achievement",
+        "ITEM REFERENCE" => "Item Usage",
+        _ when Category.EndsWith("SOURCE", StringComparison.Ordinal) => "AQW Client Code",
+        _ => Category
+    };
     public string Name { get; init; } = string.Empty;
     public string Summary { get; init; } = string.Empty;
     public string Metadata { get; init; } = string.Empty;
