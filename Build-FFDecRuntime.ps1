@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $JavaMajorVersion = 21
-$MetadataUri = "https://api.azul.com/metadata/v1/zulu/packages/?java_version=$JavaMajorVersion&os=windows&arch=x86&java_package_type=jre&javafx_bundled=false&archive_type=zip&release_status=ga&availability_types=CA&latest=true&page=1&page_size=20"
+$MetadataUri = "https://api.azul.com/metadata/v1/zulu/packages/?java_version=$JavaMajorVersion&os=windows&arch=x64&java_package_type=jre&javafx_bundled=false&archive_type=zip&release_status=ga&availability_types=CA&latest=true&page=1&page_size=20"
 $DestinationDirectory = [System.IO.Path]::GetFullPath($DestinationDirectory)
 $BundledJava = Join-Path $DestinationDirectory "bin\java.exe"
 
