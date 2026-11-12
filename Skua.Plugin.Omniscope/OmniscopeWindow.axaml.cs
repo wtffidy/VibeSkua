@@ -30,6 +30,11 @@ public partial class OmniscopeWindow : Window
     private readonly ObservableCollection<EventRow> _events = [];
     private readonly ObservableCollection<GameDataRecord> _dataRecords = [];
     private readonly List<GameDataRecord> _swfSourceRecords = [];
+    private readonly object _dropHistoryLock = new();
+    private readonly Queue<DropObservation> _dropHistory = new();
+    private readonly Queue<MonsterKillObservation> _killHistory = new();
+    private int _lastKilledMapId;
+    private DateTimeOffset _lastKilledAt = DateTimeOffset.MinValue;
     private List<GameDataRecord> _dataSnapshot = [];
     private MapItem[] _mapItemSnapshot = [];
     private bool _mapAnalysisRunning;
@@ -50,6 +55,11 @@ public partial class OmniscopeWindow : Window
     {
         InitializeComponent();
         _bot = bot;
+        _bot.Events.MonsterKilled += OnMonsterKilled;
+        _bot.Events.ItemDropped += OnItemDropped;
+        _bot.Events.QuestAccepted += OnQuestAccepted;
+        _bot.Events.QuestTurnedIn += OnQuestTurnedIn;
+        _bot.Events.TryBuyItem += OnTryBuyItem;
 
         EntityList.ItemsSource = _entities;
         PlayerList.ItemsSource = _players;
@@ -74,7 +84,15 @@ public partial class OmniscopeWindow : Window
         _refreshTimer.Start();
     }
 
-    private void OnClosed(object? sender, EventArgs e) => _refreshTimer.Stop();
+    private void OnClosed(object? sender, EventArgs e)
+    {
+        _refreshTimer.Stop();
+        _bot.Events.MonsterKilled -= OnMonsterKilled;
+        _bot.Events.ItemDropped -= OnItemDropped;
+        _bot.Events.QuestAccepted -= OnQuestAccepted;
+        _bot.Events.QuestTurnedIn -= OnQuestTurnedIn;
+        _bot.Events.TryBuyItem -= OnTryBuyItem;
+    }
 
     private void RefreshTimer_Tick(object? sender, EventArgs e) => RefreshTelemetry();
 
@@ -189,6 +207,94 @@ public partial class OmniscopeWindow : Window
         }
     }
 
+    private void OnMonsterKilled(int mapId)
+    {
+        DateTimeOffset timestamp = DateTimeOffset.Now;
+        lock (_dropHistoryLock)
+        {
+            _lastKilledMapId = mapId;
+            _lastKilledAt = timestamp;
+            _killHistory.Enqueue(new MonsterKillObservation(timestamp, mapId));
+            while (_killHistory.Count > 500)
+                _killHistory.Dequeue();
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (IsVisible)
+                AddEvent("MONSTER KILLED", $"Monster MapID {mapId}");
+        });
+    }
+
+    private void OnItemDropped(ItemBase item, bool addedToInventory, int quantityNow)
+    {
+        DateTimeOffset timestamp = DateTimeOffset.Now;
+        int? precedingKillMapId = null;
+        double? secondsAfterKill = null;
+
+        lock (_dropHistoryLock)
+        {
+            if (_lastKilledAt != DateTimeOffset.MinValue)
+            {
+                TimeSpan elapsed = timestamp - _lastKilledAt;
+                if (elapsed >= TimeSpan.Zero && elapsed <= TimeSpan.FromSeconds(12))
+                {
+                    precedingKillMapId = _lastKilledMapId;
+                    secondsAfterKill = elapsed.TotalSeconds;
+                }
+            }
+
+            _dropHistory.Enqueue(new DropObservation(
+                timestamp,
+                item.ID,
+                item.Name,
+                item.Quantity,
+                addedToInventory,
+                quantityNow,
+                precedingKillMapId,
+                secondsAfterKill));
+
+            while (_dropHistory.Count > 500)
+                _dropHistory.Dequeue();
+        }
+
+        string context = precedingKillMapId.HasValue
+            ? $"  /  preceding kill MapID {precedingKillMapId.Value} ({secondsAfterKill:0.0}s earlier, correlation only)"
+            : string.Empty;
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (IsVisible)
+                AddEvent("ITEM DROP", $"{item.Name} [{item.ID}] ×{item.Quantity}  /  Added to inventory: {addedToInventory}  /  quantity now: {quantityNow}{context}");
+        });
+    }
+
+    private void OnQuestAccepted(int questId)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (IsVisible)
+                AddEvent("QUEST ACCEPTED", $"Quest ID {questId}");
+        });
+    }
+
+    private void OnQuestTurnedIn(int questId)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (IsVisible)
+                AddEvent("QUEST TURNED IN", $"Quest ID {questId}");
+        });
+    }
+
+    private void OnTryBuyItem(int shopId, int itemId, int shopItemId)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (IsVisible)
+                AddEvent("SHOP PURCHASE ATTEMPT", $"Shop {shopId}  /  Item {itemId}  /  ShopItemID {shopItemId}");
+        });
+    }
+
     private void RefreshDataCatalog_Click(object? sender, RoutedEventArgs e) => RefreshDataCatalog();
 
     private void DataSearchBox_TextChanged(object? sender, TextChangedEventArgs e) => ApplyDataFilter();
@@ -296,6 +402,39 @@ public partial class OmniscopeWindow : Window
         {
             ShopRecordCountText.Text = "0";
             records.Add(CreateStatusRecord("Loaded shop data unavailable", ex.Message, "SHOP SOURCE"));
+        }
+
+        DropObservation[] observedDrops;
+        MonsterKillObservation[] observedKills;
+        lock (_dropHistoryLock)
+        {
+            observedDrops = _dropHistory.ToArray();
+            observedKills = _killHistory.ToArray();
+        }
+
+        foreach (DropObservation observation in observedDrops)
+        {
+            records.Add(CreateObservedDropRecord(observation));
+            AddItemReference(itemReferences, new ItemBase { ID = observation.ItemId, Name = observation.Name, Quantity = observation.ItemQuantity }, "Observed item-drop event history");
+        }
+
+        foreach (IGrouping<int, MonsterKillObservation> killGroup in observedKills.GroupBy(static kill => kill.MapId))
+        {
+            MonsterKillObservation[] kills = killGroup.OrderBy(static kill => kill.Timestamp).ToArray();
+            string details = $"MONSTER MAP ID: {killGroup.Key}{Environment.NewLine}" +
+                $"OBSERVED KILLS: {kills.Length:N0}{Environment.NewLine}" +
+                $"FIRST OBSERVED: {kills[0].Timestamp:O}{Environment.NewLine}" +
+                $"MOST RECENT: {kills[^1].Timestamp:O}{Environment.NewLine}{Environment.NewLine}" +
+                "These are event observations. MapID can be cross-referenced with the current monster snapshot when that monster is present.";
+            records.Add(new GameDataRecord
+            {
+                Category = "MONSTER",
+                Name = $"Kill observations / MapID {killGroup.Key}",
+                Summary = $"{kills.Length:N0} event observations in this OMNISCOPE session",
+                Metadata = "Runtime MonsterKilled events",
+                Details = details,
+                SearchText = details
+            });
         }
 
         foreach (MapItem mapItem in _mapItemSnapshot)
@@ -626,6 +765,31 @@ public partial class OmniscopeWindow : Window
             Name = $"{item.Name} [{item.ID}]",
             Summary = $"Observed quantity ×{item.Quantity:N0}  /  {item.CategoryString}",
             Metadata = "Runtime drop queue",
+            Details = details,
+            SearchText = details
+        };
+    }
+
+    private static GameDataRecord CreateObservedDropRecord(DropObservation observation)
+    {
+        string killContext = observation.PrecedingMonsterMapId.HasValue
+            ? $"Preceding kill MapID: {observation.PrecedingMonsterMapId.Value} / {observation.SecondsAfterKill:0.0}s earlier (temporal correlation only)"
+            : "No recent monster-kill event was observed within the 12-second context window.";
+        string details =
+            $"OBSERVED DROP: {observation.Name}{Environment.NewLine}" +
+            $"ITEM ID: {observation.ItemId}{Environment.NewLine}" +
+            $"ITEM QUANTITY: {observation.ItemQuantity:N0}{Environment.NewLine}" +
+            $"ADDED TO INVENTORY: {observation.AddedToInventory}{Environment.NewLine}" +
+            $"INVENTORY QUANTITY AFTER EVENT: {observation.QuantityNow:N0}{Environment.NewLine}" +
+            $"TIMESTAMP: {observation.Timestamp:O}{Environment.NewLine}" +
+            $"{killContext}{Environment.NewLine}{Environment.NewLine}" +
+            "A nearby kill is only temporal context. The game event does not identify the exact monster responsible for this item.";
+        return new GameDataRecord
+        {
+            Category = "DROP",
+            Name = $"{observation.Name} [{observation.ItemId}]",
+            Summary = $"{observation.Timestamp:HH:mm:ss}  /  ×{observation.ItemQuantity:N0}  /  Added: {observation.AddedToInventory}",
+            Metadata = "Runtime ItemDropped event history",
             Details = details,
             SearchText = details
         };
@@ -967,6 +1131,18 @@ public partial class OmniscopeWindow : Window
 
         public bool HasSameDisplay(InventoryRow other) => Name == other.Name && Quantity == other.Quantity;
     }
+
+    private sealed record DropObservation(
+        DateTimeOffset Timestamp,
+        int ItemId,
+        string Name,
+        int ItemQuantity,
+        bool AddedToInventory,
+        int QuantityNow,
+        int? PrecedingMonsterMapId,
+        double? SecondsAfterKill);
+
+    private sealed record MonsterKillObservation(DateTimeOffset Timestamp, int MapId);
 
     private sealed class EventRow
     {
