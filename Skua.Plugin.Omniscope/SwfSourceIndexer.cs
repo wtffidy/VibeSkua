@@ -127,8 +127,17 @@ internal static class SwfSourceIndexer
             startInfo.ArgumentList.Add(swfPath);
 
             using Process process = new() { StartInfo = startInfo };
-            if (!process.Start())
-                throw new InvalidOperationException("FFDec could not be started.");
+            try
+            {
+                if (!process.Start())
+                    throw new InvalidOperationException("FFDec could not be started.");
+            }
+            catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 2)
+            {
+                throw new InvalidOperationException(
+                    "A compatible Java runtime could not be found on PATH. FFDec requires Java to decompile the AQW client.",
+                    ex);
+            }
 
             try
             {
