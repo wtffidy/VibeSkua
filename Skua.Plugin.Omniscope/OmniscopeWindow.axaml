@@ -18,7 +18,7 @@
             <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="16">
                 <StackPanel Spacing="3">
                     <TextBlock Text="OMNISCOPE" FontSize="26" FontWeight="Black" Foreground="#E6F7FF" />
-                    <TextBlock Text="VIBESKUA  /  GAME STATE OBSERVATORY" FontSize="10" CharacterSpacing="2" Foreground="#54DDF5" />
+                    <TextBlock Text="VIBESKUA  /  GAME STATE OBSERVATORY" FontSize="10" Foreground="#54DDF5" />
                 </StackPanel>
                 <Border Grid.Column="1" BorderBrush="#24516A" BorderThickness="1" CornerRadius="6" Padding="14,8" VerticalAlignment="Center" Background="#10202D">
                     <StackPanel Orientation="Horizontal" Spacing="9">
@@ -31,22 +31,22 @@
 
             <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
                 <Border Background="#101B2A" BorderBrush="#21445B" BorderThickness="1" CornerRadius="6" Padding="12">
-                    <StackPanel Spacing="4"><TextBlock Text="WORLD" Foreground="#6D9DB5" FontSize="10" CharacterSpacing="1.5"/><TextBlock x:Name="MapMetric" Text="--" Foreground="#E8F8FF" FontSize="19" FontWeight="Bold"/><TextBlock x:Name="RoomMetric" Text="Awaiting map" Foreground="#79B8CE" FontSize="11"/></StackPanel>
+                    <StackPanel Spacing="4"><TextBlock Text="WORLD" Foreground="#6D9DB5" FontSize="10"/><TextBlock x:Name="MapMetric" Text="--" Foreground="#E8F8FF" FontSize="19" FontWeight="Bold"/><TextBlock x:Name="RoomMetric" Text="Awaiting map" Foreground="#79B8CE" FontSize="11"/></StackPanel>
                 </Border>
                 <Border Grid.Column="1" Background="#101B2A" BorderBrush="#21445B" BorderThickness="1" CornerRadius="6" Padding="12">
-                    <StackPanel Spacing="4"><TextBlock Text="PLAYER VITALS" Foreground="#6D9DB5" FontSize="10" CharacterSpacing="1.5"/><TextBlock x:Name="VitalsMetric" Text="-- / -- HP" Foreground="#E8F8FF" FontSize="19" FontWeight="Bold"/><TextBlock x:Name="ManaMetric" Text="-- / -- MP" Foreground="#79B8CE" FontSize="11"/></StackPanel>
+                    <StackPanel Spacing="4"><TextBlock Text="PLAYER VITALS" Foreground="#6D9DB5" FontSize="10"/><TextBlock x:Name="VitalsMetric" Text="-- / -- HP" Foreground="#E8F8FF" FontSize="19" FontWeight="Bold"/><TextBlock x:Name="ManaMetric" Text="-- / -- MP" Foreground="#79B8CE" FontSize="11"/></StackPanel>
                 </Border>
                 <Border Grid.Column="2" Background="#101B2A" BorderBrush="#21445B" BorderThickness="1" CornerRadius="6" Padding="12">
-                    <StackPanel Spacing="4"><TextBlock Text="ENTITY FIELD" Foreground="#6D9DB5" FontSize="10" CharacterSpacing="1.5"/><TextBlock x:Name="EntityMetric" Text="0" Foreground="#E8F8FF" FontSize="19" FontWeight="Bold"/><TextBlock x:Name="EntitySubMetric" Text="Monsters in current map" Foreground="#79B8CE" FontSize="11"/></StackPanel>
+                    <StackPanel Spacing="4"><TextBlock Text="ENTITY FIELD" Foreground="#6D9DB5" FontSize="10"/><TextBlock x:Name="EntityMetric" Text="0" Foreground="#E8F8FF" FontSize="19" FontWeight="Bold"/><TextBlock x:Name="EntitySubMetric" Text="Monsters in current map" Foreground="#79B8CE" FontSize="11"/></StackPanel>
                 </Border>
                 <Border Grid.Column="3" Background="#101B2A" BorderBrush="#21445B" BorderThickness="1" CornerRadius="6" Padding="12">
-                    <StackPanel Spacing="4"><TextBlock Text="PLAYER POSITION" Foreground="#6D9DB5" FontSize="10" CharacterSpacing="1.5"/><TextBlock x:Name="PositionMetric" Text="X --  /  Y --" Foreground="#E8F8FF" FontSize="19" FontWeight="Bold"/><TextBlock x:Name="CellMetric" Text="Cell --  /  Pad --" Foreground="#79B8CE" FontSize="11"/></StackPanel>
+                    <StackPanel Spacing="4"><TextBlock Text="PLAYER POSITION" Foreground="#6D9DB5" FontSize="10"/><TextBlock x:Name="PositionMetric" Text="X --  /  Y --" Foreground="#E8F8FF" FontSize="19" FontWeight="Bold"/><TextBlock x:Name="CellMetric" Text="Cell --  /  Pad --" Foreground="#79B8CE" FontSize="11"/></StackPanel>
                 </Border>
             </Grid>
 
             <Grid Grid.Row="2" ColumnDefinitions="1.05*,1.3*,1.1*" ColumnSpacing="14">
                 <Grid Grid.Column="0" RowDefinitions="Auto,*" RowSpacing="8">
-                    <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="PLAYER TELEMETRY" Foreground="#65DDF4" FontSize="12" FontWeight="Bold" CharacterSpacing="1"/><TextBlock Text=" / LIVE" Foreground="#4B7D91" FontSize="10" VerticalAlignment="Center"/></StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="PLAYER TELEMETRY" Foreground="#65DDF4" FontSize="12" FontWeight="Bold"/><TextBlock Text=" / LIVE" Foreground="#4B7D91" FontSize="10" VerticalAlignment="Center"/></StackPanel>
                     <Border Grid.Row="1" Background="#0D1725" BorderBrush="#1C3B50" BorderThickness="1" CornerRadius="6" Padding="14">
                         <StackPanel Spacing="13">
                             <StackPanel Spacing="3"><TextBlock Text="IDENTITY" Foreground="#54869D" FontSize="10"/><TextBlock x:Name="PlayerNameText" Text="Waiting for player session" Foreground="#E6F7FF" FontSize="20" FontWeight="SemiBold"/><TextBlock x:Name="PlayerClassText" Text="Class: unavailable" Foreground="#8AB7C9" FontSize="12"/></StackPanel>
@@ -66,9 +66,9 @@
                 </Grid>
 
                 <Grid Grid.Column="1" RowDefinitions="Auto,*" RowSpacing="8">
-                    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="ENTITY INTELLIGENCE" Foreground="#65DDF4" FontSize="12" FontWeight="Bold" CharacterSpacing="1"/><TextBlock Grid.Column="1" Text="CURRENT MAP" Foreground="#4B7D91" FontSize="10"/></Grid>
+                    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="ENTITY INTELLIGENCE" Foreground="#65DDF4" FontSize="12" FontWeight="Bold"/><TextBlock Grid.Column="1" Text="CURRENT MAP" Foreground="#4B7D91" FontSize="10"/></Grid>
                     <Border Grid.Row="1" Background="#0D1725" BorderBrush="#1C3B50" BorderThickness="1" CornerRadius="6" Padding="10">
-                        <Grid RowDefinitions="Auto,*">
+                        <Grid RowDefinitions="Auto,*,Auto">
                             <Grid ColumnDefinitions="*,70,70,65" Margin="4,4,8,10">
                                 <TextBlock Text="ENTITY / CELL" Foreground="#54869D" FontSize="10"/>
                                 <TextBlock Grid.Column="1" Text="HP" Foreground="#54869D" FontSize="10" HorizontalAlignment="Right"/>
@@ -78,12 +78,19 @@
                             <ListBox x:Name="EntityList" Grid.Row="1" Background="Transparent" BorderThickness="0" Foreground="#D7F1FA">
                                 <ListBox.ItemTemplate><DataTemplate><Grid ColumnDefinitions="*,70,70,65" Margin="3,5"><StackPanel Spacing="2"><TextBlock Text="{Binding Name}" Foreground="#D7F1FA" FontSize="12"/><TextBlock Text="{Binding Cell}" Foreground="#628FA3" FontSize="10"/></StackPanel><TextBlock Grid.Column="1" Text="{Binding Health}" Foreground="#9ED8E8" FontSize="11" HorizontalAlignment="Right"/><TextBlock Grid.Column="2" Text="{Binding State}" Foreground="#9ED8E8" FontSize="11" HorizontalAlignment="Right"/><TextBlock Grid.Column="3" Text="{Binding Id}" Foreground="#6F9BAE" FontSize="11" HorizontalAlignment="Right"/></Grid></DataTemplate></ListBox.ItemTemplate>
                             </ListBox>
+                            <Border Grid.Row="2" Margin="0,8,0,0" Padding="10" Background="#101F2E" BorderBrush="#24516A" BorderThickness="1" CornerRadius="4">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="SELECTED ENTITY" Foreground="#54869D" FontSize="9" />
+                                    <TextBlock x:Name="SelectedEntityText" Text="Select a monster to inspect its live properties." Foreground="#DFF7FF" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    <TextBlock x:Name="SelectedEntityDetailsText" Text="Read-only entity inspection" Foreground="#85B7C9" FontSize="10" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
                         </Grid>
                     </Border>
                 </Grid>
 
                 <Grid Grid.Column="2" RowDefinitions="Auto,*" RowSpacing="8">
-                    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="EVENT CHRONOLOGY" Foreground="#65DDF4" FontSize="12" FontWeight="Bold" CharacterSpacing="1"/><TextBlock x:Name="EventCountText" Grid.Column="1" Text="0 EVENTS" Foreground="#4B7D91" FontSize="10"/></Grid>
+                    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="EVENT CHRONOLOGY" Foreground="#65DDF4" FontSize="12" FontWeight="Bold"/><TextBlock x:Name="EventCountText" Grid.Column="1" Text="0 EVENTS" Foreground="#4B7D91" FontSize="10"/></Grid>
                     <Border Grid.Row="1" Background="#0D1725" BorderBrush="#1C3B50" BorderThickness="1" CornerRadius="6" Padding="12">
                         <Grid RowDefinitions="Auto,*">
                             <TextBlock Text="Observed state transitions  /  newest first" Foreground="#628FA3" FontSize="10" Margin="2,2,2,10"/>
