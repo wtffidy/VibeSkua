@@ -73,7 +73,7 @@ internal static class SwfSourceIndexer
     /// Decompiles the supplied SWF when no matching export exists, then builds a bounded searchable source index.
     /// </summary>
     /// <param name="swfPath">Path to the packaged AQW client SWF.</param>
-    /// <param name="ffdecDirectory">Directory containing the bundled FFDec command-line launcher.</param>
+    /// <param name="ffdecDirectory">Directory containing the bundled FFDec JAR.</param>
     /// <param name="cancellationToken">Token used to cancel the export operation.</param>
     /// <returns>The export directory and indexed ActionScript source records.</returns>
     public static async Task<SwfSourceIndexResult> DecompileAsync(string swfPath, string ffdecDirectory, CancellationToken cancellationToken = default)
