@@ -67,7 +67,7 @@ internal static class SwfSourceIndexer
                 RedirectStandardError = true,
                 WorkingDirectory = ffdecDirectory
             };
-            startInfo.Environment["FFDEC_MEMORY"] = "2048m";
+            startInfo.Environment["FFDEC_MEMORY"] = "1536m";
             startInfo.ArgumentList.Add("/c");
             startInfo.ArgumentList.Add($"call \"{ffdecPath}\" -export script \"{exportDirectory}\" \"{swfPath}\"");
 
@@ -75,9 +75,29 @@ internal static class SwfSourceIndexer
             if (!process.Start())
                 throw new InvalidOperationException("FFDec could not be started.");
 
+            try
+            {
+                process.PriorityClass = ProcessPriorityClass.BelowNormal;
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                // Priority adjustment is optional; decompilation can continue with the default priority.
+            }
+
             Task<string> standardOutputTask = process.StandardOutput.ReadToEndAsync();
             Task<string> standardErrorTask = process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                if (!process.HasExited)
+                    process.Kill(entireProcessTree: true);
+
+                throw;
+            }
+
             await Task.WhenAll(standardOutputTask, standardErrorTask).ConfigureAwait(false);
 
             string standardOutput = await standardOutputTask.ConfigureAwait(false);
