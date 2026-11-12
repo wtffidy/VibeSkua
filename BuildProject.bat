@@ -155,7 +155,7 @@ echo.
 echo ==========================================================
 echo Fast Build complete! Launching VibeSkua...
 echo ==========================================================
-start "" "%CD%\Build\VibeSkua.exe"
+start "" /D "%BUILDPROJECT_ROOT%\Build" "VibeSkua.exe"
 set "BUILD_EXIT_CODE=0"
 goto :Finish
 
