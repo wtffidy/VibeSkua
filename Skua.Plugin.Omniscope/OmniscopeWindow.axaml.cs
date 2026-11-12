@@ -572,10 +572,10 @@ public partial class OmniscopeWindow : Window
                 "Shop Items" => query.Where(static record => record.Category == "SHOP" || record.Category == "SHOP SOURCE"),
                 "Map Links" => query.Where(static record => record.Category == "MAP ITEM" || record.Category == "MAP SOURCE"),
                 "Observed Drops" => query.Where(static record => record.Category == "DROP" || record.Category == "DROP SOURCE"),
-                "MONSTERS" => query.Where(static record => record.Category == "MONSTER"),
-                "ACHIEVEMENTS" => query.Where(static record => record.Category == "ACHIEVEMENT"),
+                "Monsters" => query.Where(static record => record.Category == "MONSTER"),
+                "Achievements" => query.Where(static record => record.Category == "ACHIEVEMENT"),
                 "Item Usage" => query.Where(static record => record.Category == "ITEM REFERENCE"),
-                "AQW Client Code" => query.Where(static record => record.Category.EndsWith("SOURCE", StringComparison.Ordinal)),
+                "AQW Client Code" => query.Where(record => _swfSourceRecords.Contains(record)),
                 _ => query
             };
         }
