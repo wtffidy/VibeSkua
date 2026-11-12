@@ -1,4 +1,6 @@
 using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 
 namespace Skua.Plugin.Omniscope;
@@ -22,11 +24,14 @@ internal static class AqwGameClientResolver
     /// <returns>The downloaded SWF path and the source filename reported by AQW.</returns>
     public static async Task<AqwGameClientFile> DownloadLatestAsync(CancellationToken cancellationToken = default)
     {
-        using HttpResponseMessage versionResponse = await HttpClient.GetAsync(
-            new Uri(new Uri(GameRoot), "api/data/gameversion"),
+        Uri gameRootUri = new(GameRoot);
+        Uri versionUri = new(gameRootUri, "api/data/gameversion");
+        using HttpRequestMessage versionRequest = CreateGameRequest(versionUri, gameRootUri, "application/json, text/plain, */*");
+        using HttpResponseMessage versionResponse = await HttpClient.SendAsync(
+            versionRequest,
             HttpCompletionOption.ResponseHeadersRead,
             cancellationToken).ConfigureAwait(false);
-        EnsureSuccessStatusCode(versionResponse, "AQW game-version lookup");
+        await EnsureSuccessStatusCodeAsync(versionResponse, "AQW game-version lookup", cancellationToken).ConfigureAwait(false);
 
         await using Stream versionStream = await versionResponse.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         using JsonDocument versionDocument = await JsonDocument.ParseAsync(versionStream, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -42,12 +47,13 @@ internal static class AqwGameClientResolver
             throw new InvalidDataException($"AQW returned an unexpected game client filename: {fileName ?? "null"}");
         }
 
-        Uri gameClientUri = new(new Uri(GameRoot), $"gamefiles/{Uri.EscapeDataString(fileName)}");
-        using HttpResponseMessage swfResponse = await HttpClient.GetAsync(
-            gameClientUri,
+        Uri gameClientUri = new(gameRootUri, $"gamefiles/{Uri.EscapeDataString(fileName)}");
+        using HttpRequestMessage swfRequest = CreateGameRequest(gameClientUri, gameRootUri, "*/*");
+        using HttpResponseMessage swfResponse = await HttpClient.SendAsync(
+            swfRequest,
             HttpCompletionOption.ResponseHeadersRead,
             cancellationToken).ConfigureAwait(false);
-        EnsureSuccessStatusCode(swfResponse, "AQW game-client SWF download");
+        await EnsureSuccessStatusCodeAsync(swfResponse, "AQW game-client SWF download", cancellationToken).ConfigureAwait(false);
 
         long? contentLength = swfResponse.Content.Headers.ContentLength;
         if (contentLength is > MaximumSwfBytes)
@@ -113,16 +119,78 @@ internal static class AqwGameClientResolver
         return new AqwGameClientFile(fileName, destinationPath, gameClientUri);
     }
 
-    private static void EnsureSuccessStatusCode(HttpResponseMessage response, string operation)
+    private static HttpRequestMessage CreateGameRequest(Uri requestUri, Uri referer, string accept)
+    {
+        HttpRequestMessage request = new(HttpMethod.Get, requestUri);
+        request.Headers.UserAgent.ParseAdd(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
+        request.Headers.Accept.ParseAdd(accept);
+        request.Headers.AcceptLanguage.ParseAdd("en-US,en;q=0.9");
+        request.Headers.Referrer = referer;
+        request.Headers.TryAddWithoutValidation("Origin", referer.GetLeftPart(UriPartial.Authority));
+        request.Headers.TryAddWithoutValidation("Sec-Fetch-Dest", "empty");
+        request.Headers.TryAddWithoutValidation("Sec-Fetch-Mode", "cors");
+        request.Headers.TryAddWithoutValidation("Sec-Fetch-Site", "same-origin");
+        request.Headers.CacheControl = new CacheControlHeaderValue { NoCache = true };
+        return request;
+    }
+
+    private static async Task EnsureSuccessStatusCodeAsync(
+        HttpResponseMessage response,
+        string operation,
+        CancellationToken cancellationToken)
     {
         if (response.IsSuccessStatusCode)
             return;
 
         string requestUrl = response.RequestMessage?.RequestUri?.ToString() ?? "Unknown URL";
+        string server = response.Headers.Server?.ToString() ?? "Unknown";
+        string cfRay = response.Headers.TryGetValues("cf-ray", out IEnumerable<string>? rayValues)
+            ? string.Join(", ", rayValues)
+            : "Not present";
+        string responseBody = await ReadErrorBodyAsync(response, cancellationToken).ConfigureAwait(false);
+        string diagnostic = string.IsNullOrWhiteSpace(responseBody)
+            ? string.Empty
+            : $" Response: {responseBody}";
         throw new HttpRequestException(
-            $"{operation} was rejected by AQW. HTTP {(int)response.StatusCode} ({response.ReasonPhrase}). URL: {requestUrl}",
+            $"{operation} was rejected by AQW. HTTP {(int)response.StatusCode} ({response.ReasonPhrase}). Server: {server}. CF-Ray: {cfRay}. URL: {requestUrl}.{diagnostic}",
             null,
             response.StatusCode);
+    }
+
+    private static async Task<string> ReadErrorBodyAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            byte[] buffer = new byte[2048];
+            int totalRead = 0;
+            while (totalRead < buffer.Length)
+            {
+                int bytesRead = await stream.ReadAsync(buffer.AsMemory(totalRead, buffer.Length - totalRead), cancellationToken).ConfigureAwait(false);
+                if (bytesRead == 0)
+                    break;
+
+                totalRead += bytesRead;
+            }
+
+            return Encoding.UTF8.GetString(buffer, 0, totalRead)
+                .Replace('\r', ' ')
+                .Replace('\n', ' ')
+                .Trim();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (HttpRequestException)
+        {
+            return string.Empty;
+        }
+        catch (IOException)
+        {
+            return string.Empty;
+        }
     }
 }
 
