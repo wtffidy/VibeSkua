@@ -125,6 +125,15 @@ public partial class OmniscopeWindow : Window
         }
     }
 
+    private void TelemetryRateBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (!_xamlInitialized || TelemetryRateBox?.SelectedItem is not ComboBoxItem selected ||
+            !int.TryParse(selected.Tag?.ToString(), out int intervalMilliseconds))
+            return;
+
+        _refreshTimer.Interval = TimeSpan.FromMilliseconds(Math.Clamp(intervalMilliseconds, 100, 10000));
+    }
+
     private void RefreshTimer_Tick(object? sender, EventArgs e) => RefreshTelemetry();
 
     private void RefreshTelemetry()
