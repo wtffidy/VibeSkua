@@ -29,6 +29,7 @@ public partial class OmniscopeWindow : Window
         _bot = bot;
         EntityList.ItemsSource = _entities;
         EventList.ItemsSource = _events;
+        EntityList.SelectionChanged += EntityList_SelectionChanged;
         _refreshTimer.Tick += RefreshTimer_Tick;
         Loaded += OnLoaded;
         Closed += OnClosed;
@@ -70,9 +71,10 @@ public partial class OmniscopeWindow : Window
             PositionMetric.Text = loggedIn ? $"X {_bot.Player.X:N0}  /  Y {_bot.Player.Y:N0}" : "X --  /  Y --";
             CellMetric.Text = loggedIn ? $"Cell {NullLabel(_bot.Player.Cell)}  /  Pad {NullLabel(_bot.Player.Pad)}" : "Cell --  /  Pad --";
 
-            string mapName = _bot.Map.Loaded ? _bot.Map.FullName : "Map unavailable";
+            bool mapLoaded = _bot.Map.Loaded;
+            string mapName = mapLoaded ? _bot.Map.FullName : "Map unavailable";
             MapMetric.Text = mapName;
-            RoomMetric.Text = _bot.Map.Loaded ? $"Room {_bot.Map.RoomNumber}  /  {_bot.Map.RoomID}  /  {_bot.Map.PlayerCount} players" : "Waiting for map data";
+            RoomMetric.Text = mapLoaded ? $"Room {_bot.Map.RoomNumber}  /  {_bot.Map.RoomID}  /  {_bot.Map.PlayerCount} players" : "Waiting for map data";
             SessionText.Text = loggedIn
                 ? $"Avatar loaded: {_bot.Player.Loaded}\nTarget: {(_bot.Player.Target?.Name ?? "None")}\nCombat: {(_bot.Player.InCombat ? "Engaged" : "Idle")}"
                 : "Waiting for the game client to expose a logged-in avatar.";
@@ -102,27 +104,56 @@ public partial class OmniscopeWindow : Window
                 _lastTarget = target;
             }
 
-            List<Monster> monsters = _bot.Map.Loaded ? _bot.Monsters.MapMonsters.ToList() : [];
-            EntityMetric.Text = monsters.Count.ToString("N0");
-            EntitySubMetric.Text = $"{monsters.Count(m => m.Alive)} alive  /  {monsters.Count - monsters.Count(m => m.Alive)} inactive";
-            if (_lastMonsterCount != monsters.Count)
+            Monster[] monsters = mapLoaded ? _bot.Monsters.MapMonsters.ToArray() : [];
+            int aliveCount = monsters.Count(static monster => monster.Alive);
+            EntityMetric.Text = monsters.Length.ToString("N0");
+            EntitySubMetric.Text = $"{aliveCount} alive  /  {monsters.Length - aliveCount} inactive";
+            if (_lastMonsterCount != monsters.Length)
             {
-                AddEvent("ENTITY FIELD", $"{monsters.Count} monsters observed in the current map");
-                _lastMonsterCount = monsters.Count;
+                AddEvent("ENTITY FIELD", $"{monsters.Length} monsters observed in the current map");
+                _lastMonsterCount = monsters.Length;
             }
 
-            _entities.Clear();
-            foreach (Monster monster in monsters.OrderByDescending(m => m.Alive).ThenBy(m => m.Name).Take(250))
-            {
-                _entities.Add(new EntityRow
+            EntityRow[] rows = monsters
+                .OrderByDescending(static monster => monster.Alive)
+                .ThenBy(static monster => monster.Name)
+                .Take(250)
+                .Select(monster => new EntityRow
                 {
                     Name = monster.Name,
                     Cell = $"CELL {NullLabel(monster.Cell)}",
                     Health = $"{monster.HP:N0}/{monster.MaxHP:N0}",
                     State = monster.Alive ? "ALIVE" : "DOWN",
-                    Id = monster.ID.ToString()
-                });
+                    Id = monster.ID.ToString(),
+                    Source = monster
+                })
+                .ToArray();
+
+            bool entitiesChanged = _entities.Count != rows.Length;
+            if (!entitiesChanged)
+            {
+                for (int i = 0; i < rows.Length; i++)
+                {
+                    if (!_entities[i].HasSameDisplay(rows[i]))
+                    {
+                        entitiesChanged = true;
+                        break;
+                    }
+                }
             }
+
+            if (entitiesChanged)
+            {
+                string? selectedId = (EntityList.SelectedItem as EntityRow)?.Id;
+                _entities.Clear();
+                foreach (EntityRow row in rows)
+                    _entities.Add(row);
+
+                EntityList.SelectedItem = selectedId is null ? null : _entities.FirstOrDefault(row => row.Id == selectedId);
+            }
+
+            if (EntityList.SelectedItem is EntityRow selected)
+                ShowEntityDetails(selected);
         }
         catch (Exception ex)
         {
@@ -133,6 +164,31 @@ public partial class OmniscopeWindow : Window
         {
             _refreshing = false;
         }
+    }
+
+    private void EntityList_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (EntityList.SelectedItem is EntityRow selected)
+        {
+            ShowEntityDetails(selected);
+            return;
+        }
+
+        SelectedEntityText.Text = "Select a monster to inspect its live properties.";
+        SelectedEntityDetailsText.Text = "Read-only entity inspection";
+    }
+
+    private void ShowEntityDetails(EntityRow row)
+    {
+        Monster? monster = row.Source;
+        if (monster is null)
+            return;
+
+        SelectedEntityText.Text = $"{monster.Name}  /  ID {monster.ID}";
+        SelectedEntityDetailsText.Text =
+            $"Race: {NullLabel(monster.Race)}   Map ID: {monster.MapID}   State: {monster.State}\n" +
+            $"HP: {monster.HP:N0} / {monster.MaxHP:N0}   Cell: {NullLabel(monster.Cell)}\n" +
+            $"Client asset: {NullLabel(monster.FileName)}";
     }
 
     private void AddEvent(string category, string detail)
@@ -167,6 +223,14 @@ public partial class OmniscopeWindow : Window
         public string Health { get; init; } = string.Empty;
         public string State { get; init; } = string.Empty;
         public string Id { get; init; } = string.Empty;
+        public Monster? Source { get; init; }
+
+        public bool HasSameDisplay(EntityRow other) =>
+            Name == other.Name &&
+            Cell == other.Cell &&
+            Health == other.Health &&
+            State == other.State &&
+            Id == other.Id;
     }
 
     private sealed class EventRow
