@@ -31,6 +31,7 @@ internal sealed class GameDataRecord
     public string Details { get; init; } = string.Empty;
     public string SearchText { get; init; } = string.Empty;
     public int? SourceShopId { get; init; }
+    public int? SourceQuestId { get; init; }
     public object? SourceObject { get; init; }
 }
 
