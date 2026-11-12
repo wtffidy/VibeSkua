@@ -22,6 +22,7 @@ public partial class OmniscopeWindow : Window
     private readonly ObservableCollection<AuraRow> _auras = [];
     private readonly ObservableCollection<SkillRow> _skills = [];
     private readonly ObservableCollection<string> _quests = [];
+    private readonly ObservableCollection<InventoryRow> _inventory = [];
     private readonly ObservableCollection<EventRow> _events = [];
     private string _lastMap = string.Empty;
     private string _lastTarget = string.Empty;
@@ -45,6 +46,7 @@ public partial class OmniscopeWindow : Window
         AuraList.ItemsSource = _auras;
         SkillList.ItemsSource = _skills;
         QuestList.ItemsSource = _quests;
+        InventoryList.ItemsSource = _inventory;
         EventList.ItemsSource = _events;
 
         EntityList.SelectionChanged += EntityList_SelectionChanged;
@@ -315,6 +317,25 @@ public partial class OmniscopeWindow : Window
         InventoryMetric.Text = loggedIn ? $"{inventoryUsed:N0} / {inventoryCapacity:N0} slots" : "-- / --";
         SetProgress(InventoryProgressBar, inventoryUsed, inventoryCapacity);
 
+        InventoryRow[] inventoryRows = loggedIn
+            ? _bot.Inventory.Items
+                .OrderByDescending(static item => item.Wearing)
+                .ThenBy(static item => item.Name)
+                .Take(12)
+                .Select(item => new InventoryRow
+                {
+                    Name = $"{(item.Wearing ? "EQUIPPED  /  " : string.Empty)}{(item is Skua.Core.Models.Items.InventoryItem inventoryItem && _bot.Inventory.IsFavorited(inventoryItem.ID) ? "★  " : string.Empty)}{item.Name}",
+                    Quantity = $"×{item.Quantity:N0}"
+                })
+                .ToArray()
+            : [];
+        if (_inventory.Count != inventoryRows.Length || !_inventory.Zip(inventoryRows).All(static pair => pair.First.HasSameDisplay(pair.Second)))
+        {
+            _inventory.Clear();
+            foreach (InventoryRow row in inventoryRows)
+                _inventory.Add(row);
+        }
+
         if (loggedIn && _lastKillCount != _bot.Stats.Kills)
         {
             if (_lastKillCount >= 0)
@@ -422,6 +443,14 @@ public partial class OmniscopeWindow : Window
         public bool HasSameDisplay(SkillRow other) =>
             Slot == other.Slot && Name == other.Name && Cooldown == other.Cooldown &&
             Description == other.Description;
+    }
+
+    private sealed class InventoryRow
+    {
+        public string Name { get; init; } = string.Empty;
+        public string Quantity { get; init; } = string.Empty;
+
+        public bool HasSameDisplay(InventoryRow other) => Name == other.Name && Quantity == other.Quantity;
     }
 
     private sealed class EventRow
