@@ -11,10 +11,14 @@ internal sealed class GameDataRecord
     public string Category { get; init; } = string.Empty;
     public string DisplayCategory => Category switch
     {
-        "QUEST" or "QUEST SOURCE" => "Quest / Reward",
-        "SHOP" or "SHOP SOURCE" => "Shop Item",
-        "MAP ITEM" or "MAP SOURCE" => "Map Link",
-        "DROP" or "DROP SOURCE" => "Drop / Loot",
+        "QUEST" => "Quest / Reward",
+        "QUEST SOURCE" => "Quest Data Status",
+        "SHOP" => "Shop Item",
+        "SHOP SOURCE" => "Shop Data Status",
+        "MAP ITEM" => "Map Link",
+        "MAP SOURCE" => "Map Data Status",
+        "DROP" => "Drop / Loot",
+        "DROP SOURCE" => "Drop Data Status",
         "MONSTER" => "Monster",
         "ACHIEVEMENT" => "Achievement",
         "ITEM REFERENCE" => "Item Usage",
