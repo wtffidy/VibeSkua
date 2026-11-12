@@ -70,6 +70,41 @@ internal static class SwfSourceIndexer
     }
 
     /// <summary>
+    /// Resolves the private Java runtime packaged beside FFDec, with system Java as a development fallback.
+    /// </summary>
+    /// <param name="ffdecDirectory">Directory containing ffdec.jar and the optional Runtime folder.</param>
+    /// <returns>The Java executable path.</returns>
+    private static string ResolveJavaExecutable(string ffdecDirectory)
+    {
+        string bundledJava = Path.Combine(ffdecDirectory, "Runtime", "bin", "java.exe");
+        if (File.Exists(bundledJava))
+            return bundledJava;
+
+        string? javaHome = Environment.GetEnvironmentVariable("JAVA_HOME");
+        if (!string.IsNullOrWhiteSpace(javaHome))
+        {
+            string javaHomeExecutable = Path.Combine(javaHome, "bin", "java.exe");
+            if (File.Exists(javaHomeExecutable))
+                return javaHomeExecutable;
+        }
+
+        string? pathEnvironment = Environment.GetEnvironmentVariable("PATH");
+        if (!string.IsNullOrWhiteSpace(pathEnvironment))
+        {
+            foreach (string path in pathEnvironment.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                string pathJava = Path.Combine(path, "java.exe");
+                if (File.Exists(pathJava))
+                    return pathJava;
+            }
+        }
+
+        throw new FileNotFoundException(
+            $"VibeSkua's bundled Java 21 runtime is missing. Expected: {bundledJava}. Run package-build.ps1 to restore the portable runtime.",
+            bundledJava);
+    }
+
+    /// <summary>
     /// Decompiles the supplied SWF when no matching export exists, then builds a bounded searchable source index.
     /// </summary>
     /// <param name="swfPath">Path to the packaged AQW client SWF.</param>
@@ -99,7 +134,7 @@ internal static class SwfSourceIndexer
         bool hasExportedScripts = Directory.EnumerateFiles(exportDirectory, "*.as", SearchOption.AllDirectories).Any();
         if (!File.Exists(markerPath) || !hasExportedScripts)
         {
-            ProcessStartInfo startInfo = new("java.exe")
+            ProcessStartInfo startInfo = new(ResolveJavaExecutable(ffdecDirectory))
             {
                 UseShellExecute = false,
                 CreateNoWindow = true,
@@ -132,10 +167,10 @@ internal static class SwfSourceIndexer
                 if (!process.Start())
                     throw new InvalidOperationException("FFDec could not be started.");
             }
-            catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 2)
+            catch (System.ComponentModel.Win32Exception ex)
             {
                 throw new InvalidOperationException(
-                    "A compatible Java runtime could not be found on PATH. FFDec requires Java to decompile the AQW client.",
+                    $"The bundled Java runtime could not be started ({ex.NativeErrorCode}). Executable: {startInfo.FileName}",
                     ex);
             }
 
