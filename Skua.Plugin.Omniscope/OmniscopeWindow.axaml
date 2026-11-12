@@ -4,8 +4,8 @@
         x:Class="Skua.Plugin.Omniscope.OmniscopeWindow"
         Classes="skua"
         Title="OMNISCOPE | Live Game Intelligence"
-        Width="1540" Height="1040"
-        MinWidth="1120" MinHeight="860"
+        Width="1400" Height="900"
+        MinWidth="1080" MinHeight="700"
         Background="#070B14"
         SystemDecorations="BorderOnly"
         ExtendClientAreaToDecorationsHint="True"
@@ -21,7 +21,7 @@
             <Setter Property="Foreground" Value="#DDF7FF"/>
             <Setter Property="BorderBrush" Value="#2C718A"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Padding" Value="12,8"/>
         </Style>
@@ -55,7 +55,8 @@
         <shell:WindowTitleBar Grid.Row="0" TitleText="OMNISCOPE  /  LIVE GAME INTELLIGENCE" />
         <TabControl Grid.Row="1" Background="#070B14" BorderThickness="0">
             <TabItem Header="LIVE OBSERVATORY">
-            <Grid Margin="22" MinWidth="0" RowDefinitions="Auto,Auto,*,Auto,Auto" RowSpacing="14">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <Grid Margin="22" MinWidth="0" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="14">
                 <Grid Grid.Row="0" MinWidth="0" ColumnDefinitions="*,Auto" ColumnSpacing="18">
                     <StackPanel Spacing="4" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" Spacing="12">
@@ -204,7 +205,8 @@
                     <TextBlock Text="OMNISCOPE  /  READ-ONLY TELEMETRY  /  SOURCE: PUBLIC VIBESKUA GAME INTERFACES" Foreground="#456A7D" FontSize="9"/>
                     <TextBlock Grid.Column="1" Text="750 MS POLL  •  BOUNDED EVENT HISTORY" Foreground="#456A7D" FontSize="9"/>
                 </Grid>
-            </Grid>
+                </Grid>
+            </ScrollViewer>
             </TabItem>
             <TabItem Header="DATA INTELLIGENCE">
                 <Grid Margin="18" MinWidth="0" RowDefinitions="Auto,*,Auto" RowSpacing="10">
