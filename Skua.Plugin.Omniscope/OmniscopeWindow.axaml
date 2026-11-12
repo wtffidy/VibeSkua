@@ -21,8 +21,8 @@
                         <StackPanel Orientation="Horizontal" Spacing="12">
                             <Border Width="4" Height="34" Background="#39DDF5" CornerRadius="2"/>
                             <StackPanel Spacing="0">
-                                <TextBlock Text="OMNISCOPE" FontSize="28" FontWeight="Black" Foreground="#E9FAFF" LetterSpacing="3"/>
-                                <TextBlock Text="VIBESKUA  /  GAME STATE OBSERVATORY" FontSize="10" Foreground="#58CDEB" LetterSpacing="2"/>
+                                <TextBlock Text="OMNISCOPE" FontSize="28" FontWeight="Black" Foreground="#E9FAFF"/>
+                                <TextBlock Text="VIBESKUA  /  GAME STATE OBSERVATORY" FontSize="10" Foreground="#58CDEB"/>
                             </StackPanel>
                         </StackPanel>
                         <TextBlock Text="A live operational picture of the world, your avatar, and everything the client exposes." Foreground="#66899D" FontSize="11" Margin="16,4,0,0"/>
@@ -42,35 +42,35 @@
                     <Border Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="15">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                             <Border Width="34" Height="34" CornerRadius="8" Background="#17394A" VerticalAlignment="Center"><TextBlock Text="◈" Foreground="#55DDF4" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-                            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="WORLD / INSTANCE" Foreground="#6E9CB0" FontSize="9" LetterSpacing="1.5"/><TextBlock x:Name="MapMetric" Text="Awaiting world" Foreground="#E8F8FF" FontSize="17" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="RoomMetric" Text="Room --  /  -- players" Foreground="#79B8CE" FontSize="10"/></StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="WORLD / INSTANCE" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="MapMetric" Text="Awaiting world" Foreground="#E8F8FF" FontSize="17" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="RoomMetric" Text="Room --  /  -- players" Foreground="#79B8CE" FontSize="10"/></StackPanel>
                         </Grid>
                     </Border>
                     <Border Grid.Column="1" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="15">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                             <Border Width="34" Height="34" CornerRadius="8" Background="#17394A" VerticalAlignment="Center"><TextBlock Text="♥" Foreground="#FF8297" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-                            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="VITALITY" Foreground="#6E9CB0" FontSize="9" LetterSpacing="1.5"/><TextBlock x:Name="VitalsMetric" Text="-- / -- HP" Foreground="#E8F8FF" FontSize="17" FontWeight="Bold"/><Border Height="4" Background="#263847" CornerRadius="2"><Border x:Name="HealthProgressBar" HorizontalAlignment="Left" Width="0" Background="#F16F87" CornerRadius="2"/></Border></StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="VITALITY" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="VitalsMetric" Text="-- / -- HP" Foreground="#E8F8FF" FontSize="17" FontWeight="Bold"/><Border Height="4" Background="#263847" CornerRadius="2"><Border x:Name="HealthProgressBar" HorizontalAlignment="Left" Width="0" Background="#F16F87" CornerRadius="2"/></Border></StackPanel>
                         </Grid>
                     </Border>
                     <Border Grid.Column="2" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="15">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                             <Border Width="34" Height="34" CornerRadius="8" Background="#17394A" VerticalAlignment="Center"><TextBlock Text="⌖" Foreground="#6DDCFF" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-                            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="ENTITY FIELD" Foreground="#6E9CB0" FontSize="9" LetterSpacing="1.5"/><TextBlock x:Name="EntityMetric" Text="0" Foreground="#E8F8FF" FontSize="17" FontWeight="Bold"/><TextBlock x:Name="EntitySubMetric" Text="No entities observed" Foreground="#79B8CE" FontSize="10"/></StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="ENTITY FIELD" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="EntityMetric" Text="0" Foreground="#E8F8FF" FontSize="17" FontWeight="Bold"/><TextBlock x:Name="EntitySubMetric" Text="No entities observed" Foreground="#79B8CE" FontSize="10"/></StackPanel>
                         </Grid>
                     </Border>
                     <Border Grid.Column="3" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="15">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                             <Border Width="34" Height="34" CornerRadius="8" Background="#17394A" VerticalAlignment="Center"><TextBlock Text="⌁" Foreground="#B49AFF" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-                            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="POSITION / CELL" Foreground="#6E9CB0" FontSize="9" LetterSpacing="1.5"/><TextBlock x:Name="PositionMetric" Text="X --  /  Y --" Foreground="#E8F8FF" FontSize="17" FontWeight="Bold"/><TextBlock x:Name="CellMetric" Text="Cell --  /  Pad --" Foreground="#79B8CE" FontSize="10"/></StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="POSITION / CELL" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="PositionMetric" Text="X --  /  Y --" Foreground="#E8F8FF" FontSize="17" FontWeight="Bold"/><TextBlock x:Name="CellMetric" Text="Cell --  /  Pad --" Foreground="#79B8CE" FontSize="10"/></StackPanel>
                         </Grid>
                     </Border>
                 </Grid>
 
                 <Grid Grid.Row="2" ColumnDefinitions="1.02*,1.28*,1.08*" ColumnSpacing="14" MinHeight="410">
                     <Grid Grid.Column="0" RowDefinitions="Auto,*" RowSpacing="8">
-                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="01" Foreground="#3DD7F2" FontSize="10" FontWeight="Bold"/><TextBlock Text="AVATAR TELEMETRY" Foreground="#BCEAF5" FontSize="11" FontWeight="Bold" LetterSpacing="1.2"/><TextBlock Text="LIVE" Foreground="#4CCCA8" FontSize="9" VerticalAlignment="Center"/></StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="01" Foreground="#3DD7F2" FontSize="10" FontWeight="Bold"/><TextBlock Text="AVATAR TELEMETRY" Foreground="#BCEAF5" FontSize="11" FontWeight="Bold"/><TextBlock Text="LIVE" Foreground="#4CCCA8" FontSize="9" VerticalAlignment="Center"/></StackPanel>
                         <Border Grid.Row="1" Background="#0D1724" BorderBrush="#203E51" BorderThickness="1" CornerRadius="8" Padding="16">
                             <StackPanel Spacing="12">
-                                <StackPanel Spacing="3"><TextBlock Text="IDENTITY" Foreground="#5F8FA5" FontSize="9" LetterSpacing="1.4"/><TextBlock x:Name="PlayerNameText" Text="Waiting for player session" Foreground="#ECFAFF" FontSize="21" FontWeight="SemiBold"/><TextBlock x:Name="PlayerClassText" Text="Class: unavailable" Foreground="#83B8CA" FontSize="11"/></StackPanel>
+                                <StackPanel Spacing="3"><TextBlock Text="IDENTITY" Foreground="#5F8FA5" FontSize="9"/><TextBlock x:Name="PlayerNameText" Text="Waiting for player session" Foreground="#ECFAFF" FontSize="21" FontWeight="SemiBold"/><TextBlock x:Name="PlayerClassText" Text="Class: unavailable" Foreground="#83B8CA" FontSize="11"/></StackPanel>
                                 <StackPanel Spacing="5"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="HEALTH" Foreground="#6C98AA" FontSize="9"/><TextBlock x:Name="HealthText" Grid.Column="1" Text="-- / --" Foreground="#F39AA8" FontSize="10"/></Grid><Border Height="7" Background="#263442" CornerRadius="4"><Border x:Name="HealthDetailBar" Width="0" HorizontalAlignment="Left" Background="#F16F87" CornerRadius="4"/></Border></StackPanel>
                                 <StackPanel Spacing="5"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="MANA" Foreground="#6C98AA" FontSize="9"/><TextBlock x:Name="ManaText" Grid.Column="1" Text="-- / --" Foreground="#8BCFFF" FontSize="10"/></Grid><Border Height="7" Background="#263442" CornerRadius="4"><Border x:Name="ManaProgressBar" Width="0" HorizontalAlignment="Left" Background="#53B8F5" CornerRadius="4"/></Border></StackPanel>
                                 <Border Height="1" Background="#203E51"/>
@@ -83,13 +83,13 @@
                                     <StackPanel Grid.Row="2" Grid.Column="1"><TextBlock Text="SERVER" Foreground="#5F8FA5" FontSize="9"/><TextBlock x:Name="ServerText" Text="--" Foreground="#E7F8FF" FontSize="12"/></StackPanel>
                                 </Grid>
                                 <Border Height="1" Background="#203E51"/>
-                                <StackPanel Spacing="4"><TextBlock Text="SESSION SNAPSHOT" Foreground="#5F8FA5" FontSize="9" LetterSpacing="1.2"/><TextBlock x:Name="SessionText" Text="Telemetry will populate as the game exposes state." Foreground="#9CC5D5" FontSize="11" TextWrapping="Wrap"/></StackPanel>
+                                <StackPanel Spacing="4"><TextBlock Text="SESSION SNAPSHOT" Foreground="#5F8FA5" FontSize="9"/><TextBlock x:Name="SessionText" Text="Telemetry will populate as the game exposes state." Foreground="#9CC5D5" FontSize="11" TextWrapping="Wrap"/></StackPanel>
                             </StackPanel>
                         </Border>
                     </Grid>
 
                     <Grid Grid.Column="1" RowDefinitions="Auto,*" RowSpacing="8">
-                        <Grid ColumnDefinitions="*,Auto"><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="02" Foreground="#3DD7F2" FontSize="10" FontWeight="Bold"/><TextBlock Text="ENTITY INTELLIGENCE" Foreground="#BCEAF5" FontSize="11" FontWeight="Bold" LetterSpacing="1.2"/></StackPanel><TextBlock Grid.Column="1" Text="SELECT TO INSPECT" Foreground="#527D91" FontSize="9" VerticalAlignment="Center"/></Grid>
+                        <Grid ColumnDefinitions="*,Auto"><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="02" Foreground="#3DD7F2" FontSize="10" FontWeight="Bold"/><TextBlock Text="ENTITY INTELLIGENCE" Foreground="#BCEAF5" FontSize="11" FontWeight="Bold"/></StackPanel><TextBlock Grid.Column="1" Text="SELECT TO INSPECT" Foreground="#527D91" FontSize="9" VerticalAlignment="Center"/></Grid>
                         <Border Grid.Row="1" Background="#0D1724" BorderBrush="#203E51" BorderThickness="1" CornerRadius="8" Padding="10">
                             <Grid RowDefinitions="Auto,*,Auto">
                                 <Grid ColumnDefinitions="*,76,66,58" Margin="4,4,8,10"><TextBlock Text="ENTITY / CELL" Foreground="#5F8FA5" FontSize="9"/><TextBlock Grid.Column="1" Text="HP" Foreground="#5F8FA5" FontSize="9" HorizontalAlignment="Right"/><TextBlock Grid.Column="2" Text="STATE" Foreground="#5F8FA5" FontSize="9" HorizontalAlignment="Right"/><TextBlock Grid.Column="3" Text="ID" Foreground="#5F8FA5" FontSize="9" HorizontalAlignment="Right"/></Grid>
@@ -97,14 +97,14 @@
                                     <ListBox.ItemTemplate><DataTemplate><Grid ColumnDefinitions="*,76,66,58" Margin="3,5"><StackPanel Spacing="2"><TextBlock Text="{Binding Name}" Foreground="#D7F1FA" FontSize="11"/><TextBlock Text="{Binding Cell}" Foreground="#628FA3" FontSize="9"/></StackPanel><TextBlock Grid.Column="1" Text="{Binding Health}" Foreground="#9ED8E8" FontSize="10" HorizontalAlignment="Right"/><TextBlock Grid.Column="2" Text="{Binding State}" Foreground="#9ED8E8" FontSize="9" HorizontalAlignment="Right"/><TextBlock Grid.Column="3" Text="{Binding Id}" Foreground="#6F9BAE" FontSize="9" HorizontalAlignment="Right"/></Grid></DataTemplate></ListBox.ItemTemplate>
                                 </ListBox>
                                 <Border Grid.Row="2" Margin="0,8,0,0" Padding="11" Background="#122333" BorderBrush="#28536A" BorderThickness="1" CornerRadius="6">
-                                    <StackPanel Spacing="4"><TextBlock Text="SELECTED ENTITY" Foreground="#5F8FA5" FontSize="9" LetterSpacing="1.2"/><TextBlock x:Name="SelectedEntityText" Text="Select a monster to inspect its live properties." Foreground="#E5F8FF" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock x:Name="SelectedEntityDetailsText" Text="Read-only entity inspection" Foreground="#85B7C9" FontSize="10" TextWrapping="Wrap"/></StackPanel>
+                                    <StackPanel Spacing="4"><TextBlock Text="SELECTED ENTITY" Foreground="#5F8FA5" FontSize="9"/><TextBlock x:Name="SelectedEntityText" Text="Select a monster to inspect its live properties." Foreground="#E5F8FF" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock x:Name="SelectedEntityDetailsText" Text="Read-only entity inspection" Foreground="#85B7C9" FontSize="10" TextWrapping="Wrap"/></StackPanel>
                                 </Border>
                             </Grid>
                         </Border>
                     </Grid>
 
                     <Grid Grid.Column="2" RowDefinitions="Auto,*" RowSpacing="8">
-                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="03" Foreground="#3DD7F2" FontSize="10" FontWeight="Bold"/><TextBlock Text="EVENT CHRONOLOGY" Foreground="#BCEAF5" FontSize="11" FontWeight="Bold" LetterSpacing="1.2"/></StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="03" Foreground="#3DD7F2" FontSize="10" FontWeight="Bold"/><TextBlock Text="EVENT CHRONOLOGY" Foreground="#BCEAF5" FontSize="11" FontWeight="Bold"/></StackPanel>
                         <Border Grid.Row="1" Background="#0D1724" BorderBrush="#203E51" BorderThickness="1" CornerRadius="8" Padding="12">
                             <Grid RowDefinitions="Auto,*"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="Observed state transitions / newest first" Foreground="#628FA3" FontSize="9"/><TextBlock x:Name="EventCountText" Grid.Column="1" Text="0 EVENTS" Foreground="#4CCFEA" FontSize="9"/></Grid><ListBox x:Name="EventList" Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="0,8,0,0"><ListBox.ItemTemplate><DataTemplate><StackPanel Spacing="3" Margin="2,5"><Grid ColumnDefinitions="Auto,*"><TextBlock Text="{Binding Time}" Foreground="#4CCFEA" FontSize="9" FontFamily="Consolas"/><TextBlock Grid.Column="1" Text="{Binding Category}" Foreground="#D9F2FA" FontSize="10" Margin="10,0,0,0"/></Grid><TextBlock Text="{Binding Detail}" Foreground="#719CAF" FontSize="9" TextWrapping="Wrap"/></StackPanel></DataTemplate></ListBox.ItemTemplate></ListBox></Grid>
                         </Border>
@@ -113,25 +113,25 @@
 
                 <Grid Grid.Row="3" ColumnDefinitions="*,*,*,*" ColumnSpacing="14" MinHeight="250">
                     <Grid Grid.Column="0" RowDefinitions="Auto,*" RowSpacing="8">
-                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="04" Foreground="#3DD7F2" FontSize="10" FontWeight="Bold"/><TextBlock Text="WORLD ROSTER" Foreground="#BCEAF5" FontSize="11" FontWeight="Bold" LetterSpacing="1.2"/></StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="04" Foreground="#3DD7F2" FontSize="10" FontWeight="Bold"/><TextBlock Text="WORLD ROSTER" Foreground="#BCEAF5" FontSize="11" FontWeight="Bold"/></StackPanel>
                         <Border Grid.Row="1" Background="#0D1724" BorderBrush="#203E51" BorderThickness="1" CornerRadius="8" Padding="12"><Grid RowDefinitions="Auto,*"><TextBlock x:Name="RosterMetric" Text="Players in instance: --" Foreground="#628FA3" FontSize="9"/><ListBox x:Name="PlayerList" Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="0,6,0,0"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Foreground="#D7F1FA" FontSize="11" Margin="3,5"/></DataTemplate></ListBox.ItemTemplate></ListBox></Grid></Border>
                     </Grid>
                     <Grid Grid.Column="1" RowDefinitions="Auto,*" RowSpacing="8">
-                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="05" Foreground="#3DD7F2" FontSize="10" FontWeight="Bold"/><TextBlock Text="ACTIVE AURAS" Foreground="#BCEAF5" FontSize="11" FontWeight="Bold" LetterSpacing="1.2"/></StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="05" Foreground="#3DD7F2" FontSize="10" FontWeight="Bold"/><TextBlock Text="ACTIVE AURAS" Foreground="#BCEAF5" FontSize="11" FontWeight="Bold"/></StackPanel>
                         <Border Grid.Row="1" Background="#0D1724" BorderBrush="#203E51" BorderThickness="1" CornerRadius="8" Padding="12"><Grid RowDefinitions="Auto,*"><TextBlock x:Name="AuraMetric" Text="Self effects: 0" Foreground="#628FA3" FontSize="9"/><ListBox x:Name="AuraList" Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="0,6,0,0"><ListBox.ItemTemplate><DataTemplate><StackPanel Spacing="2" Margin="3,4"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Name}" Foreground="#D7F1FA" FontSize="10"/><TextBlock Grid.Column="1" Text="{Binding Stacks}" Foreground="#62DDF1" FontSize="9"/></Grid><TextBlock Text="{Binding Duration}" Foreground="#719CAF" FontSize="9"/></StackPanel></DataTemplate></ListBox.ItemTemplate></ListBox></Grid></Border>
                     </Grid>
                     <Grid Grid.Column="2" RowDefinitions="Auto,*" RowSpacing="8">
-                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="06" Foreground="#3DD7F2" FontSize="10" FontWeight="Bold"/><TextBlock Text="SKILL MATRIX" Foreground="#BCEAF5" FontSize="11" FontWeight="Bold" LetterSpacing="1.2"/></StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="06" Foreground="#3DD7F2" FontSize="10" FontWeight="Bold"/><TextBlock Text="SKILL MATRIX" Foreground="#BCEAF5" FontSize="11" FontWeight="Bold"/></StackPanel>
                         <Border Grid.Row="1" Background="#0D1724" BorderBrush="#203E51" BorderThickness="1" CornerRadius="8" Padding="12"><Grid RowDefinitions="Auto,*"><TextBlock x:Name="SkillMetric" Text="Combat engine: idle" Foreground="#628FA3" FontSize="9"/><ListBox x:Name="SkillList" Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="0,6,0,0"><ListBox.ItemTemplate><DataTemplate><StackPanel Spacing="2" Margin="3,4"><Grid ColumnDefinitions="Auto,*,Auto"><TextBlock Text="{Binding Slot}" Foreground="#4CCFEA" FontSize="9"/><TextBlock Grid.Column="1" Text="{Binding Name}" Foreground="#D7F1FA" FontSize="10" Margin="8,0,0,0"/><TextBlock Grid.Column="2" Text="{Binding Cooldown}" Foreground="#83B8CA" FontSize="9"/></Grid><TextBlock Text="{Binding Description}" Foreground="#719CAF" FontSize="9" TextTrimming="CharacterEllipsis"/></StackPanel></DataTemplate></ListBox.ItemTemplate></ListBox></Grid></Border>
                     </Grid>
                     <Grid Grid.Column="3" RowDefinitions="Auto,*" RowSpacing="8">
-                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="07" Foreground="#3DD7F2" FontSize="10" FontWeight="Bold"/><TextBlock Text="SESSION ANALYTICS" Foreground="#BCEAF5" FontSize="11" FontWeight="Bold" LetterSpacing="1.2"/></StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="07" Foreground="#3DD7F2" FontSize="10" FontWeight="Bold"/><TextBlock Text="SESSION ANALYTICS" Foreground="#BCEAF5" FontSize="11" FontWeight="Bold"/></StackPanel>
                         <Border Grid.Row="1" Background="#0D1724" BorderBrush="#203E51" BorderThickness="1" CornerRadius="8" Padding="13"><StackPanel Spacing="10"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="SESSION TIME" Foreground="#5F8FA5" FontSize="9"/><TextBlock x:Name="SessionTimeMetric" Grid.Column="1" Text="--:--:--" Foreground="#E7F8FF" FontSize="12" FontWeight="Bold"/></Grid><Grid ColumnDefinitions="*,Auto"><TextBlock Text="KILLS" Foreground="#5F8FA5" FontSize="9"/><TextBlock x:Name="KillsMetric" Grid.Column="1" Text="0" Foreground="#E7F8FF" FontSize="13"/></Grid><Grid ColumnDefinitions="*,Auto"><TextBlock Text="DROPS" Foreground="#5F8FA5" FontSize="9"/><TextBlock x:Name="DropsMetric" Grid.Column="1" Text="0" Foreground="#E7F8FF" FontSize="13"/></Grid><Grid ColumnDefinitions="*,Auto"><TextBlock Text="DEATHS" Foreground="#5F8FA5" FontSize="9"/><TextBlock x:Name="DeathsMetric" Grid.Column="1" Text="0" Foreground="#E7F8FF" FontSize="13"/></Grid><Grid ColumnDefinitions="*,Auto"><TextBlock Text="KILLS / MIN" Foreground="#5F8FA5" FontSize="9"/><TextBlock x:Name="KpmMetric" Grid.Column="1" Text="0.0" Foreground="#75E1C0" FontSize="13"/></Grid><Border Height="1" Background="#203E51"/><Grid ColumnDefinitions="*,Auto"><TextBlock Text="INVENTORY" Foreground="#5F8FA5" FontSize="9"/><TextBlock x:Name="InventoryMetric" Grid.Column="1" Text="-- / --" Foreground="#E7F8FF" FontSize="11"/></Grid><Border Height="6" Background="#263442" CornerRadius="3"><Border x:Name="InventoryProgressBar" Width="0" HorizontalAlignment="Left" Background="#B49AFF" CornerRadius="3"/></Border><TextBlock x:Name="QuestMetric" Text="Quests: -- active / -- ready" Foreground="#83B8CA" FontSize="9"/></StackPanel></Border>
                     </Grid>
                 </Grid>
 
                 <Grid Grid.Row="4" ColumnDefinitions="*,Auto">
-                    <TextBlock Text="OMNISCOPE  /  READ-ONLY TELEMETRY  /  SOURCE: PUBLIC VIBESKUA GAME INTERFACES" Foreground="#456A7D" FontSize="9" LetterSpacing="1.1"/>
+                    <TextBlock Text="OMNISCOPE  /  READ-ONLY TELEMETRY  /  SOURCE: PUBLIC VIBESKUA GAME INTERFACES" Foreground="#456A7D" FontSize="9"/>
                     <TextBlock Grid.Column="1" Text="750 MS POLL  •  BOUNDED EVENT HISTORY" Foreground="#456A7D" FontSize="9"/>
                 </Grid>
             </Grid>
