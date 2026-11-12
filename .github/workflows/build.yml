@@ -42,7 +42,7 @@ jobs:
       - name: Build solution
         run: dotnet build Skua.sln --configuration Release --no-restore --verbosity minimal
 
-      - name: Package client and verify OMNISCOPE
+      - name: Package client and verify OMNISCOPE and portable Java
         shell: pwsh
         run: |
           ./package-build.ps1
@@ -50,4 +50,12 @@ jobs:
           if (-not (Test-Path $pluginPath)) {
             throw "OMNISCOPE was not included in the packaged client: $pluginPath"
           }
-          Get-Item $pluginPath | Format-List FullName, Length, LastWriteTimeUtc
+          $javaPath = Join-Path $PWD "Build/FFDec/Runtime/bin/java.exe"
+          if (-not (Test-Path $javaPath)) {
+            throw "The private FFDec Java runtime was not included in the packaged client: $javaPath"
+          }
+          & $javaPath -version
+          if ($LASTEXITCODE -ne 0) {
+            throw "The packaged FFDec Java runtime failed its startup check."
+          }
+          Get-Item $pluginPath, $javaPath | Format-List FullName, Length, LastWriteTimeUtc
