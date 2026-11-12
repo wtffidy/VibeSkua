@@ -14,7 +14,9 @@
         WindowStartupLocation="CenterScreen">
     <Grid RowDefinitions="Auto,*" Background="#070B14">
         <shell:WindowTitleBar Grid.Row="0" TitleText="OMNISCOPE  /  LIVE GAME INTELLIGENCE" />
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <TabControl Grid.Row="1" Background="#070B14" BorderThickness="0">
+            <TabItem Header="LIVE OBSERVATORY">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <Grid Margin="22" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="16">
                 <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="18">
                     <StackPanel Spacing="4" VerticalAlignment="Center">
@@ -136,5 +138,92 @@
                 </Grid>
             </Grid>
         </ScrollViewer>
+            </TabItem>
+            <TabItem Header="DATA INTELLIGENCE">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid Margin="22" RowDefinitions="Auto,Auto,Auto,*" RowSpacing="15">
+                        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="GAME DATA INTELLIGENCE" FontSize="23" FontWeight="Bold" Foreground="#E9FAFF"/>
+                                <TextBlock Text="QUEST GRAPH  /  SHOP REQUIREMENTS  /  MAP REFERENCES  /  CLIENT SOURCE" FontSize="9" Foreground="#58CDEB"/>
+                                <TextBlock Text="Inspect locally available game data and decompiled client logic. No game actions are performed." FontSize="11" Foreground="#66899D"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <Button Content="REFRESH CATALOG" Click="RefreshDataCatalog_Click" Padding="12,8"/>
+                                <Button Content="ANALYZE CURRENT MAP" Click="AnalyzeMap_Click" Padding="12,8"/>
+                                <Button Content="DECOMPILE CLIENT SWF" Click="DecompileSwf_Click" Padding="12,8"/>
+                                <Button Content="EXPORT JSON" Click="ExportData_Click" Padding="12,8"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
+                            <Border Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="13"><StackPanel Spacing="3"><TextBlock Text="INDEXED RECORDS" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="DataRecordCountText" Text="0" Foreground="#E8F8FF" FontSize="22" FontWeight="Bold"/><TextBlock Text="Searchable objects" Foreground="#79B8CE" FontSize="9"/></StackPanel></Border>
+                            <Border Grid.Column="1" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="13"><StackPanel Spacing="3"><TextBlock Text="QUEST DATABASE" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="QuestRecordCountText" Text="0" Foreground="#E8F8FF" FontSize="22" FontWeight="Bold"/><TextBlock Text="Cached quest definitions" Foreground="#79B8CE" FontSize="9"/></StackPanel></Border>
+                            <Border Grid.Column="2" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="13"><StackPanel Spacing="3"><TextBlock Text="SHOP INVENTORY" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="ShopRecordCountText" Text="0" Foreground="#E8F8FF" FontSize="22" FontWeight="Bold"/><TextBlock Text="Items from loaded shop cache" Foreground="#79B8CE" FontSize="9"/></StackPanel></Border>
+                            <Border Grid.Column="3" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="13"><StackPanel Spacing="3"><TextBlock Text="MAP ITEM REFERENCES" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="MapItemRecordCountText" Text="0" Foreground="#E8F8FF" FontSize="22" FontWeight="Bold"/><TextBlock Text="Current map SWF analysis" Foreground="#79B8CE" FontSize="9"/></StackPanel></Border>
+                        </Grid>
+
+                        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                            <TextBox x:Name="DataSearchBox" Watermark="Search names, IDs, requirements, rewards, source code, functions..." TextChanged="DataSearchBox_TextChanged" Background="#111F2D" Foreground="#D7F1FA" BorderBrush="#28536A" FontSize="12" Padding="12,9"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                <ComboBox x:Name="DataCategoryBox" Width="170" SelectedIndex="0" SelectionChanged="DataCategoryBox_SelectionChanged">
+                                    <ComboBoxItem Content="ALL DATA"/>
+                                    <ComboBoxItem Content="QUESTS"/>
+                                    <ComboBoxItem Content="SHOPS"/>
+                                    <ComboBoxItem Content="MAP ITEMS"/>
+                                    <ComboBoxItem Content="DROPS"/>
+                                    <ComboBoxItem Content="MONSTERS"/>
+                                    <ComboBoxItem Content="ACHIEVEMENTS"/>
+                                    <ComboBoxItem Content="SWF SOURCE"/>
+                                </ComboBox>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid Grid.Row="3" ColumnDefinitions="0.9*,1.1*" ColumnSpacing="14" MinHeight="620">
+                            <Border Grid.Column="0" Background="#0D1724" BorderBrush="#203E51" BorderThickness="1" CornerRadius="8" Padding="12">
+                                <Grid RowDefinitions="Auto,*">
+                                    <Grid ColumnDefinitions="*,Auto" Margin="2,2,2,10">
+                                        <TextBlock Text="DATA INDEX" Foreground="#BCEAF5" FontSize="11" FontWeight="Bold"/>
+                                        <TextBlock x:Name="DataResultMetric" Grid.Column="1" Text="0 MATCHES" Foreground="#4CCFEA" FontSize="9"/>
+                                    </Grid>
+                                    <ListBox x:Name="DataRecordList" Grid.Row="1" Background="Transparent" BorderThickness="0" SelectionChanged="DataRecordList_SelectionChanged">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="#101F2D" CornerRadius="5" Padding="10" Margin="2,3">
+                                                    <StackPanel Spacing="4">
+                                                        <Grid ColumnDefinitions="*,Auto">
+                                                            <TextBlock Text="{Binding Name}" Foreground="#E2F6FC" FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Grid.Column="1" Text="{Binding Category}" Foreground="#4CCFEA" FontSize="8" VerticalAlignment="Center"/>
+                                                        </Grid>
+                                                        <TextBlock Text="{Binding Summary}" Foreground="#719CAF" FontSize="9" TextWrapping="Wrap" MaxLines="2"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Grid>
+                            </Border>
+
+                            <Border Grid.Column="1" Background="#0D1724" BorderBrush="#203E51" BorderThickness="1" CornerRadius="8" Padding="14">
+                                <Grid RowDefinitions="Auto,Auto,*">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="OBJECT INSPECTOR" Foreground="#4CCFEA" FontSize="9"/>
+                                        <TextBlock x:Name="DataDetailTitle" Text="Select an indexed record" Foreground="#E9FAFF" FontSize="18" FontWeight="Bold" TextWrapping="Wrap"/>
+                                        <TextBlock x:Name="DataDetailMeta" Text="Structured data and source references appear here." Foreground="#76A8BB" FontSize="10" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <Border Grid.Row="1" Height="1" Background="#203E51" Margin="0,12,0,12"/>
+                                    <TextBox x:Name="DataDetailText" Grid.Row="2" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Background="#09131F" Foreground="#B9D8E4" BorderThickness="0" FontFamily="Consolas" FontSize="10" Padding="10" Text="No record selected."/>
+                                </Grid>
+                            </Border>
+                        </Grid>
+
+                        <Grid Grid.Row="4" ColumnDefinitions="*,Auto">
+                            <TextBlock x:Name="DataStatusText" Text="LOCAL CATALOG READY  /  Refresh to load cached quests and loaded shops." Foreground="#527D91" FontSize="9"/>
+                            <TextBlock x:Name="SwfSourceStatusText" Grid.Column="1" Text="CLIENT SWF SOURCE NOT INDEXED" Foreground="#527D91" FontSize="9"/>
+                        </Grid>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
     </Grid>
 </Window>
