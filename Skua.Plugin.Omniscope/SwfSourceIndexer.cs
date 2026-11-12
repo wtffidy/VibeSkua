@@ -47,6 +47,29 @@ internal static class SwfSourceIndexer
     private static readonly Regex FunctionRegex = new(@"\bfunction\s+([A-Za-z0-9_]+)\s*\(", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     /// <summary>
+    /// Locates the bundled FFDec JAR relative to either the application or plugin directory.
+    /// </summary>
+    /// <returns>The directory containing ffdec.jar.</returns>
+    public static string ResolveFfdecDirectory()
+    {
+        string assemblyDirectory = Path.GetDirectoryName(typeof(SwfSourceIndexer).Assembly.Location) ?? AppContext.BaseDirectory;
+        string[] candidates = new[]
+        {
+            Path.Combine(AppContext.BaseDirectory, "FFDec"),
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "FFDec")),
+            Path.Combine(assemblyDirectory, "FFDec"),
+            Path.GetFullPath(Path.Combine(assemblyDirectory, "..", "FFDec"))
+        };
+
+        string? ffdecDirectory = candidates
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(static path => File.Exists(Path.Combine(path, "ffdec.jar")));
+
+        return ffdecDirectory ?? throw new DirectoryNotFoundException(
+            $"The bundled FFDec runtime was not found. Checked: {string.Join("; ", candidates)}");
+    }
+
+    /// <summary>
     /// Decompiles the supplied SWF when no matching export exists, then builds a bounded searchable source index.
     /// </summary>
     /// <param name="swfPath">Path to the packaged AQW client SWF.</param>
@@ -58,9 +81,9 @@ internal static class SwfSourceIndexer
         if (!File.Exists(swfPath))
             throw new FileNotFoundException("The packaged AQW client SWF could not be found.", swfPath);
 
-        string ffdecPath = Path.Combine(ffdecDirectory, "ffdec.bat");
-        if (!File.Exists(ffdecPath))
-            throw new FileNotFoundException("The bundled FFDec launcher could not be found.", ffdecPath);
+        string ffdecJarPath = Path.GetFullPath(Path.Combine(ffdecDirectory, "ffdec.jar"));
+        if (!File.Exists(ffdecJarPath))
+            throw new FileNotFoundException("The bundled FFDec JAR could not be found.", ffdecJarPath);
 
         FileInfo swfInfo = new(swfPath);
         string versionKey = $"{swfInfo.Length}_{swfInfo.LastWriteTimeUtc.Ticks}";
@@ -76,19 +99,32 @@ internal static class SwfSourceIndexer
         bool hasExportedScripts = Directory.EnumerateFiles(exportDirectory, "*.as", SearchOption.AllDirectories).Any();
         if (!File.Exists(markerPath) || !hasExportedScripts)
         {
-            ProcessStartInfo startInfo = new("cmd.exe")
+            ProcessStartInfo startInfo = new("java.exe")
             {
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                WorkingDirectory = ffdecDirectory
+                WorkingDirectory = Environment.SystemDirectory
             };
-            startInfo.Environment["FFDEC_MEMORY"] = "1536m";
-            startInfo.ArgumentList.Add("/d");
-            startInfo.ArgumentList.Add("/s");
-            startInfo.ArgumentList.Add("/c");
-            startInfo.ArgumentList.Add($"\"\"{ffdecPath}\" -export script \"{exportDirectory}\" \"{swfPath}\"\"");
+            startInfo.Environment["VLC_VERBOSE"] = "-1";
+            startInfo.ArgumentList.Add("-Xmx1536m");
+            startInfo.ArgumentList.Add("--enable-native-access=ALL-UNNAMED");
+            startInfo.ArgumentList.Add("--add-opens=java.base/java.lang=ALL-UNNAMED");
+            startInfo.ArgumentList.Add("--add-opens=java.base/java.io=ALL-UNNAMED");
+            startInfo.ArgumentList.Add("--add-opens=java.base/java.util=ALL-UNNAMED");
+            startInfo.ArgumentList.Add("--add-opens=java.base/sun.nio.fs=ALL-UNNAMED");
+            startInfo.ArgumentList.Add("--add-opens=java.desktop/sun.awt=ALL-UNNAMED");
+            startInfo.ArgumentList.Add("--add-opens=java.desktop/sun.java2d=ALL-UNNAMED");
+            startInfo.ArgumentList.Add("-Djava.net.preferIPv4Stack=true");
+            startInfo.ArgumentList.Add("-Djna.nosys=true");
+            startInfo.ArgumentList.Add("-Djava.util.Arrays.useLegacyMergeSort=true");
+            startInfo.ArgumentList.Add("-jar");
+            startInfo.ArgumentList.Add(ffdecJarPath);
+            startInfo.ArgumentList.Add("-export");
+            startInfo.ArgumentList.Add("script");
+            startInfo.ArgumentList.Add(exportDirectory);
+            startInfo.ArgumentList.Add(swfPath);
 
             using Process process = new() { StartInfo = startInfo };
             if (!process.Start())
