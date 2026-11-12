@@ -20,6 +20,7 @@ public partial class OmniscopeWindow : Window
     private readonly ObservableCollection<string> _players = [];
     private readonly ObservableCollection<AuraRow> _auras = [];
     private readonly ObservableCollection<SkillRow> _skills = [];
+    private readonly ObservableCollection<string> _quests = [];
     private readonly ObservableCollection<EventRow> _events = [];
     private string _lastMap = string.Empty;
     private string _lastTarget = string.Empty;
@@ -42,6 +43,7 @@ public partial class OmniscopeWindow : Window
         PlayerList.ItemsSource = _players;
         AuraList.ItemsSource = _auras;
         SkillList.ItemsSource = _skills;
+        QuestList.ItemsSource = _quests;
         EventList.ItemsSource = _events;
 
         EntityList.SelectionChanged += EntityList_SelectionChanged;
@@ -80,6 +82,8 @@ public partial class OmniscopeWindow : Window
             PlayerNameText.Text = loggedIn ? _bot.Player.Username : "No active player session";
             PlayerClassText.Text = $"Class: {_bot.Player.CurrentClass?.Name ?? "Unavailable"}  /  Rank {_bot.Player.CurrentClassRank}";
             LevelText.Text = loggedIn ? _bot.Player.Level.ToString("N0") : "--";
+            XpText.Text = loggedIn ? _bot.Stats.ExperienceProgressText : "XP unavailable";
+            SetProgress(XpProgressBar, _bot.Stats.ExperienceProgress, 100);
             StateText.Text = loggedIn ? GetPlayerState(_bot.Player.State) : "OFFLINE";
             GoldText.Text = loggedIn ? _bot.Player.Gold.ToString("N0") : "--";
             CoinsText.Text = loggedIn ? _bot.Player.Coins.ToString("N0") : "--";
@@ -141,11 +145,23 @@ public partial class OmniscopeWindow : Window
             UpdateSkills(loggedIn);
             UpdateSessionAnalytics(loggedIn);
 
-            string questSignature = $"{_bot.Quests.Active.Count}:{_bot.Quests.Completed.Count}";
-            QuestMetric.Text = $"Quests: {_bot.Quests.Active.Count:N0} active  /  {_bot.Quests.Completed.Count:N0} ready";
+            Skua.Core.Models.Quests.Quest[] activeQuests = loggedIn ? _bot.Quests.Active.ToArray() : [];
+            Skua.Core.Models.Quests.Quest[] readyQuests = loggedIn ? _bot.Quests.Completed.ToArray() : [];
+            string questSignature = $"{activeQuests.Length}:{readyQuests.Length}";
+            QuestMetric.Text = $"Quests: {activeQuests.Length:N0} active  /  {readyQuests.Length:N0} ready";
             if (_lastQuestSignature.Length > 0 && _lastQuestSignature != questSignature)
                 AddEvent("QUEST TRACKER", QuestMetric.Text);
             _lastQuestSignature = questSignature;
+
+            string[] questRows = readyQuests.Take(4).Select(static quest => $"READY  /  {quest.Name} [{quest.ID}]")
+                .Concat(activeQuests.Take(4).Select(static quest => $"ACTIVE  /  {quest.Name} [{quest.ID}]"))
+                .ToArray();
+            if (!_quests.SequenceEqual(questRows))
+            {
+                _quests.Clear();
+                foreach (string questRow in questRows)
+                    _quests.Add(questRow);
+            }
         }
         catch (Exception ex)
         {
