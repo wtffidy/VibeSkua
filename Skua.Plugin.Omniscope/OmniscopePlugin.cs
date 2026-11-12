@@ -1,3 +1,4 @@
+using Avalonia.Controls;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Skua.Core.Interfaces;
@@ -64,6 +65,32 @@ public sealed class OmniscopePlugin : ISkuaPlugin
             {
                 System.Diagnostics.Trace.WriteLine($"OMNISCOPE window launch failed: {ex}");
                 _window = null;
+
+                try
+                {
+                    Window errorWindow = new()
+                    {
+                        Title = "OMNISCOPE failed to open",
+                        Width = 760,
+                        Height = 420,
+                        MinWidth = 520,
+                        MinHeight = 280,
+                        WindowStartupLocation = WindowStartupLocation.CenterScreen,
+                        Content = new TextBox
+                        {
+                            Text = ex.ToString(),
+                            IsReadOnly = true,
+                            AcceptsReturn = true,
+                            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+                            Margin = new Avalonia.Thickness(12)
+                        }
+                    };
+                    errorWindow.Show();
+                }
+                catch (Exception dialogException)
+                {
+                    System.Diagnostics.Trace.WriteLine($"OMNISCOPE error window failed: {dialogException}");
+                }
             }
         });
     }
