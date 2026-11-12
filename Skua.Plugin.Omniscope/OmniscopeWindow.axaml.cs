@@ -610,25 +610,40 @@ public partial class OmniscopeWindow : Window
         if (_swfIndexRunning)
             return;
 
-        string swfPath = Path.Combine(AppContext.BaseDirectory, "skua.swf");
         string ffdecDirectory = Path.Combine(AppContext.BaseDirectory, "FFDec");
         _swfIndexRunning = true;
         DecompileSwfButtonState(true);
-        DataStatusText.Text = "DECOMPILING CLIENT SWF  /  FFDEC IS RUNNING IN THE BACKGROUND";
+        DataStatusText.Text = "RESOLVING AQW GAME VERSION  /  DOWNLOADING THE LIVE GAME CLIENT SWF";
         try
         {
-            SwfSourceIndexResult result = await SwfSourceIndexer.DecompileAsync(swfPath, ffdecDirectory);
+            AqwGameClientFile clientFile = await AqwGameClientResolver.DownloadLatestAsync();
+            DataStatusText.Text = $"AQW CLIENT {clientFile.FileName} DOWNLOADED  /  STARTING FFDEC";
+            SwfSourceIndexResult result = await SwfSourceIndexer.DecompileAsync(clientFile.LocalPath, ffdecDirectory);
             _swfSourceRecords.Clear();
+            _swfSourceRecords.Add(new GameDataRecord
+            {
+                Category = "SWF SOURCE",
+                Name = $"AQW game client / {clientFile.FileName}",
+                Summary = $"Live game-version manifest  /  {_swfSourceRecords.Count:N0} source files indexed",
+                Metadata = clientFile.SourceUri.ToString(),
+                Details = $"SOURCE FILE: {clientFile.FileName}{Environment.NewLine}" +
+                    $"LOCAL COPY: {clientFile.LocalPath}{Environment.NewLine}" +
+                    $"DOWNLOAD SOURCE: {clientFile.SourceUri}{Environment.NewLine}" +
+                    $"EXPORTED SOURCE: {result.ExportDirectory}{Environment.NewLine}" +
+                    $"INDEXED ACTIONSCRIPT FILES: {result.Records.Count:N0}{Environment.NewLine}{Environment.NewLine}" +
+                    "The SWF is the live AQW game client resolved from the game's own gameversion endpoint. Client-side logic is not proof of server-side rules.",
+                SearchText = $"AQW game client {clientFile.FileName} {clientFile.SourceUri} {clientFile.LocalPath}"
+            });
             _swfSourceRecords.AddRange(result.Records);
             RefreshDataCatalog();
-            SwfSourceStatusText.Text = $"CLIENT SWF INDEXED  /  {_swfSourceRecords.Count:N0} FILES  /  {result.ExportDirectory}";
-            DataStatusText.Text = $"CLIENT SWF DECOMPILED  /  {_swfSourceRecords.Count:N0} SOURCE FILES INDEXED";
+            SwfSourceStatusText.Text = $"AQW CLIENT INDEXED  /  {clientFile.FileName}  /  {_swfSourceRecords.Count:N0} RECORDS";
+            DataStatusText.Text = $"AQW GAME CLIENT DECOMPILED  /  {result.Records.Count:N0} ACTIONSCRIPT FILES INDEXED";
         }
         catch (Exception ex)
         {
-            DataStatusText.Text = $"SWF DECOMPILATION FAILED  /  {ex.Message}";
-            SwfSourceStatusText.Text = "SWF SOURCE INDEX FAILED";
-            System.Diagnostics.Trace.WriteLine($"OMNISCOPE SWF indexing failed: {ex}");
+            DataStatusText.Text = $"AQW CLIENT DECOMPILATION FAILED  /  {ex.Message}";
+            SwfSourceStatusText.Text = "AQW CLIENT SOURCE INDEX FAILED";
+            System.Diagnostics.Trace.WriteLine($"OMNISCOPE AQW client SWF indexing failed: {ex}");
         }
         finally
         {
@@ -642,7 +657,7 @@ public partial class OmniscopeWindow : Window
         if (DecompileSwfButton is not null)
         {
             DecompileSwfButton.IsEnabled = !running;
-            DecompileSwfButton.Content = running ? "DECOMPILING SWF..." : "DECOMPILE CLIENT SWF";
+            DecompileSwfButton.Content = running ? "DOWNLOADING / DECOMPILING..." : "DECOMPILE AQW GAME SWF";
         }
     }
 
