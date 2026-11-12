@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
@@ -29,6 +30,7 @@ public partial class OmniscopeWindow : Window
     private readonly ObservableCollection<InventoryRow> _inventory = [];
     private readonly ObservableCollection<EventRow> _events = [];
     private readonly ObservableCollection<GameDataRecord> _dataRecords = [];
+    private readonly ObservableCollection<GameDataRecord> _mapRecords = [];
     private readonly List<GameDataRecord> _swfSourceRecords = [];
     private readonly object _dropHistoryLock = new();
     private readonly Queue<DropObservation> _dropHistory = new();
@@ -36,6 +38,7 @@ public partial class OmniscopeWindow : Window
     private int _lastKilledMapId;
     private DateTimeOffset _lastKilledAt = DateTimeOffset.MinValue;
     private List<GameDataRecord> _dataSnapshot = [];
+    private List<GameDataRecord> _mapSnapshot = [];
     private MapItem[] _mapItemSnapshot = [];
     private bool _mapAnalysisRunning;
     private bool _swfIndexRunning;
@@ -79,6 +82,7 @@ public partial class OmniscopeWindow : Window
         InventoryList.ItemsSource = _inventory;
         EventList.ItemsSource = _events;
         DataRecordList.ItemsSource = _dataRecords;
+        MapRecordList.ItemsSource = _mapRecords;
 
         EntityList.SelectionChanged += EntityList_SelectionChanged;
         _refreshTimer.Tick += RefreshTimer_Tick;
@@ -343,6 +347,24 @@ public partial class OmniscopeWindow : Window
     private void DataSearchBox_TextChanged(object? sender, TextChangedEventArgs e) => ApplyDataFilter();
 
     private void DataCategoryBox_SelectionChanged(object? sender, SelectionChangedEventArgs e) => ApplyDataFilter();
+
+    private void DataSortBox_SelectionChanged(object? sender, SelectionChangedEventArgs e) => ApplyDataFilter();
+
+    private void MapSearchBox_TextChanged(object? sender, TextChangedEventArgs e) => ApplyMapFilter();
+
+    private void MapCategoryBox_SelectionChanged(object? sender, SelectionChangedEventArgs e) => ApplyMapFilter();
+
+    private void MapSortBox_SelectionChanged(object? sender, SelectionChangedEventArgs e) => ApplyMapFilter();
+
+    private void MapRecordList_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (MapRecordList.SelectedItem is not GameDataRecord record)
+            return;
+
+        MapDetailTitle.Text = record.Name;
+        MapDetailMeta.Text = $"{record.DisplayCategory}  /  {record.Metadata}";
+        MapDetailText.Text = record.Details;
+    }
 
     private void DataRecordList_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
@@ -693,34 +715,41 @@ public partial class OmniscopeWindow : Window
     private void ApplyDataFilter()
     {
         // Avalonia can raise SelectionChanged while InitializeComponent is still populating controls.
-        if (!_xamlInitialized || DataSearchBox is null || DataCategoryBox is null || DataRecordList is null ||
-            DataResultMetric is null || DataDetailTitle is null || DataDetailMeta is null || DataDetailText is null ||
-            EvaluateShopButton is null || CheckQuestButton is null || AcceptQuestButton is null ||
-            CompleteQuestButton is null || LoadShopButton is null)
+        if (!_xamlInitialized || DataSearchBox is null || DataCategoryBox is null || DataSortBox is null ||
+            DataRecordList is null || DataResultMetric is null || DataDetailTitle is null ||
+            DataDetailMeta is null || DataDetailText is null || EvaluateShopButton is null ||
+            CheckQuestButton is null || AcceptQuestButton is null || CompleteQuestButton is null ||
+            LoadShopButton is null)
             return;
 
-        string search = DataSearchBox?.Text?.Trim() ?? string.Empty;
-        string category = (DataCategoryBox?.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "ALL DATA";
+        string search = DataSearchBox.Text?.Trim() ?? string.Empty;
+        string category = (DataCategoryBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Everything";
+        string sort = (DataSortBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Name (A-Z)";
         IEnumerable<GameDataRecord> query = _dataSnapshot;
 
-        if (!string.Equals(category, "ALL DATA", StringComparison.OrdinalIgnoreCase))
+        query = category switch
         {
-            query = category switch
-            {
-                "Quests & Rewards" => query.Where(static record => record.Category == "QUEST" || record.Category == "QUEST SOURCE"),
-                "Shop Items" => query.Where(static record => record.Category == "SHOP" || record.Category == "SHOP SOURCE"),
-                "Map Links" => query.Where(static record => record.Category == "MAP ITEM" || record.Category == "MAP SOURCE"),
-                "Observed Drops" => query.Where(static record => record.Category == "DROP" || record.Category == "DROP SOURCE"),
-                "Monsters" => query.Where(static record => record.Category == "MONSTER"),
-                "Achievements" => query.Where(static record => record.Category == "ACHIEVEMENT"),
-                "Item Usage" => query.Where(static record => record.Category == "ITEM REFERENCE"),
-                "AQW Client Code" => query.Where(record => _swfSourceRecords.Contains(record)),
-                _ => query
-            };
-        }
+            "Quests & Rewards" => query.Where(static record => record.Category is "QUEST" or "QUEST SOURCE"),
+            "Shop Items" => query.Where(static record => record.Category is "SHOP" or "SHOP SOURCE"),
+            "Observed Drops" => query.Where(static record => record.Category is "DROP" or "DROP SOURCE"),
+            "Monsters" => query.Where(static record => record.Category == "MONSTER"),
+            "Achievements" => query.Where(static record => record.Category == "ACHIEVEMENT"),
+            "Item Usage" => query.Where(static record => record.Category == "ITEM REFERENCE"),
+            "AQW Client Code" => query.Where(record => _swfSourceRecords.Contains(record)),
+            _ => query
+        };
 
         if (!string.IsNullOrWhiteSpace(search))
             query = query.Where(record => record.SearchText.Contains(search, StringComparison.OrdinalIgnoreCase));
+
+        query = sort switch
+        {
+            "Name (Z-A)" => query.OrderByDescending(static record => record.Name, StringComparer.OrdinalIgnoreCase),
+            "Category" => query.OrderBy(static record => record.DisplayCategory).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase),
+            "ID (low-high)" => query.OrderBy(GetRecordId).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase),
+            "ID (high-low)" => query.OrderByDescending(GetRecordId).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase),
+            _ => query.OrderBy(static record => record.Name, StringComparer.OrdinalIgnoreCase)
+        };
 
         GameDataRecord[] matches = query.Take(2000).ToArray();
         _dataRecords.Clear();
@@ -743,6 +772,69 @@ public partial class OmniscopeWindow : Window
         {
             DataRecordList.SelectedIndex = 0;
         }
+    }
+
+    private void ApplyMapFilter()
+    {
+        if (!_xamlInitialized || MapSearchBox is null || MapCategoryBox is null || MapSortBox is null ||
+            MapRecordList is null || MapResultMetric is null || MapDetailTitle is null ||
+            MapDetailMeta is null || MapDetailText is null)
+            return;
+
+        string search = MapSearchBox.Text?.Trim() ?? string.Empty;
+        string category = (MapCategoryBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "All maps";
+        string sort = (MapSortBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Map (A-Z)";
+        string currentMap = _bot.Map.FileName ?? string.Empty;
+        IEnumerable<GameDataRecord> query = _mapSnapshot;
+
+        if (string.Equals(category, "Current map", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(currentMap))
+        {
+            query = query.Where(record => record.Metadata.Contains(currentMap, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+            query = query.Where(record => record.SearchText.Contains(search, StringComparison.OrdinalIgnoreCase));
+
+        query = sort switch
+        {
+            "Quest ID (low-high)" => query.OrderBy(GetRecordId).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase),
+            "Map item ID (low-high)" => query.OrderBy(GetRecordId).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase),
+            "Map item ID (high-low)" => query.OrderByDescending(GetRecordId).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase),
+            _ => query.OrderBy(static record => record.Metadata, StringComparer.OrdinalIgnoreCase).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase)
+        };
+
+        GameDataRecord[] matches = query.Take(5000).ToArray();
+        _mapRecords.Clear();
+        foreach (GameDataRecord record in matches)
+            _mapRecords.Add(record);
+
+        MapResultMetric.Text = $"{matches.Length:N0} MAP REFERENCES";
+        if (matches.Length == 0)
+        {
+            MapDetailTitle.Text = "No map references loaded";
+            MapDetailMeta.Text = "Load the saved map SWF index, then search or filter its map-item references.";
+            MapDetailText.Text = string.Empty;
+        }
+        else if (MapRecordList.SelectedItem is not GameDataRecord selected || !matches.Contains(selected))
+        {
+            MapRecordList.SelectedIndex = 0;
+        }
+    }
+
+    private static int GetRecordId(GameDataRecord record)
+    {
+        if (record.SourceQuestId is int questId)
+            return questId;
+
+        if (record.SourceObject is ShopItem shopItem)
+            return shopItem.ID;
+
+        if (record.SourceObject is MapItem mapItem)
+            return mapItem.ID;
+
+        Match match = Regex.Match($"{record.Metadata} {record.Name}", @"(?:ID\s*|#)(\d+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        return match.Success && int.TryParse(match.Groups[1].Value, out int id) ? id : int.MaxValue;
     }
 
     private async void AnalyzeMap_Click(object? sender, RoutedEventArgs e)
