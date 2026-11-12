@@ -261,7 +261,7 @@ public partial class OmniscopeWindow : Window
         catch (Exception ex)
         {
             QuestRecordCountText.Text = "0";
-            records.Add(CreateStatusRecord("Quest database unavailable", ex.Message, "QUESTS"));
+            records.Add(CreateStatusRecord("Quest database unavailable", ex.Message, "QUEST SOURCE"));
         }
 
         try
@@ -295,12 +295,15 @@ public partial class OmniscopeWindow : Window
         catch (Exception ex)
         {
             ShopRecordCountText.Text = "0";
-            records.Add(CreateStatusRecord("Loaded shop data unavailable", ex.Message, "SHOPS"));
+            records.Add(CreateStatusRecord("Loaded shop data unavailable", ex.Message, "SHOP SOURCE"));
         }
 
         foreach (MapItem mapItem in _mapItemSnapshot)
         {
-            records.Add(CreateMapItemRecord(mapItem));
+            string questName = _bot.Quests.CachedDictionary.TryGetValue(mapItem.QuestID, out QuestData? questData)
+                ? questData.Name
+                : "Quest not present in local cache";
+            records.Add(CreateMapItemRecord(mapItem, questName));
         }
 
         MapItemRecordCountText.Text = _mapItemSnapshot.Length.ToString("N0");
@@ -315,7 +318,7 @@ public partial class OmniscopeWindow : Window
         }
         catch (Exception ex)
         {
-            records.Add(CreateStatusRecord("Runtime drop queue unavailable", ex.Message, "DROPS"));
+            records.Add(CreateStatusRecord("Runtime drop queue unavailable", ex.Message, "DROP SOURCE"));
         }
 
         try
@@ -346,6 +349,15 @@ public partial class OmniscopeWindow : Window
                 SearchText = $"{title} {details}"
             });
         }
+
+        records.Add(CreateStatusRecord(
+            "Achievement requirement coverage",
+            "No structured server-side achievement requirement catalogue is exposed by the current public game interfaces or QuestData cache. The SWF source index can reveal achievement and badge-related client logic, but client references are not proof of the complete server-side requirements.",
+            "ACHIEVEMENT"));
+        records.Add(CreateStatusRecord(
+            "Monster loot table coverage",
+            "OMNISCOPE indexes observed runtime drops and quest reward-rate entries. The public monster snapshot does not include an authoritative per-monster loot table. Decompiled client references may help trace drop logic but are not a verified loot table.",
+            "DROP"));
 
         records.AddRange(_swfSourceRecords);
         _dataSnapshot = records.OrderBy(static record => record.Category).ThenBy(static record => record.Name).ToList();
@@ -394,6 +406,7 @@ public partial class OmniscopeWindow : Window
             DataDetailTitle.Text = "No matching records";
             DataDetailMeta.Text = "Try a broader search or refresh the source catalog.";
             DataDetailText.Text = string.Empty;
+            EvaluateShopButton.IsEnabled = false;
         }
         else if (DataRecordList.SelectedItem is not GameDataRecord selected || !matches.Contains(selected))
         {
@@ -577,11 +590,12 @@ public partial class OmniscopeWindow : Window
         };
     }
 
-    private static GameDataRecord CreateMapItemRecord(MapItem mapItem)
+    private static GameDataRecord CreateMapItemRecord(MapItem mapItem, string questName)
     {
         string details =
             $"MAP ITEM ID: {mapItem.ID}{Environment.NewLine}" +
             $"QUEST ID: {mapItem.QuestID}{Environment.NewLine}" +
+            $"QUEST NAME: {questName}{Environment.NewLine}" +
             $"MAP: {mapItem.MapName}{Environment.NewLine}" +
             $"MAP FILE: {mapItem.MapFilePath}{Environment.NewLine}" +
             $"{Environment.NewLine}This association was extracted from the current map SWF by VibeSkua's map-item parser.";
@@ -592,7 +606,7 @@ public partial class OmniscopeWindow : Window
             Summary = $"Quest {mapItem.QuestID}  /  {mapItem.MapName}",
             Metadata = mapItem.MapFilePath,
             Details = details,
-            SearchText = $"{details} {mapItem.ID} {mapItem.QuestID} {mapItem.MapName}"
+            SearchText = $"{details} {mapItem.ID} {mapItem.QuestID} {questName} {mapItem.MapName}"
         };
     }
 
