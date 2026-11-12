@@ -150,10 +150,19 @@ foreach ($Target in $Targets) {
         }
     }
 
-    # 9. Copy the OMNISCOPE DLL staged by its MSBuild target.
+    # 9. Ensure OMNISCOPE is built and copy the staged DLL into the client package.
     $OmniscopeDll = Join-Path $RootDir "Build\plugins\Skua.Plugin.Omniscope.dll"
     if (-not (Test-Path $OmniscopeDll)) {
-        throw "OMNISCOPE was not staged by its Release build: $OmniscopeDll. Build Skua.Plugin.Omniscope.csproj before packaging."
+        $OmniscopeProject = Join-Path $RootDir "Skua.Plugin.Omniscope\Skua.Plugin.Omniscope.csproj"
+        Write-Host "OMNISCOPE output is missing. Building the plugin before packaging..."
+        & dotnet build $OmniscopeProject --configuration Release --verbosity minimal
+        if ($LASTEXITCODE -ne 0) {
+            throw "OMNISCOPE build failed with exit code $LASTEXITCODE."
+        }
+    }
+
+    if (-not (Test-Path $OmniscopeDll)) {
+        throw "OMNISCOPE build completed without staging the expected DLL: $OmniscopeDll"
     }
 
     $OmniscopeTargetDll = Join-Path $PluginsDir "Skua.Plugin.Omniscope.dll"
