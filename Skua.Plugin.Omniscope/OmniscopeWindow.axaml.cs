@@ -203,6 +203,39 @@ public partial class OmniscopeWindow : Window
         DataDetailTitle.Text = record.Name;
         DataDetailMeta.Text = $"{record.Category}  /  {record.Metadata}";
         DataDetailText.Text = record.Details;
+        EvaluateShopButton.IsEnabled = record.SourceObject is ShopItem shopItem &&
+            record.SourceShopId == _bot.Shops.ID &&
+            _bot.Shops.IsLoaded &&
+            _bot.Shops.Items.Any(item => item.ID == shopItem.ID && item.ShopItemID == shopItem.ShopItemID);
+    }
+
+    private void EvaluateShopGates_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataRecordList.SelectedItem is not GameDataRecord record ||
+            record.SourceObject is not ShopItem item ||
+            record.SourceShopId != _bot.Shops.ID ||
+            !_bot.Shops.IsLoaded)
+        {
+            DataStatusText.Text = "SHOP REQUIREMENT CHECK UNAVAILABLE  /  LOAD THE RELEVANT SHOP FIRST";
+            return;
+        }
+
+        try
+        {
+            List<string> unmetRequirements = _bot.Shops.GetUnmetPurchaseRequirements(item);
+            string evaluation = unmetRequirements.Count == 0
+                ? "No unmet quest, inventory material or token requirements were reported by the client-side checker."
+                : string.Join(Environment.NewLine, unmetRequirements.Select(static requirement => $"• {requirement}"));
+            DataDetailText.Text = $"{record.Details}{Environment.NewLine}{Environment.NewLine}" +
+                $"LIVE CLIENT REQUIREMENT CHECK:{Environment.NewLine}{evaluation}{Environment.NewLine}{Environment.NewLine}" +
+                "Note: this checker evaluates the client-visible quest/material/token gates. Server-side validation and any separate level, faction or membership checks remain authoritative.";
+            DataStatusText.Text = $"SHOP GATES INSPECTED  /  {item.Name} [{item.ID}]  /  NO PURCHASE REQUEST SENT";
+        }
+        catch (Exception ex)
+        {
+            DataStatusText.Text = $"SHOP REQUIREMENT CHECK FAILED  /  {ex.Message}";
+            System.Diagnostics.Trace.WriteLine($"OMNISCOPE shop requirement check failed: {ex}");
+        }
     }
 
     private void RefreshDataCatalog()
@@ -538,7 +571,9 @@ public partial class OmniscopeWindow : Window
             Summary = $"{item.Cost:N0} {currency}  /  {NullLabel(item.Faction)}  /  {item.Requirements.Count:N0} materials",
             Metadata = $"Shop {shopName} [{shopId}]  /  ShopItemID {item.ShopItemID}",
             Details = details,
-            SearchText = $"{details} {requirements} {item.TokenName}"
+            SearchText = $"{details} {requirements} {item.TokenName}",
+            SourceShopId = shopId,
+            SourceObject = item
         };
     }
 
