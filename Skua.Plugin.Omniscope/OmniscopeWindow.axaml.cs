@@ -640,15 +640,7 @@ public partial class OmniscopeWindow : Window
             });
         }
 
-        foreach (MapItem mapItem in _mapItemSnapshot)
-        {
-            string questName = _bot.Quests.CachedDictionary.TryGetValue(mapItem.QuestID, out QuestData? questData) && questData is not null
-                ? questData.Name
-                : "Quest not present in local cache";
-            records.Add(CreateMapItemRecord(mapItem, questName));
-        }
-
-        MapItemRecordCountText.Text = _mapItemSnapshot.Length.ToString("N0");
+        MapItemRecordCountText.Text = _mapSnapshot.Count.ToString("N0");
 
         try
         {
@@ -735,7 +727,11 @@ public partial class OmniscopeWindow : Window
             "Monsters" => query.Where(static record => record.Category == "MONSTER"),
             "Achievements" => query.Where(static record => record.Category == "ACHIEVEMENT"),
             "Item Usage" => query.Where(static record => record.Category == "ITEM REFERENCE"),
-            "AQW Client Code" => query.Where(record => _swfSourceRecords.Contains(record)),
+            "All Client Code" => query.Where(record => _swfSourceRecords.Contains(record)),
+            "Quest Client Code" => query.Where(static record => record.Category == "QUEST SOURCE"),
+            "Shop Client Code" => query.Where(static record => record.Category == "SHOP SOURCE"),
+            "Map Client Code" => query.Where(static record => record.Category == "MAP SOURCE"),
+            "Drop Client Code" => query.Where(static record => record.Category == "DROP SOURCE"),
             _ => query
         };
 
@@ -798,7 +794,7 @@ public partial class OmniscopeWindow : Window
 
         query = sort switch
         {
-            "Quest ID (low-high)" => query.OrderBy(GetRecordId).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase),
+            "Quest ID (low-high)" => query.OrderBy(static record => record.SourceObject is MapItem mapItem ? mapItem.QuestID : int.MaxValue).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase),
             "Map item ID (low-high)" => query.OrderBy(GetRecordId).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase),
             "Map item ID (high-low)" => query.OrderByDescending(GetRecordId).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase),
             _ => query.OrderBy(static record => record.Metadata, StringComparer.OrdinalIgnoreCase).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase)
@@ -842,13 +838,6 @@ public partial class OmniscopeWindow : Window
         if (_mapAnalysisRunning)
             return;
 
-        string mapFileName = _bot.Map.FileName;
-        if (string.IsNullOrWhiteSpace(mapFileName))
-        {
-            DataStatusText.Text = "MAP REFERENCES UNAVAILABLE  /  LOAD INTO A MAP FIRST";
-            return;
-        }
-
         string cachePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "VibeSkua",
@@ -857,12 +846,17 @@ public partial class OmniscopeWindow : Window
 
         _mapAnalysisRunning = true;
         AnalyzeMapButtonState(true);
-        DataStatusText.Text = $"READING SAVED MAP REFERENCES  /  {mapFileName}";
+        DataStatusText.Text = "LOADING SAVED MAP SWF REFERENCES";
         try
         {
             if (!File.Exists(cachePath))
             {
-                DataStatusText.Text = "NO SAVED MAP INDEX EXISTS YET  /  LIVE MAP DECOMPILATION IS PAUSED TO PROTECT THE GAME VIEW";
+                _mapSnapshot.Clear();
+                _mapRecords.Clear();
+                MapSwfMapCountText.Text = "0";
+                MapItemRecordCountText.Text = "0";
+                ApplyMapFilter();
+                DataStatusText.Text = "NO SAVED MAP INDEX FOUND  /  LOAD MAPS IN-GAME FIRST";
                 return;
             }
 
@@ -871,32 +865,33 @@ public partial class OmniscopeWindow : Window
                 json,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-            KeyValuePair<string, List<MapItem>> mapEntry = savedMaps?
-                .FirstOrDefault(pair => string.Equals(pair.Key, mapFileName, StringComparison.OrdinalIgnoreCase))
-                ?? default;
+            KeyValuePair<string, List<MapItem>>[] mapEntries = savedMaps?
+                .Where(static pair => !string.IsNullOrWhiteSpace(pair.Key) && pair.Value is not null)
+                .OrderBy(static pair => pair.Key, StringComparer.OrdinalIgnoreCase)
+                .ToArray() ?? [];
 
-            if (mapEntry.Value is null)
+            List<GameDataRecord> mapRecords = new();
+            foreach (KeyValuePair<string, List<MapItem>> mapEntry in mapEntries)
             {
-                DataStatusText.Text = $"NO SAVED REFERENCES FOR {mapFileName}  /  LIVE MAP DECOMPILATION IS PAUSED TO PROTECT THE GAME VIEW";
-                return;
+                foreach (MapItem mapItem in mapEntry.Value)
+                {
+                    string questName = _bot.Quests.CachedDictionary.TryGetValue(mapItem.QuestID, out QuestData? questData) && questData is not null
+                        ? questData.Name
+                        : $"Quest ID {mapItem.QuestID}";
+                    mapRecords.Add(CreateMapItemRecord(mapItem, questName, mapEntry.Key));
+                }
             }
 
-            _mapItemSnapshot = mapEntry.Value.ToArray();
-            GameDataRecord[] mapRecords = _mapItemSnapshot
-                .Select(item => CreateMapItemRecord(item, $"Quest ID {item.QuestID}"))
-                .ToArray();
-
-            _dataSnapshot = _dataSnapshot
-                .Where(static record => record.Category != "MAP ITEM")
-                .Concat(mapRecords)
-                .OrderBy(static record => record.Category)
-                .ThenBy(static record => record.Name)
+            _mapItemSnapshot = mapEntries.SelectMany(static pair => pair.Value).ToArray();
+            _mapSnapshot = mapRecords
+                .GroupBy(static record => $"{record.Metadata}|{GetRecordId(record)}")
+                .Select(static group => group.First())
                 .ToList();
 
-            MapItemRecordCountText.Text = _mapItemSnapshot.Length.ToString("N0");
-            DataRecordCountText.Text = _dataSnapshot.Count.ToString("N0");
-            ApplyDataFilter();
-            DataStatusText.Text = $"LOADED {_mapItemSnapshot.Length:N0} SAVED MAP REFERENCES  /  {mapFileName}";
+            MapSwfMapCountText.Text = mapEntries.Length.ToString("N0");
+            MapItemRecordCountText.Text = _mapSnapshot.Count.ToString("N0");
+            ApplyMapFilter();
+            DataStatusText.Text = $"LOADED {_mapSnapshot.Count:N0} MAP REFERENCES FROM {mapEntries.Length:N0} SAVED MAPS";
         }
         catch (Exception ex)
         {
@@ -1075,23 +1070,26 @@ public partial class OmniscopeWindow : Window
         };
     }
 
-    private static GameDataRecord CreateMapItemRecord(MapItem mapItem, string questName)
+    private static GameDataRecord CreateMapItemRecord(MapItem mapItem, string questName, string mapKey)
     {
+        string mapName = string.IsNullOrWhiteSpace(mapItem.MapName) ? mapKey : mapItem.MapName;
+        string mapFilePath = string.IsNullOrWhiteSpace(mapItem.MapFilePath) ? mapKey : mapItem.MapFilePath;
         string details =
             $"MAP ITEM ID: {mapItem.ID}{Environment.NewLine}" +
             $"QUEST ID: {mapItem.QuestID}{Environment.NewLine}" +
             $"QUEST NAME: {questName}{Environment.NewLine}" +
-            $"MAP: {mapItem.MapName}{Environment.NewLine}" +
-            $"MAP FILE: {mapItem.MapFilePath}{Environment.NewLine}" +
-            $"{Environment.NewLine}This association was extracted from the current map SWF by VibeSkua's map-item parser.";
+            $"MAP: {mapName}{Environment.NewLine}" +
+            $"MAP FILE: {mapFilePath}{Environment.NewLine}" +
+            $"{Environment.NewLine}This association was extracted from VibeSkua's saved map-SWF index.";
         return new GameDataRecord
         {
             Category = "MAP ITEM",
             Name = $"Map link #{mapItem.ID}",
-            Summary = $"Quest {mapItem.QuestID}  /  {mapItem.MapName}",
-            Metadata = mapItem.MapFilePath,
+            Summary = $"Quest {mapItem.QuestID}  /  {mapName}",
+            Metadata = mapFilePath,
             Details = details,
-            SearchText = $"{details} {mapItem.ID} {mapItem.QuestID} {questName} {mapItem.MapName}"
+            SearchText = $"{details} {mapItem.ID} {mapItem.QuestID} {questName} {mapName} {mapKey}",
+            SourceObject = mapItem
         };
     }
 
