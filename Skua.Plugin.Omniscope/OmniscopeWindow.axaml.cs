@@ -69,12 +69,6 @@ public partial class OmniscopeWindow : Window
         if (_bot is null)
             return;
 
-        _bot.Events.MonsterKilled += OnMonsterKilled;
-        _bot.Events.ItemDropped += OnItemDropped;
-        _bot.Events.QuestAccepted += OnQuestAccepted;
-        _bot.Events.QuestTurnedIn += OnQuestTurnedIn;
-        _bot.Events.TryBuyItem += OnTryBuyItem;
-
         EntityList.ItemsSource = _entities;
         PlayerList.ItemsSource = _players;
         AuraList.ItemsSource = _auras;
@@ -88,13 +82,25 @@ public partial class OmniscopeWindow : Window
         _refreshTimer.Tick += RefreshTimer_Tick;
         Loaded += OnLoaded;
         Closed += OnClosed;
-        Skua.Shared.Avalonia.Services.WindowPlacementHelper.CenterOnActiveScreen(this);
     }
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
         if (_bot is null)
             return;
+
+        try
+        {
+            _bot.Events.MonsterKilled += OnMonsterKilled;
+            _bot.Events.ItemDropped += OnItemDropped;
+            _bot.Events.QuestAccepted += OnQuestAccepted;
+            _bot.Events.QuestTurnedIn += OnQuestTurnedIn;
+            _bot.Events.TryBuyItem += OnTryBuyItem;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Trace.WriteLine($"OMNISCOPE event subscription failed: {ex}");
+        }
 
         RefreshTelemetry();
         _refreshTimer.Start();
@@ -103,11 +109,18 @@ public partial class OmniscopeWindow : Window
     private void OnClosed(object? sender, EventArgs e)
     {
         _refreshTimer.Stop();
-        _bot.Events.MonsterKilled -= OnMonsterKilled;
-        _bot.Events.ItemDropped -= OnItemDropped;
-        _bot.Events.QuestAccepted -= OnQuestAccepted;
-        _bot.Events.QuestTurnedIn -= OnQuestTurnedIn;
-        _bot.Events.TryBuyItem -= OnTryBuyItem;
+        try
+        {
+            _bot.Events.MonsterKilled -= OnMonsterKilled;
+            _bot.Events.ItemDropped -= OnItemDropped;
+            _bot.Events.QuestAccepted -= OnQuestAccepted;
+            _bot.Events.QuestTurnedIn -= OnQuestTurnedIn;
+            _bot.Events.TryBuyItem -= OnTryBuyItem;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Trace.WriteLine($"OMNISCOPE event unsubscription failed: {ex}");
+        }
     }
 
     private void RefreshTimer_Tick(object? sender, EventArgs e) => RefreshTelemetry();
