@@ -30,11 +30,23 @@
                         <TextBlock Text="A live operational picture of the world, your avatar, and everything the client exposes." Foreground="#66899D" FontSize="11" Margin="16,4,0,0"/>
                     </StackPanel>
                     <Border Grid.Column="1" BorderBrush="#24566B" BorderThickness="1" CornerRadius="8" Padding="16,10" VerticalAlignment="Center" Background="#102130">
-                        <StackPanel Orientation="Horizontal" Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
                             <Ellipse x:Name="ConnectionIndicator" Width="9" Height="9" Fill="#F0B95A" VerticalAlignment="Center"/>
                             <StackPanel Spacing="2">
-                                <TextBlock x:Name="ConnectionText" Text="INITIALIZING TELEMETRY" Foreground="#C8F3FF" FontSize="11" FontWeight="Bold"/>
-                                <TextBlock x:Name="ClockText" Text="--:--:--" Foreground="#58CDEB" FontSize="10" FontFamily="Consolas"/>
+                                <TextBlock x:Name="ConnectionText" Text="INITIALIZING TELEMETRY" Foreground="#C8F3FF" FontSize="12" FontWeight="Bold"/>
+                                <TextBlock x:Name="ClockText" Text="--:--:--" Foreground="#58CDEB" FontSize="11" FontFamily="Consolas"/>
+                            </StackPanel>
+                            <Border Width="1" Height="34" Background="#28536A"/>
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="REFRESH RATE" Foreground="#79B8CE" FontSize="9" FontWeight="SemiBold"/>
+                                <ComboBox x:Name="TelemetryRateBox" Width="100" SelectedIndex="2" SelectionChanged="TelemetryRateBox_SelectionChanged">
+                                    <ComboBoxItem Content="250 ms" Tag="250"/>
+                                    <ComboBoxItem Content="500 ms" Tag="500"/>
+                                    <ComboBoxItem Content="750 ms" Tag="750"/>
+                                    <ComboBoxItem Content="1 second" Tag="1000"/>
+                                    <ComboBoxItem Content="2 seconds" Tag="2000"/>
+                                    <ComboBoxItem Content="5 seconds" Tag="5000"/>
+                                </ComboBox>
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -145,7 +157,7 @@
                         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="16">
                             <StackPanel Spacing="4">
                                 <TextBlock Text="FIND GAME INFORMATION" FontSize="23" FontWeight="Bold" Foreground="#E9FAFF"/>
-                                <TextBlock Text="Quests & Rewards  /  ITEMS  /  Monsters  /  Observed Drops  /  MAPS" FontSize="9" Foreground="#58CDEB"/>
+                                <TextBlock Text="Quests &amp; Rewards  /  ITEMS  /  Monsters  /  Observed Drops  /  MAPS" FontSize="9" Foreground="#58CDEB"/>
                                 <TextBlock Text="Search cached game information and live observations. Everything here is read-only." FontSize="11" Foreground="#66899D"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
@@ -158,17 +170,17 @@
 
                         <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
                             <Border Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="13"><StackPanel Spacing="3"><TextBlock Text="TOTAL RESULTS" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="DataRecordCountText" Text="0" Foreground="#E8F8FF" FontSize="22" FontWeight="Bold"/><TextBlock Text="Items you can browse" Foreground="#79B8CE" FontSize="9"/></StackPanel></Border>
-                            <Border Grid.Column="1" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="13"><StackPanel Spacing="3"><TextBlock Text="SAVED Quests & Rewards" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="QuestRecordCountText" Text="0" Foreground="#E8F8FF" FontSize="22" FontWeight="Bold"/><TextBlock Text="Quest details on this PC" Foreground="#79B8CE" FontSize="9"/></StackPanel></Border>
+                            <Border Grid.Column="1" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="13"><StackPanel Spacing="3"><TextBlock Text="SAVED Quests &amp; Rewards" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="QuestRecordCountText" Text="0" Foreground="#E8F8FF" FontSize="22" FontWeight="Bold"/><TextBlock Text="Quest details on this PC" Foreground="#79B8CE" FontSize="9"/></StackPanel></Border>
                             <Border Grid.Column="2" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="13"><StackPanel Spacing="3"><TextBlock Text="SHOP ITEMS" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="ShopRecordCountText" Text="0" Foreground="#E8F8FF" FontSize="22" FontWeight="Bold"/><TextBlock Text="Items from shops Skua has seen" Foreground="#79B8CE" FontSize="9"/></StackPanel></Border>
                             <Border Grid.Column="3" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="13"><StackPanel Spacing="3"><TextBlock Text="MAP LINKS" Foreground="#6E9CB0" FontSize="9"/><TextBlock x:Name="MapItemRecordCountText" Text="0" Foreground="#E8F8FF" FontSize="22" FontWeight="Bold"/><TextBlock Text="Links found in saved map data" Foreground="#79B8CE" FontSize="9"/></StackPanel></Border>
                         </Grid>
 
                         <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                            <TextBox x:Name="DataSearchBox" Watermark="Search by name, item ID, quest, monster, shop, or keyword..." TextChanged="DataSearchBox_TextChanged" Background="#111F2D" Foreground="#D7F1FA" BorderBrush="#28536A" FontSize="12" Padding="12,9"/>
+                            <TextBox x:Name="DataSearchBox" Watermark="Search by name, item ID, quest, monster, shop, or keyword..." TextChanged="DataSearchBox_TextChanged" Background="#111F2D" Foreground="#D7F1FA" BorderBrush="#28536A" FontSize="14" Padding="12,10"/>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                                <ComboBox x:Name="DataCategoryBox" Width="170" SelectedIndex="0" SelectionChanged="DataCategoryBox_SelectionChanged">
+                                <ComboBox x:Name="DataCategoryBox" Width="200" FontSize="13" SelectedIndex="0" SelectionChanged="DataCategoryBox_SelectionChanged">
                                     <ComboBoxItem Content="Everything"/>
-                                    <ComboBoxItem Content="Quests & Rewards"/>
+                                    <ComboBoxItem Content="Quests &amp; Rewards"/>
                                     <ComboBoxItem Content="Shop Items"/>
                                     <ComboBoxItem Content="Map Links"/>
                                     <ComboBoxItem Content="Observed Drops"/>
@@ -180,7 +192,7 @@
                             </StackPanel>
                         </Grid>
 
-                        <Grid Grid.Row="3" ColumnDefinitions="0.9*,1.1*" ColumnSpacing="14" MinHeight="620">
+                        <Grid Grid.Row="3" ColumnDefinitions="0.9*,1.1*" ColumnSpacing="14" MinHeight="680">
                             <Border Grid.Column="0" Background="#0D1724" BorderBrush="#203E51" BorderThickness="1" CornerRadius="8" Padding="12">
                                 <Grid RowDefinitions="Auto,*">
                                     <Grid ColumnDefinitions="*,Auto" Margin="2,2,2,10">
@@ -190,7 +202,7 @@
                                     <ListBox x:Name="DataRecordList" Grid.Row="1" Background="Transparent" BorderThickness="0" SelectionChanged="DataRecordList_SelectionChanged">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
-                                                <Border Background="#101F2D" CornerRadius="5" Padding="10" Margin="2,3">
+                                                <Border Background="#101F2D" CornerRadius="5" Padding="12" Margin="2,4">
                                                     <StackPanel Spacing="4">
                                                         <Grid ColumnDefinitions="*,Auto">
                                                             <TextBlock Text="{Binding Name}" Foreground="#E2F6FC" FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
@@ -214,7 +226,7 @@
                                     </StackPanel>
                                     <Border Grid.Row="1" Height="1" Background="#203E51" Margin="0,12,0,12"/>
                                     <Button x:Name="EvaluateShopButton" Grid.Row="2" Content="CHECK WHY I CAN'T BUY THIS" Click="EvaluateShopGates_Click" IsEnabled="False" HorizontalAlignment="Left" Padding="12,7" Margin="0,0,0,10"/>
-                                    <TextBox x:Name="DataDetailText" Grid.Row="3" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto" Background="#09131F" Foreground="#B9D8E4" BorderThickness="0" FontFamily="Consolas" FontSize="10" Padding="10" Text="No record selected."/>
+                                    <TextBox x:Name="DataDetailText" Grid.Row="3" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Background="#09131F" Foreground="#C9E1E9" BorderThickness="0" FontFamily="Segoe UI" FontSize="12" Padding="12" Text="No record selected."/>
                                 </Grid>
                             </Border>
                         </Grid>
