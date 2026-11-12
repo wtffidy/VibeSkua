@@ -226,13 +226,13 @@
                                         <TextBlock x:Name="DataDetailMeta" Text="Helpful details and where the information came from." Foreground="#76A8BB" FontSize="10" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <Border Grid.Row="1" Height="1" Background="#203E51" Margin="0,12,0,12"/>
-                                    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
+                                    <WrapPanel Grid.Row="2" Margin="0,0,0,10">
                                         <Button x:Name="CheckQuestButton" Content="CHECK QUEST" Click="CheckQuest_Click" IsEnabled="False" Padding="12,8"/>
                                         <Button x:Name="AcceptQuestButton" Content="ACCEPT QUEST" Click="AcceptQuest_Click" IsEnabled="False" Padding="12,8"/>
                                         <Button x:Name="CompleteQuestButton" Content="TURN IN QUEST" Click="CompleteQuest_Click" IsEnabled="False" Padding="12,8"/>
                                         <Button x:Name="LoadShopButton" Content="LOAD SHOP" Click="LoadShop_Click" IsEnabled="False" Padding="12,8"/>
                                         <Button x:Name="EvaluateShopButton" Content="CHECK REQUIREMENTS" Click="EvaluateShopGates_Click" IsEnabled="False" Padding="12,8"/>
-                                    </StackPanel>
+                                    </WrapPanel>
                                     <TextBox x:Name="DataDetailText" Grid.Row="3" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Background="#09131F" Foreground="#C9E1E9" BorderThickness="0" FontFamily="Segoe UI" FontSize="12" Padding="12" Text="No record selected."/>
                                 </Grid>
                             </Border>
