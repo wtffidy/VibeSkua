@@ -26,7 +26,7 @@ internal static class AqwGameClientResolver
             new Uri(new Uri(GameRoot), "api/data/gameversion"),
             HttpCompletionOption.ResponseHeadersRead,
             cancellationToken).ConfigureAwait(false);
-        versionResponse.EnsureSuccessStatusCode();
+        EnsureSuccessStatusCode(versionResponse, "AQW game-version lookup");
 
         await using Stream versionStream = await versionResponse.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         using JsonDocument versionDocument = await JsonDocument.ParseAsync(versionStream, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -47,7 +47,7 @@ internal static class AqwGameClientResolver
             gameClientUri,
             HttpCompletionOption.ResponseHeadersRead,
             cancellationToken).ConfigureAwait(false);
-        swfResponse.EnsureSuccessStatusCode();
+        EnsureSuccessStatusCode(swfResponse, "AQW game-client SWF download");
 
         long? contentLength = swfResponse.Content.Headers.ContentLength;
         if (contentLength is > MaximumSwfBytes)
@@ -111,6 +111,18 @@ internal static class AqwGameClientResolver
         }
 
         return new AqwGameClientFile(fileName, destinationPath, gameClientUri);
+    }
+
+    private static void EnsureSuccessStatusCode(HttpResponseMessage response, string operation)
+    {
+        if (response.IsSuccessStatusCode)
+            return;
+
+        string requestUrl = response.RequestMessage?.RequestUri?.ToString() ?? "Unknown URL";
+        throw new HttpRequestException(
+            $"{operation} was rejected by AQW. HTTP {(int)response.StatusCode} ({response.ReasonPhrase}). URL: {requestUrl}",
+            null,
+            response.StatusCode);
     }
 }
 
