@@ -559,14 +559,14 @@ public partial class OmniscopeWindow : Window
         {
             query = category switch
             {
-                "QUESTS & REWARDS" => query.Where(static record => record.Category == "QUEST" || record.Category == "QUEST SOURCE"),
-                "SHOP ITEMS" => query.Where(static record => record.Category == "SHOP" || record.Category == "SHOP SOURCE"),
-                "MAP LINKS" => query.Where(static record => record.Category == "MAP ITEM" || record.Category == "MAP SOURCE"),
-                "OBSERVED DROPS" => query.Where(static record => record.Category == "DROP" || record.Category == "DROP SOURCE"),
+                "Quests & Rewards" => query.Where(static record => record.Category == "QUEST" || record.Category == "QUEST SOURCE"),
+                "Shop Items" => query.Where(static record => record.Category == "SHOP" || record.Category == "SHOP SOURCE"),
+                "Map Links" => query.Where(static record => record.Category == "MAP ITEM" || record.Category == "MAP SOURCE"),
+                "Observed Drops" => query.Where(static record => record.Category == "DROP" || record.Category == "DROP SOURCE"),
                 "MONSTERS" => query.Where(static record => record.Category == "MONSTER"),
                 "ACHIEVEMENTS" => query.Where(static record => record.Category == "ACHIEVEMENT"),
-                "ITEM USAGE" => query.Where(static record => record.Category == "ITEM REFERENCE"),
-                "AQW CLIENT CODE" => query.Where(static record => record.Category.EndsWith("SOURCE", StringComparison.Ordinal)),
+                "Item Usage" => query.Where(static record => record.Category == "ITEM REFERENCE"),
+                "AQW Client Code" => query.Where(static record => record.Category.EndsWith("SOURCE", StringComparison.Ordinal)),
                 _ => query
             };
         }
