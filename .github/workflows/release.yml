@@ -63,10 +63,14 @@ jobs:
           if (-not (Test-Path $javaPath)) {
             throw "The portable FFDec Java runtime was not staged: $javaPath"
           }
-          & $javaPath -version
-          if ($LASTEXITCODE -ne 0) {
-            throw "The portable FFDec Java runtime failed its startup check."
+          $javaStdOut = Join-Path $env:RUNNER_TEMP "ffdec-java-version.stdout.txt"
+          $javaStdErr = Join-Path $env:RUNNER_TEMP "ffdec-java-version.stderr.txt"
+          $javaProcess = Start-Process -FilePath $javaPath -ArgumentList "-version" -Wait -PassThru -NoNewWindow -RedirectStandardOutput $javaStdOut -RedirectStandardError $javaStdErr
+          $javaVersion = ((Get-Content $javaStdOut -Raw -ErrorAction SilentlyContinue) + (Get-Content $javaStdErr -Raw -ErrorAction SilentlyContinue)).Trim()
+          if ($javaProcess.ExitCode -ne 0 -or $javaVersion -notmatch 'version "21(?:\.|")') {
+            throw "The portable FFDec Java runtime failed its startup check (exit code $($javaProcess.ExitCode)): $javaVersion"
           }
+          Write-Host $javaVersion
 
       - name: Package Release with Velopack
         shell: pwsh
