@@ -137,6 +137,11 @@ call :BuildProject "Skua.Plugin.DailyTracker\Skua.Plugin.DailyTracker.csproj" "D
 call :BuildProject "Skua.Plugin.ButlerV5\Skua.Plugin.ButlerV5.csproj" "ButlerV5 Plugin" || goto :Failure
 call :BuildProject "Skua.Plugin.Cosmetics\Skua.Plugin.Cosmetics.csproj" "Cosmetics Plugin" || goto :Failure
 call :BuildProject "Skua.Plugin.Omniscope\Skua.Plugin.Omniscope.csproj" "OMNISCOPE Plugin" || goto :Failure
+echo Verifying OMNISCOPE staging...
+if not exist "Build\plugins\Skua.Plugin.Omniscope.dll" (
+    echo OMNISCOPE built without staging its plugin DLL. Check the plugin build output above.
+    goto :Failure
+)
 
 echo Packaging and organizing output to match WPF release structure...
 powershell -NoProfile -ExecutionPolicy Bypass -File "package-build.ps1"
