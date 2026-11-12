@@ -832,12 +832,12 @@ public partial class OmniscopeWindow : Window
         if (_swfIndexRunning)
             return;
 
-        string ffdecDirectory = Path.Combine(AppContext.BaseDirectory, "FFDec");
         _swfIndexRunning = true;
         DecompileSwfButtonState(true);
         DataStatusText.Text = "RESOLVING AQW GAME VERSION  /  DOWNLOADING THE LIVE GAME CLIENT SWF";
         try
         {
+            string ffdecDirectory = SwfSourceIndexer.ResolveFfdecDirectory();
             AqwGameClientFile clientFile = await AqwGameClientResolver.DownloadLatestAsync();
             DataStatusText.Text = $"AQW CLIENT {clientFile.FileName} DOWNLOADED  /  STARTING FFDEC";
             SwfSourceIndexResult result = await SwfSourceIndexer.DecompileAsync(clientFile.LocalPath, ffdecDirectory);
