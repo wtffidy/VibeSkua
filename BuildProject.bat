@@ -153,9 +153,9 @@ if not exist "Build\VibeSkua.exe" (
 
 echo.
 echo ==========================================================
-echo Fast Build complete! The application is located in the Build folder.
-echo You can run VibeSkua.Manager.exe or VibeSkua.exe from there.
+echo Fast Build complete! Launching VibeSkua...
 echo ==========================================================
+start "" "%CD%\Build\VibeSkua.exe"
 set "BUILD_EXIT_CODE=0"
 goto :Finish
 
