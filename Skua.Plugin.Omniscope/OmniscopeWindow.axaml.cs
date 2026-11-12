@@ -100,7 +100,6 @@ public partial class OmniscopeWindow : Window
             VitalsMetric.Text = loggedIn ? $"{health:N0} / {maxHealth:N0} HP" : "-- / -- HP";
             HealthText.Text = loggedIn ? $"{health:N0} / {maxHealth:N0}" : "-- / --";
             ManaText.Text = loggedIn ? $"{mana:N0} / {maxMana:N0}" : "-- / --";
-            ManaMetric.Text = loggedIn ? $"{mana:N0} / {maxMana:N0} MP" : "-- / -- MP";
             SetProgress(HealthProgressBar, health, maxHealth);
             SetProgress(HealthDetailBar, health, maxHealth);
             SetProgress(ManaProgressBar, mana, maxMana);
