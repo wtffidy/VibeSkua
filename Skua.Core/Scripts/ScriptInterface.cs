@@ -327,7 +327,7 @@ public class ScriptInterface : IScriptInterface, IScriptInterfaceManager, IDispo
                     _watchdogSessionEstablished = true;
                     wasPlaying = true;
                     Servers.LastIP = Player.ServerIP ?? Servers.LastIP;
-                    if (Servers.IsIntentionalLogout)
+                    if (Servers.IsIntentionalLogout && !Servers.IsLogoutInProgress)
                         Servers.IsIntentionalLogout = false;
 
                     if (!catching)
@@ -760,9 +760,33 @@ public class ScriptInterface : IScriptInterface, IScriptInterfaceManager, IDispo
                             _waitForLogin = false;
                             Messenger.Send<LoginMessage, int>(new(Convert.ToString(data[4])), (int)MessageChannels.GameEvents);
                             break;
+
+                        case "chatm":
+                        case "whisper":
+                        case "warning":
+                        case "server":
+                            try
+                            {
+                                var partsList = new List<string>();
+                                foreach (var elem in data)
+                                {
+                                    partsList.Add(Convert.ToString(elem) ?? string.Empty);
+                                }
+                                string reconstructed = "%xt%" + string.Join("%", partsList) + "%";
+                                Messenger.Send<PacketMessage, int>(new(reconstructed), (int)MessageChannels.GameEvents);
+                            }
+                            catch { }
+                            break;
                     }
                 }
                 Messenger.Send<ExtensionPacketMessage, int>(new(packet), (int)MessageChannels.GameEvents);
+                break;
+
+            case "packetFromServer":
+                if (args is { Length: > 0 } && args[0] is string serverPacket && !string.IsNullOrWhiteSpace(serverPacket))
+                {
+                    Messenger.Send<PacketMessage, int>(new(serverPacket), (int)MessageChannels.GameEvents);
+                }
                 break;
 
             case "packet":
@@ -917,7 +941,9 @@ public class ScriptInterface : IScriptInterface, IScriptInterfaceManager, IDispo
     private void Relogin(int delay, bool startScript, CancellationTokenSource reloginCts)
     {
         reloginCts.Token.ThrowIfCancellationRequested();
-        Servers.DisconnectForRelogin();
+        // A login loop already running (e.g. the startup login) owns the login screen; this one queues behind it.
+        if (!Servers.IsReloginInProgress)
+            Servers.DisconnectForRelogin();
         Log($"Waiting {delay}ms for re-login.");
         _reloginTask = Schedule(delay, async _ =>
         {

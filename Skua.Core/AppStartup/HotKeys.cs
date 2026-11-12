@@ -29,6 +29,7 @@ public class HotKeys
     private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
 
     public static bool IsHostProcess { get; set; } = false;
+    public static int ParentHostProcessId { get; set; } = 0;
     public static IntPtr ActiveChildHwnd { get; set; } = IntPtr.Zero;
     public static IntPtr HostHwnd { get; set; } = IntPtr.Zero;
     public static Func<uint, IntPtr>? GetChildHwndForPid { get; set; }
@@ -563,12 +564,12 @@ public class HotKeys
         StrongReferenceMessenger.Default.Send<ToggleScriptMessage, int>((int)MessageChannels.ScriptStatus);
     }
 
-    private static void TogglePauseScriptLocal()
+    private static async void TogglePauseScriptLocal()
     {
         // Same as the Script Loader's Pause/Resume button; its status text follows ScriptPaused.
         IScriptManager manager = Ioc.Default.GetRequiredService<IScriptManager>();
         if (manager.ScriptRunning)
-            manager.ScriptPaused = !manager.ScriptPaused;
+            await manager.SetPausedAsync(!manager.ScriptPaused);
     }
 
     private static void LoadScriptLocal()
