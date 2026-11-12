@@ -24,8 +24,8 @@ internal static class SwfSourceIndexer
     private const int MaximumSourceFiles = 5000;
     private const long MaximumSourceBytes = 64L * 1024 * 1024;
     private const long MaximumFileBytes = 512L * 1024;
-    private static readonly Regex ClassNameRegex = new(@"(?:public|internal|protected)?\\s*(?:final\\s+)?class\\s+([A-Za-z0-9_]+)", RegexOptions.Compiled | RegexOptions.CultureInvariant);
-    private static readonly Regex FunctionRegex = new(@"\\bfunction\\s+([A-Za-z0-9_]+)\\s*\\(", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex ClassNameRegex = new(@"(?:public|internal|protected)?\s*(?:final\s+)?class\s+([A-Za-z0-9_]+)", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex FunctionRegex = new(@"\bfunction\s+([A-Za-z0-9_]+)\s*\(", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     /// <summary>
     /// Decompiles the supplied SWF when no matching export exists, then builds a bounded searchable source index.
