@@ -17,6 +17,7 @@ public partial class OmniscopeWindow : Window
     private readonly IScriptInterface _bot;
     private readonly DispatcherTimer _refreshTimer = new() { Interval = TimeSpan.FromMilliseconds(750) };
     private readonly ObservableCollection<EntityRow> _entities = [];
+    private EntityRow[] _entitySnapshot = [];
     private readonly ObservableCollection<string> _players = [];
     private readonly ObservableCollection<AuraRow> _auras = [];
     private readonly ObservableCollection<SkillRow> _skills = [];
@@ -177,10 +178,10 @@ public partial class OmniscopeWindow : Window
 
     private void UpdateEntities(Monster[] monsters)
     {
-        EntityRow[] rows = monsters
+        _entitySnapshot = monsters
             .OrderByDescending(static monster => monster.Alive)
             .ThenBy(static monster => monster.Name)
-            .Take(300)
+            .Take(500)
             .Select(monster => new EntityRow
             {
                 Name = monster.Name,
@@ -191,6 +192,21 @@ public partial class OmniscopeWindow : Window
                 Source = monster
             })
             .ToArray();
+
+        ApplyEntityFilter();
+    }
+
+    private void EntitySearchBox_TextChanged(object? sender, TextChangedEventArgs e) => ApplyEntityFilter();
+
+    private void ApplyEntityFilter()
+    {
+        string filter = EntitySearchBox?.Text?.Trim() ?? string.Empty;
+        EntityRow[] rows = string.IsNullOrWhiteSpace(filter)
+            ? _entitySnapshot
+            : _entitySnapshot.Where(row =>
+                row.Name.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
+                row.Id.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
+                row.Cell.Contains(filter, StringComparison.OrdinalIgnoreCase)).ToArray();
 
         bool changed = _entities.Count != rows.Length;
         if (!changed)
