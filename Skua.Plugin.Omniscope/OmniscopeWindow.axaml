@@ -53,7 +53,7 @@
                 </Grid>
 
                 <Grid Grid.Row="1" MinWidth="0" ColumnDefinitions="*,*,*,*" ColumnSpacing="12">
-                    <Border MinWidth="0" ClipToBounds="True" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="15"/>
+                    <Border MinWidth="0" ClipToBounds="True" Background="#101D2B" BorderBrush="#25485D" BorderThickness="1" CornerRadius="8" Padding="15">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                             <Border Width="34" Height="34" CornerRadius="8" Background="#17394A" VerticalAlignment="Center"><TextBlock Text="◈" Foreground="#55DDF4" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
                             <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="WORLD / INSTANCE" Foreground="#6E9CB0" FontSize="9" TextWrapping="Wrap"/><TextBlock x:Name="MapMetric" Text="Awaiting world" Foreground="#E8F8FF" FontSize="17" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="RoomMetric" Text="Room --  /  -- players" Foreground="#79B8CE" FontSize="10" TextWrapping="Wrap"/></StackPanel>
