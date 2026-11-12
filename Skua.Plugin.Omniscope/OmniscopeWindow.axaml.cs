@@ -371,11 +371,20 @@ public partial class OmniscopeWindow : Window
 
     private void UpdateQuestActionState(int questId)
     {
-        bool inProgress = _bot.Quests.IsInProgress(questId);
-        bool available = !inProgress && _bot.Quests.IsAvailable(questId);
-        bool canTurnIn = inProgress && _bot.Quests.CanCompleteFullCheck(questId);
-        AcceptQuestButton.IsEnabled = available;
-        CompleteQuestButton.IsEnabled = canTurnIn;
+        try
+        {
+            bool inProgress = _bot.Quests.IsInProgress(questId);
+            bool available = !inProgress && _bot.Quests.IsAvailable(questId);
+            bool canTurnIn = inProgress && _bot.Quests.CanCompleteFullCheck(questId);
+            AcceptQuestButton.IsEnabled = available;
+            CompleteQuestButton.IsEnabled = canTurnIn;
+        }
+        catch (Exception ex)
+        {
+            AcceptQuestButton.IsEnabled = false;
+            CompleteQuestButton.IsEnabled = false;
+            DataStatusText.Text = $"QUEST STATUS UNAVAILABLE  /  {ex.Message}";
+        }
     }
 
     private void CheckQuest_Click(object? sender, RoutedEventArgs e)
