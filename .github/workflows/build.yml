@@ -41,3 +41,12 @@ jobs:
 
       - name: Build solution
         run: dotnet build Skua.sln --configuration Release --no-restore --verbosity minimal
+
+      - name: Verify OMNISCOPE is staged for the client
+        shell: pwsh
+        run: |
+          $pluginPath = Join-Path $PWD "Build/plugins/Skua.Plugin.Omniscope.dll"
+          if (-not (Test-Path $pluginPath)) {
+            throw "OMNISCOPE was not staged into Build/plugins: $pluginPath"
+          }
+          Get-Item $pluginPath | Format-List FullName, Length, LastWriteTimeUtc
