@@ -27,14 +27,14 @@ public partial class OmniscopeWindow : Window
     private static readonly Regex ActionScriptTokenRegex = new(
         @"(?<comment>//.*|/\*.*?(?:\*/|$))|(?<string>""(?:\\.|[^""\\])*""|'(?:\\.|[^'\\])*')|(?<keyword>\b(?:package|import|class|interface|extends|implements|public|private|protected|internal|static|final|override|function|var|const|return|new|this|super|if|else|for|while|do|switch|case|break|continue|try|catch|throw|with|as|is|in|instanceof|typeof|void|delete|true|false|null|undefined|namespace)\b)|(?<number>\b(?:0[xX][0-9A-Fa-f]+|\d+(?:\.\d+)?)\b)|(?<function>\b[A-Za-z_$][A-Za-z0-9_$]*(?=\s*\())|(?<type>\b[A-Z][A-Za-z0-9_]*\b)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
-    private static readonly SolidColorBrush CodeDefaultBrush = new(Color.Parse("#E3EBF4"));
-    private static readonly SolidColorBrush CodeLineNumberBrush = new(Color.Parse("#71869F"));
-    private static readonly SolidColorBrush CodeCommentBrush = new(Color.Parse("#83B99B"));
-    private static readonly SolidColorBrush CodeStringBrush = new(Color.Parse("#E6C58C"));
-    private static readonly SolidColorBrush CodeKeywordBrush = new(Color.Parse("#C2A7FF"));
-    private static readonly SolidColorBrush CodeNumberBrush = new(Color.Parse("#F0A8B2"));
-    private static readonly SolidColorBrush CodeFunctionBrush = new(Color.Parse("#83C9F4"));
-    private static readonly SolidColorBrush CodeTypeBrush = new(Color.Parse("#79DCC7"));
+    private static readonly SolidColorBrush CodeDefaultBrush = new(Color.Parse("#DFF0FF"));
+    private static readonly SolidColorBrush CodeLineNumberBrush = new(Color.Parse("#7D92B1"));
+    private static readonly SolidColorBrush CodeCommentBrush = new(Color.Parse("#7CF2C5"));
+    private static readonly SolidColorBrush CodeStringBrush = new(Color.Parse("#FFD27F"));
+    private static readonly SolidColorBrush CodeKeywordBrush = new(Color.Parse("#C493FF"));
+    private static readonly SolidColorBrush CodeNumberBrush = new(Color.Parse("#FF83B9"));
+    private static readonly SolidColorBrush CodeFunctionBrush = new(Color.Parse("#65C8FF"));
+    private static readonly SolidColorBrush CodeTypeBrush = new(Color.Parse("#7BEAFF"));
     private const int MaximumVisibleCodeCharacters = 200_000;
     private readonly DispatcherTimer _refreshTimer = new() { Interval = TimeSpan.FromMilliseconds(750) };
     private readonly ObservableCollection<EntityRow> _entities = [];
@@ -417,15 +417,15 @@ public partial class OmniscopeWindow : Window
         bool isMapShop = MapRecordList.SelectedItem is GameDataRecord
         {
             Category: "MAP SHOP",
-            SourceShopId: > 1
-        } selectedShop;
+            SourceShopId: int shopId
+        } && shopId > 1;
         bool hasMap = MapRecordList.SelectedItem is GameDataRecord selectedRecord &&
             !string.IsNullOrWhiteSpace(selectedRecord.SourceMapName);
 
         LoadMapShopButton.IsEnabled = !_mapShopLoadRunning && isMapShop;
         GenerateMergeShopButton.IsEnabled = ready && isMapShop && hasMap;
         GenerateMapQuestsButton.IsEnabled = ready && hasMap;
-        GenerateCurrentMapQuestsButton.IsEnabled = ready && _bot.Map.Loaded;
+        GenerateCurrentMapQuestsButton.IsEnabled = ready;
     }
 
     private void DataRecordList_SelectionChanged(object? sender, SelectionChangedEventArgs e)
