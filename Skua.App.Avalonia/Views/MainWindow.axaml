@@ -132,12 +132,12 @@
       <Grid Grid.Row="1">
         <!-- Clip the complete game viewport, including its background, to the rounded bottom edge. -->
         <Border Background="{DynamicResource SkuaPageBrush}"
-                CornerRadius="0,0,12,12"
+                CornerRadius="0,0,16,16"
                 ClipToBounds="True">
           <Grid>
             <!-- Rounded backing frame remains visible around the inset native game surface. -->
-            <Border Margin="4,0,4,4"
-                    CornerRadius="0,0,12,12"
+            <Border Margin="0"
+                    CornerRadius="0,0,16,16"
                     Background="#141414"
                     BorderBrush="{DynamicResource SkuaBorderBrush}"
                     BorderThickness="1" />
