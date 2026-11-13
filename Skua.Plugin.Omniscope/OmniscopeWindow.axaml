@@ -127,7 +127,7 @@
                     <Border Grid.Column="1" Width="112" Height="92" BorderBrush="#7154A0" BorderThickness="1" CornerRadius="18" Padding="7" VerticalAlignment="Center" Background="{StaticResource RaisedPanelBrush}" BoxShadow="0 8 24 0 #80000000">
                         <Grid>
                             <Ellipse Width="76" Height="76" Stroke="#8B6AE4" StrokeThickness="1" Opacity="0.8"/>
-                            <Ellipse Width="57" Height="57" Stroke="#4D8A9A" StrokeThickness="1" StrokeDashArray="3 4" Opacity="0.9"/>
+                            <Ellipse Width="57" Height="57" Stroke="#4D8A9A" StrokeThickness="1" Opacity="0.9"/>
                             <Ellipse Width="34" Height="34" Fill="#302650" Stroke="#73F3D3" StrokeThickness="1"/>
                             <TextBlock Text="👁️" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             <TextBlock Text="LIVE SCAN" FontSize="8" FontWeight="Bold" Foreground="#73F3D3" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,1"/>
@@ -289,7 +289,7 @@
                         <Border Grid.Column="1" Width="82" Height="70" BorderBrush="#6A4F91" BorderThickness="1" CornerRadius="16" Background="{StaticResource RaisedPanelBrush}" BoxShadow="0 8 24 0 #80000000">
                             <Grid>
                                 <Ellipse Width="54" Height="54" Stroke="#8B6AE4" StrokeThickness="1"/>
-                                <Ellipse Width="35" Height="35" Stroke="#55C7B5" StrokeThickness="1" StrokeDashArray="3 4"/>
+                                <Ellipse Width="35" Height="35" Stroke="#55C7B5" StrokeThickness="1"/>
                                 <TextBlock Text="🧬" FontSize="27" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Grid>
                         </Border>
