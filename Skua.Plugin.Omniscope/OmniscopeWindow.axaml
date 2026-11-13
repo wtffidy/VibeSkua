@@ -81,7 +81,7 @@
 
                 <Grid Grid.Row="2" MinWidth="0" ClipToBounds="True" ColumnDefinitions="1*,1.15*,1.15*" ColumnSpacing="14" MinHeight="410">
                     <Grid Grid.Column="0" RowDefinitions="Auto,*" RowSpacing="8">
-                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="01" Foreground="#3DD7F2" FontSize="10" FontWeight="Bold"/><TextBlock Text="AVATAR TELEMETRY" Foreground="#BCEAF5" FontSize="11" FontWeight="Bold"/><TextBlock Text="LIVE" Foreground="#4CCCA8" FontSize="9" VerticalAlignment="Center"/></StackPanel>
+                        <Grid ColumnDefinitions="*,Auto"><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="01" Foreground="#3DD7F2" FontSize="10" FontWeight="Bold"/><TextBlock Text="AVATAR TELEMETRY" Foreground="#BCEAF5" FontSize="11" FontWeight="Bold"/><TextBlock x:Name="AvatarFollowStatus" Text="LIVE" Foreground="#4CCCA8" FontSize="9" VerticalAlignment="Center"/></StackPanel><Button x:Name="AvatarFollowButton" Grid.Column="1" Content="PAUSE" MinWidth="72" Padding="9,4" FontSize="9" Background="#122C3D" BorderBrush="#28566B" BorderThickness="1" Foreground="#70DFF4" Click="AvatarFollowButton_Click"/></Grid>
                         <Border Grid.Row="1" MinWidth="0" ClipToBounds="True" Background="#0D1724" BorderBrush="#203E51" BorderThickness="1" CornerRadius="8" Padding="16">
                             <StackPanel Spacing="12">
                                 <StackPanel Spacing="3"><TextBlock Text="IDENTITY" Foreground="#5F8FA5" FontSize="9"/><TextBlock x:Name="PlayerNameText" Text="Waiting for player session" Foreground="#ECFAFF" FontSize="21" FontWeight="SemiBold"/><TextBlock x:Name="PlayerClassText" Text="Class: unavailable" Foreground="#83B8CA" FontSize="11"/></StackPanel>

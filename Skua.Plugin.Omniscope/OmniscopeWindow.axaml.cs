@@ -32,6 +32,7 @@ public partial class OmniscopeWindow : Window
     private readonly ObservableCollection<EventRow> _events = [];
     private readonly List<EventRow> _eventHistory = [];
     private string[] _playerSnapshot = [];
+    private bool _avatarLiveFollow = true;
     private bool _entityLiveFollow = true;
     private bool _playerLiveFollow = true;
     private bool _eventLiveFollow = true;
@@ -168,6 +169,12 @@ public partial class OmniscopeWindow : Window
             ConnectionText.Text = loggedIn ? playing ? "LIVE / AVATAR ACTIVE" : "CONNECTED / LOADING AVATAR" : "WAITING FOR GAME SESSION";
             ConnectionIndicator.Fill = playing ? Avalonia.Media.Brushes.MediumSpringGreen : loggedIn ? Avalonia.Media.Brushes.Goldenrod : Avalonia.Media.Brushes.IndianRed;
 
+            int health = loggedIn ? _bot.Player.Health : 0;
+            int maxHealth = loggedIn ? _bot.Player.MaxHealth : 0;
+            int mana = loggedIn ? _bot.Player.Mana : 0;
+            int maxMana = loggedIn ? _bot.Player.MaxMana : 0;
+            if (_avatarLiveFollow)
+            {
             PlayerNameText.Text = loggedIn ? _bot.Player.Username : "No active player session";
             PlayerClassText.Text = $"Class: {_bot.Player.CurrentClass?.Name ?? "Unavailable"}  /  Rank {_bot.Player.CurrentClassRank}";
             LevelText.Text = loggedIn ? _bot.Player.Level.ToString("N0") : "--";
@@ -179,10 +186,6 @@ public partial class OmniscopeWindow : Window
             GuildText.Text = loggedIn ? NullLabel(_bot.Player.Guild) : "--";
             ServerText.Text = loggedIn ? NullLabel(_bot.Player.ServerIP) : "--";
 
-            int health = loggedIn ? _bot.Player.Health : 0;
-            int maxHealth = loggedIn ? _bot.Player.MaxHealth : 0;
-            int mana = loggedIn ? _bot.Player.Mana : 0;
-            int maxMana = loggedIn ? _bot.Player.MaxMana : 0;
             VitalsMetric.Text = loggedIn ? $"{health:N0} / {maxHealth:N0} HP" : "-- / -- HP";
             HealthText.Text = loggedIn ? $"{health:N0} / {maxHealth:N0}" : "-- / --";
             ManaText.Text = loggedIn ? $"{mana:N0} / {maxMana:N0}" : "-- / --";
@@ -193,14 +196,16 @@ public partial class OmniscopeWindow : Window
             PositionMetric.Text = loggedIn ? $"X {_bot.Player.X:N0}  /  Y {_bot.Player.Y:N0}" : "X --  /  Y --";
             CellMetric.Text = loggedIn ? $"Cell {NullLabel(_bot.Player.Cell)}  /  Pad {NullLabel(_bot.Player.Pad)}" : "Cell --  /  Pad --";
 
-            bool mapLoaded = _bot.Map.Loaded;
-            string mapName = mapLoaded ? _bot.Map.FullName : "Map unavailable";
-            MapMetric.Text = mapName;
-            RoomMetric.Text = mapLoaded ? $"Room {_bot.Map.RoomNumber}  /  ID {_bot.Map.RoomID}  /  {_bot.Map.PlayerCount} players" : "Waiting for map data";
             SessionText.Text = loggedIn
                 ? $"Avatar loaded: {_bot.Player.Loaded}\nTarget: {(_bot.Player.Target?.Name ?? "None")}\nCombat: {(_bot.Player.InCombat ? "Engaged" : "Idle")}  /  AFK: {(_bot.Player.AFK ? "Yes" : "No")}"
                 : "Waiting for the game client to expose a logged-in avatar.";
 
+            }
+
+            bool mapLoaded = _bot.Map.Loaded;
+            string mapName = mapLoaded ? _bot.Map.FullName : "Map unavailable";
+            MapMetric.Text = mapName;
+            RoomMetric.Text = mapLoaded ? $"Room {_bot.Map.RoomNumber}  /  ID {_bot.Map.RoomID}  /  {_bot.Map.PlayerCount} players" : "Waiting for map data";
             TrackChange(ref _lastMap, mapName, "WORLD TRANSITION");
             string playerState = loggedIn ? GetPlayerState(_bot.Player.State) : "OFFLINE";
             TrackChange(ref _lastPlayerState, playerState, "PLAYER STATE");
@@ -1257,6 +1262,7 @@ public partial class OmniscopeWindow : Window
 
     private void EntitySearchBox_TextChanged(object? sender, TextChangedEventArgs e) => ApplyEntityFilter();
 
+    private void AvatarFollowButton_Click(object? sender, RoutedEventArgs e) => SetAvatarLiveFollow(!_avatarLiveFollow);
     private void EntityFollowButton_Click(object? sender, RoutedEventArgs e) => SetEntityLiveFollow(!_entityLiveFollow);
     private void PlayerFollowButton_Click(object? sender, RoutedEventArgs e) => SetPlayerLiveFollow(!_playerLiveFollow);
     private void EventFollowButton_Click(object? sender, RoutedEventArgs e) => SetEventLiveFollow(!_eventLiveFollow);
@@ -1267,6 +1273,16 @@ public partial class OmniscopeWindow : Window
     private void PlayerList_PointerPressed(object? sender, PointerPressedEventArgs e) => SetPlayerLiveFollow(false);
     private void EventList_PointerWheelChanged(object? sender, PointerWheelEventArgs e) => SetEventLiveFollow(false);
     private void EventList_PointerPressed(object? sender, PointerPressedEventArgs e) => SetEventLiveFollow(false);
+
+    private void SetAvatarLiveFollow(bool enabled)
+    {
+        _avatarLiveFollow = enabled;
+        AvatarFollowButton.Content = enabled ? "PAUSE" : "RESUME";
+        AvatarFollowStatus.Text = enabled ? "LIVE" : "PAUSED";
+        AvatarFollowStatus.Foreground = enabled ? Avalonia.Media.Brushes.MediumSpringGreen : Avalonia.Media.Brushes.Goldenrod;
+        if (enabled)
+            RefreshTelemetry();
+    }
 
     private void SetEntityLiveFollow(bool enabled)
     {
