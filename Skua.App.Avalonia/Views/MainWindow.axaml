@@ -138,7 +138,7 @@
                 BorderBrush="{DynamicResource SkuaBorderBrush}"
                 BorderThickness="1" />
         <!-- Keep the native resize gutters clear while preserving the rounded frame beneath them. -->
-        <controls:WinFormsFlashHost x:Name="FlashHost" Margin="14,0,14,14" IsVisible="False" />
+        <controls:WinFormsFlashHost x:Name="FlashHost" Margin="16,0,16,14" IsVisible="False" />
         <ProgressBar x:Name="LoadingBar"
                      Width="150"
                      Height="8"
@@ -154,13 +154,13 @@
         </Grid>
 
         <!-- These transparent Avalonia grips sit in the gutters around the native Flash HWND. -->
-        <Border Width="14"
+        <Border Width="16"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Stretch"
                 Background="Transparent"
                 Cursor="SizeWestEast"
                 PointerPressed="ResizeWestGrip_PointerPressed" />
-        <Border Width="14"
+        <Border Width="16"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Stretch"
                 Background="Transparent"
@@ -172,14 +172,14 @@
                 Background="Transparent"
                 Cursor="SizeNorthSouth"
                 PointerPressed="ResizeSouthGrip_PointerPressed" />
-        <Border Width="14"
+        <Border Width="16"
                 Height="14"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Bottom"
                 Background="Transparent"
                 Cursor="BottomLeftCorner"
                 PointerPressed="ResizeSouthWestGrip_PointerPressed" />
-        <Border Width="14"
+        <Border Width="16"
                 Height="14"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Bottom"
