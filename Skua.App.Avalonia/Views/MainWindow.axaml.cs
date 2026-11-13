@@ -69,6 +69,9 @@ public partial class MainWindow : Window
     }
 
     private const int WM_NCACTIVATE = 0x0086;
+    private const int WM_NCHITTEST = 0x0084;
+    private const int HTBOTTOMLEFT = 16;
+    private const int HTBOTTOMRIGHT = 17;
     private const int WM_WINDOWPOSCHANGED = 0x0047;
     private const int WM_DPICHANGED = 0x02E0;
     private const int WM_GETDPISCALEDSIZE = 0x02E4;
@@ -489,6 +492,44 @@ public partial class MainWindow : Window
     }
 
 #if IS_WINDOWS
+    /// <summary>
+    /// Returns the Windows non-client resize code when the pointer is in either bottom corner.
+    /// </summary>
+    /// <param name="hWnd">The VibeSkua top-level window handle.</param>
+    /// <param name="lParam">The screen-space pointer coordinates from WM_NCHITTEST.</param>
+    /// <param name="hitTest">The resize hit-test code when the pointer is in a bottom corner.</param>
+    /// <returns><see langword="true"/> when the point should start a bottom-corner resize.</returns>
+    private static bool TryGetBottomCornerHitTest(IntPtr hWnd, IntPtr lParam, out IntPtr hitTest)
+    {
+        hitTest = IntPtr.Zero;
+        if (!GetWindowRect(hWnd, out RECT bounds))
+            return false;
+
+        long packedPoint = lParam.ToInt64();
+        int x = unchecked((short)(packedPoint & 0xFFFF));
+        int y = unchecked((short)((packedPoint >> 16) & 0xFFFF));
+        uint dpi = GetDpiForWindow(hWnd);
+        double scale = dpi > 0 ? dpi / 96.0 : 1.0;
+        int resizeBand = Math.Max(8, (int)Math.Ceiling(14 * scale));
+
+        if (y < bounds.Bottom - resizeBand || y > bounds.Bottom + resizeBand)
+            return false;
+
+        if (x >= bounds.Left - resizeBand && x <= bounds.Left + resizeBand)
+        {
+            hitTest = (IntPtr)HTBOTTOMLEFT;
+            return true;
+        }
+
+        if (x >= bounds.Right - resizeBand && x <= bounds.Right + resizeBand)
+        {
+            hitTest = (IntPtr)HTBOTTOMRIGHT;
+            return true;
+        }
+
+        return false;
+    }
+
     private IntPtr WindowSubclassProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam, nuint uIdSubclass, IntPtr dwRefData)
     {
         if (uMsg == WM_NCACTIVATE)
@@ -505,6 +546,17 @@ public partial class MainWindow : Window
                     }
                 }
             }
+        }
+
+        // The native Flash host can occupy the client pixels used by Windows' two lower resize corners.
+        // Its child HWNDs pass these points through; return the top-level resize hit here.
+        if (uMsg == WM_NCHITTEST &&
+            CanResize &&
+            WindowState == WindowState.Normal &&
+            HotKeys.HostHwnd == IntPtr.Zero &&
+            TryGetBottomCornerHitTest(hWnd, lParam, out IntPtr resizeHit))
+        {
+            return resizeHit;
         }
 
         // The tab host sizes this window to its tab area. On a monitor with another scale, keep that size instead of
