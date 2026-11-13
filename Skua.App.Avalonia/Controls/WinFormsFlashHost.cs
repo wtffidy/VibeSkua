@@ -9,7 +9,7 @@ namespace Skua.App.Avalonia.Controls;
 using WinForms = System.Windows.Forms;
 public class WinFormsFlashHost : NativeControlHost
 {
-    private const int NativeCornerRadiusDip = 12;
+    private const int NativeCornerRadiusDip = 16;
     private const int RegionCombineOr = 2;
 
     [StructLayout(LayoutKind.Sequential)]
@@ -140,7 +140,7 @@ public class WinFormsFlashHost : NativeControlHost
     private void Child_HandleCreated(object? sender, EventArgs e) => ApplyNativeCornerRegions();
 
     /// <summary>
-    /// Clips the native panel and Flash control to the same square-top, rounded-bottom shape as the backing frame.
+    /// Clips the native panel and Flash control to the same 16-DIP rounded-bottom shape as the backing frame.
     /// </summary>
     private void ApplyNativeCornerRegions()
     {
