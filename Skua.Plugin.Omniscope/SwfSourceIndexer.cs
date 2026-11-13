@@ -301,24 +301,23 @@ internal static class SwfSourceIndexer
         if (ContainsAny(searchable, "avatar", "player", "character", "username", "guild", "health", "mana", "stats"))
             return "PLAYER / AVATAR";
 
-        if (ContainsAny(searchable, "inventory", "item", "shop", "bank", "drop", "reward", "quest", "buy", "sell"))
-            return "INVENTORY / ITEMS";
+        if (ContainsAny(searchable, "quest", "achievement", "faction", "reputation", "house", "enhancement", "pet", "class"))
+            return "GAME SYSTEMS";
 
         if (ContainsAny(searchable, "combat", "skill", "attack", "target", "battle", "damage", "cooldown", "aggro", "monster"))
             return "COMBAT / SKILLS";
 
+        if (ContainsAny(searchable, "inventory", "item", "shop", "bank", "drop", "reward", "buy", "sell"))
+            return "INVENTORY / ITEMS";
+
         if (ContainsAny(searchable, "loader", "bootstrap", "config", "client", "main", "root", "initializ", "startup"))
             return "CLIENT CORE";
-
-        if (ContainsAny(searchable, "faction", "achievement", "reputation", "house", "enhancement", "pet", "class"))
-            return "GAME SYSTEMS";
 
         return "OTHER";
     }
 
     private static bool ContainsAny(string source, params string[] terms) =>
         terms.Any(term => source.Contains(term, StringComparison.OrdinalIgnoreCase));
-}
 }
 
 /// <summary>

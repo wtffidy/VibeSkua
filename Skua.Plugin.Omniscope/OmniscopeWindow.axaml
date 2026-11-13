@@ -295,7 +295,7 @@
                                         <TextBlock Text="MAP SWF LOOKUP" Foreground="#E9FAFF" FontSize="19" FontWeight="Bold"/>
                                         <TextBlock Text="Browse saved map-item links, scan map SWFs for shop IDs, and generate map-specific scripts." Foreground="#8BB3C4" FontSize="10" TextWrapping="Wrap"/>
                                     </StackPanel>
-                                    <WrapPanel Grid.Column="1" VerticalAlignment="Center"><Button x:Name="AnalyzeMapButton" Content="LOAD SAVED MAP INDEX" Click="AnalyzeMap_Click" Margin="0,0,6,0"/><Button x:Name="ScanMapShopsButton" Content="SCAN CURRENT MAP SHOPS" Click="ScanCurrentMapShops_Click"/></WrapPanel>
+                                    <WrapPanel Grid.Column="1" VerticalAlignment="Center"><Button x:Name="AnalyzeMapButton" Content="LOAD SAVED MAP INDEX" Click="AnalyzeMap_Click" Margin="0,0,6,0"/><Button x:Name="ScanMapShopsButton" Content="SCAN CURRENT MAP SHOPS" Click="ScanCurrentMapShops_Click" Margin="0,0,6,0"/><Button x:Name="GenerateCurrentMapQuestsButton" Content="GENERATE CURRENT MAP QUESTS" Click="GenerateCurrentMapQuests_Click"/></WrapPanel>
                                 </Grid>
 
                                 <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="10">

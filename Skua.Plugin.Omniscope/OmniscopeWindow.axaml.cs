@@ -811,6 +811,21 @@ public partial class OmniscopeWindow : Window
             ("ignoreCaseStorage", false));
     }
 
+    private async void GenerateCurrentMapQuests_Click(object? sender, RoutedEventArgs e)
+    {
+        string mapName = GetMapScriptName(_bot.Map.Name);
+        if (!_bot.Map.Loaded || string.IsNullOrWhiteSpace(mapName))
+        {
+            DataStatusText.Text = "JOIN THE MAP YOU WANT TO GENERATE BEFORE STARTING THE WEEKLY RELEASE GENERATOR";
+            return;
+        }
+
+        await RunDeveloperHelperAsync(
+            "WeeklyReleaseGeneratorV3.cs",
+            ("UseCurrentMap", true),
+            ("MapName", mapName));
+    }
+
     private async void GenerateMapQuests_Click(object? sender, RoutedEventArgs e)
     {
         if (MapRecordList.SelectedItem is not GameDataRecord record || string.IsNullOrWhiteSpace(record.SourceMapName))
@@ -1588,6 +1603,7 @@ public partial class OmniscopeWindow : Window
 
     private sealed class SavedMapShopIndexEntry
     {
+        public SavedMapShopIndexEntry() { }
         public string MapName { get; set; } = string.Empty;
         public string MapFilePath { get; set; } = string.Empty;
         public int[] ShopIds { get; set; } = [];
