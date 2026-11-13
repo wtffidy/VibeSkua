@@ -31,8 +31,9 @@ public class WinFormsFlashHost : NativeControlHost
         {
             try
             {
-                flash.ScaleMode = 0;
-                flash.CtlScale = "ShowAll";
+                // NoBorder fills the viewport without distorting the SWF's aspect ratio.
+                flash.ScaleMode = 1;
+                flash.CtlScale = "NoBorder";
             }
             catch { }
         }
