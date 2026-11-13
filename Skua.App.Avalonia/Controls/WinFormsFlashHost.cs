@@ -98,8 +98,10 @@ public class WinFormsFlashHost : NativeControlHost
     private sealed class ResizeHitTestPassthrough : IDisposable
     {
         private const uint WmNcHitTest = 0x0084;
+        private const uint WmLButtonDown = 0x0201;
+        private const uint WmNcLButtonDown = 0x00A1;
         private const uint GaRoot = 2;
-        private const int HtTransparent = -1;
+        private const int HtClient = 1;
         private const int ResizeBorderDip = 12;
         private static readonly nuint SubclassId = 1;
 
@@ -126,6 +128,17 @@ public class WinFormsFlashHost : NativeControlHost
         [DllImport("user32.dll")]
         private static extern uint GetDpiForWindow(IntPtr hWnd);
 
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetCursorPos(out NativePoint point);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool ReleaseCapture();
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, uint message, IntPtr wParam, IntPtr lParam);
+
         [StructLayout(LayoutKind.Sequential)]
         private struct NativeRect
         {
@@ -133,6 +146,13 @@ public class WinFormsFlashHost : NativeControlHost
             public int Top;
             public int Right;
             public int Bottom;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct NativePoint
+        {
+            public int X;
+            public int Y;
         }
 
         private readonly WinForms.Control _control;
@@ -174,14 +194,36 @@ public class WinFormsFlashHost : NativeControlHost
 
         private IntPtr WindowSubclassProc(IntPtr hWnd, uint message, IntPtr wParam, IntPtr lParam, nuint subclassId, IntPtr referenceData)
         {
-            if (message == WmNcHitTest && IsResizeBorder(hWnd, lParam))
-                return (IntPtr)HtTransparent;
+            if (message == WmNcHitTest && TryGetResizeHitTest(hWnd, lParam, out _))
+                return (IntPtr)HtClient;
+
+            if (message == WmLButtonDown && GetCursorPos(out NativePoint cursor) &&
+                TryGetResizeHitTest(hWnd, PackPoint(cursor.X, cursor.Y), out IntPtr resizeHit))
+            {
+                IntPtr rootHandle = GetAncestor(hWnd, GaRoot);
+                if (rootHandle != IntPtr.Zero)
+                {
+                    ReleaseCapture();
+                    SendMessage(rootHandle, WmNcLButtonDown, resizeHit, IntPtr.Zero);
+                    return IntPtr.Zero;
+                }
+            }
 
             return DefSubclassProc(hWnd, message, wParam, lParam);
         }
 
-        private static bool IsResizeBorder(IntPtr hWnd, IntPtr lParam)
+        private static IntPtr PackPoint(int x, int y)
         {
+            long packed = ((long)(ushort)y << 16) | (ushort)x;
+            return new IntPtr(packed);
+        }
+
+        /// <summary>
+        /// Identifies the top-level window resize edge beneath the embedded game viewport.
+        /// </summary>
+        private static bool TryGetResizeHitTest(IntPtr hWnd, IntPtr lParam, out IntPtr hitTest)
+        {
+            hitTest = IntPtr.Zero;
             IntPtr rootHandle = GetAncestor(hWnd, GaRoot);
             if (rootHandle == IntPtr.Zero || !GetWindowRect(rootHandle, out NativeRect bounds))
                 return false;
@@ -196,11 +238,31 @@ public class WinFormsFlashHost : NativeControlHost
             if (x < bounds.Left || x >= bounds.Right || y < bounds.Top || y >= bounds.Bottom)
                 return false;
 
-            bool leftEdge = x < bounds.Left + resizeBand;
-            bool rightEdge = x >= bounds.Right - resizeBand;
-            bool topEdge = y < bounds.Top + resizeBand;
-            bool bottomEdge = y >= bounds.Bottom - resizeBand;
-            return leftEdge || rightEdge || topEdge || bottomEdge;
+            bool left = x < bounds.Left + resizeBand;
+            bool right = x >= bounds.Right - resizeBand;
+            bool top = y < bounds.Top + resizeBand;
+            bool bottom = y >= bounds.Bottom - resizeBand;
+
+            if (top && left)
+                hitTest = (IntPtr)13;
+            else if (top && right)
+                hitTest = (IntPtr)14;
+            else if (bottom && left)
+                hitTest = (IntPtr)16;
+            else if (bottom && right)
+                hitTest = (IntPtr)17;
+            else if (left)
+                hitTest = (IntPtr)10;
+            else if (right)
+                hitTest = (IntPtr)11;
+            else if (top)
+                hitTest = (IntPtr)12;
+            else if (bottom)
+                hitTest = (IntPtr)15;
+            else
+                return false;
+
+            return true;
         }
 
         public void Dispose()
