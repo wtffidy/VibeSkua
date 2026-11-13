@@ -136,28 +136,41 @@
                 ClipToBounds="True">
           <Grid>
             <!-- Rounded backing frame remains visible around the inset native game surface. -->
-        <Border Margin="4,0,4,4"
-                CornerRadius="0,0,12,12"
-                Background="#141414"
-                BorderBrush="{DynamicResource SkuaBorderBrush}"
-                BorderThickness="1" />
-        <!-- Keep the native resize gutters clear while preserving the rounded frame beneath them. -->
-        <controls:WinFormsFlashHost x:Name="FlashHost" Margin="16,0,16,14" IsVisible="False" />
-        <ProgressBar x:Name="LoadingBar"
-                     Width="150"
-                     Height="8"
-                     IsIndeterminate="True"
-                     HorizontalAlignment="Center"
-                     VerticalAlignment="Center"/>
-        <Grid x:Name="HeadlessOverlay" Background="{DynamicResource SkuaPageBrush}" IsVisible="False">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
-                <materialIcons:MaterialIcon Kind="MonitorOff" Width="36" Height="36" Foreground="{DynamicResource SkuaMutedTextBrush}" HorizontalAlignment="Center" />
-                <TextBlock Foreground="{DynamicResource SkuaTextBrush}" HorizontalAlignment="Center" FontSize="18" FontWeight="SemiBold" Text="Headless Mode Active" />
-                <TextBlock Foreground="{DynamicResource SkuaMutedTextBrush}" HorizontalAlignment="Center" FontSize="12" Text="Viewport suspended to minimize CPU and GPU usage" />
-            </StackPanel>
+            <Border Margin="4,0,4,4"
+                    CornerRadius="0,0,12,12"
+                    Background="#141414"
+                    BorderBrush="{DynamicResource SkuaBorderBrush}"
+                    BorderThickness="1" />
+            <!-- Keep the native resize gutters clear while preserving the rounded frame beneath them. -->
+            <controls:WinFormsFlashHost x:Name="FlashHost" Margin="16,0,16,14" IsVisible="False" />
+            <ProgressBar x:Name="LoadingBar"
+                         Width="150"
+                         Height="8"
+                         IsIndeterminate="True"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
+            <Grid x:Name="HeadlessOverlay"
+                  Background="{DynamicResource SkuaPageBrush}"
+                  IsVisible="False">
+              <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                <materialIcons:MaterialIcon Kind="MonitorOff"
+                                            Width="36"
+                                            Height="36"
+                                            Foreground="{DynamicResource SkuaMutedTextBrush}"
+                                            HorizontalAlignment="Center" />
+                <TextBlock Foreground="{DynamicResource SkuaTextBrush}"
+                           HorizontalAlignment="Center"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           Text="Headless Mode Active" />
+                <TextBlock Foreground="{DynamicResource SkuaMutedTextBrush}"
+                           HorizontalAlignment="Center"
+                           FontSize="12"
+                           Text="Viewport suspended to minimize CPU and GPU usage" />
+              </StackPanel>
+            </Grid>
           </Grid>
         </Border>
-
         <!-- Keep resize grips outside the rounded clip so corner and edge resizing remain fully interactive. -->
         <Border Width="16"
                 HorizontalAlignment="Left"
