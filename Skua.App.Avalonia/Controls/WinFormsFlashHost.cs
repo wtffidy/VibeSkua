@@ -45,6 +45,9 @@ public class WinFormsFlashHost : NativeControlHost
 
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {
+        _childResizeHitTest?.Dispose();
+        _childResizeHitTest = _child is not null ? new ResizeHitTestPassthrough(_child) : null;
+
         _panel = new WinForms.Panel
         {
             Dock = WinForms.DockStyle.Fill,
@@ -98,7 +101,7 @@ public class WinFormsFlashHost : NativeControlHost
         private const uint GaRoot = 2;
         private const int HtTransparent = -1;
         private const int ResizeCornerDip = 14;
-        private const nuint SubclassId = 1;
+        private static readonly nuint SubclassId = 1;
 
         private delegate IntPtr SubclassProc(IntPtr hWnd, uint message, IntPtr wParam, IntPtr lParam, nuint subclassId, IntPtr referenceData);
 
