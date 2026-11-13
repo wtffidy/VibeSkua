@@ -132,17 +132,17 @@
       <Grid Grid.Row="1">
         <!-- Clip the complete game viewport, including its background, to the rounded bottom edge. -->
         <Border Background="{DynamicResource SkuaPageBrush}"
-                CornerRadius="0,0,16,16"
+                CornerRadius="0,0,8,8"
                 ClipToBounds="True">
           <Grid>
             <!-- Rounded backing frame remains visible around the inset native game surface. -->
             <Border Margin="0"
-                    CornerRadius="0,0,16,16"
+                    CornerRadius="0,0,8,8"
                     Background="#141414"
                     BorderBrush="{DynamicResource SkuaBorderBrush}"
                     BorderThickness="1" />
             <!-- Keep the native resize gutters clear while preserving the rounded frame beneath them. -->
-            <controls:WinFormsFlashHost x:Name="FlashHost" Margin="16,0,16,14" IsVisible="False" />
+            <controls:WinFormsFlashHost x:Name="FlashHost" Margin="8,0,8,8" IsVisible="False" />
             <ProgressBar x:Name="LoadingBar"
                          Width="150"
                          Height="8"
