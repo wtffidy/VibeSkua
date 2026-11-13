@@ -125,7 +125,7 @@
                                     <TextBlock Text="Observed state transitions / newest first" Foreground="#628FA3" FontSize="9"/>
                                     <TextBlock x:Name="EventCountText" Grid.Column="1" Text="0 EVENTS" Foreground="#4CCFEA" FontSize="9"/>
                                 </Grid>
-                                <ListBox x:Name="EventList" Grid.Row="1" ScrollViewer.VerticalScrollBarVisibility="Auto ScrollViewer.HorizontalScrollBarVisibility="Disabled" Background="Transparent" BorderThickness="0" Margin="0,8,0,0">
+                                <ListBox x:Name="EventList" Grid.Row="1" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Background="Transparent" BorderThickness="0" Margin="0,8,0,0">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
                                             <StackPanel Spacing="3" Margin="2,5">
