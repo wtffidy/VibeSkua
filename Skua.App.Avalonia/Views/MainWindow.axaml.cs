@@ -499,6 +499,35 @@ public partial class MainWindow : Window
 
 #if IS_WINDOWS
     /// <summary>
+    /// Starts a native resize operation from one of the transparent Avalonia resize grips.
+    /// </summary>
+    /// <param name="edge">The edge or corner to resize from.</param>
+    /// <param name="e">The pointer event that initiated the resize.</param>
+    private void BeginGripResize(WindowEdge edge, PointerPressedEventArgs e)
+    {
+        if (!CanResize || WindowState != WindowState.Normal || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            return;
+
+        e.Handled = true;
+        BeginResizeDrag(edge, e);
+    }
+
+    /// <summary>Starts resizing from the left edge.</summary>
+    private void ResizeWestGrip_PointerPressed(object? sender, PointerPressedEventArgs e) => BeginGripResize(WindowEdge.West, e);
+
+    /// <summary>Starts resizing from the right edge.</summary>
+    private void ResizeEastGrip_PointerPressed(object? sender, PointerPressedEventArgs e) => BeginGripResize(WindowEdge.East, e);
+
+    /// <summary>Starts resizing from the bottom edge.</summary>
+    private void ResizeSouthGrip_PointerPressed(object? sender, PointerPressedEventArgs e) => BeginGripResize(WindowEdge.South, e);
+
+    /// <summary>Starts resizing from the bottom-left corner.</summary>
+    private void ResizeSouthWestGrip_PointerPressed(object? sender, PointerPressedEventArgs e) => BeginGripResize(WindowEdge.SouthWest, e);
+
+    /// <summary>Starts resizing from the bottom-right corner.</summary>
+    private void ResizeSouthEastGrip_PointerPressed(object? sender, PointerPressedEventArgs e) => BeginGripResize(WindowEdge.SouthEast, e);
+
+    /// <summary>
     /// Returns the Windows non-client resize code for all eight edges and corners of the top-level window.
     /// </summary>
     /// <param name="hWnd">The VibeSkua top-level window handle.</param>
