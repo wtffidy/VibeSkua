@@ -195,40 +195,38 @@
                                     <Border Background="#102334" BorderBrush="#28536A" BorderThickness="1" CornerRadius="7" Padding="11">
                                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                             <Border Width="34" Height="34" CornerRadius="7" Background="#173B50"><TextBlock Text="Q" Foreground="#62E4FA" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-                                            <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="QUESTS &amp; REWARDS" Foreground="#7EB5C8" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="QuestRecordCountText" Text="0" Foreground="#E8FAFF" FontSize="21" FontWeight="Bold"/><TextBlock Text="Saved quest definitions" Foreground="#7C9FB0" FontSize="9"/></StackPanel>
+                                            <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="SOURCE FILES" Foreground="#7EB5C8" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="SourceFileCountText" Text="0" Foreground="#E8FAFF" FontSize="21" FontWeight="Bold"/><TextBlock Text=" Decompiled ActionScript files" Foreground="#7C9FB0" FontSize="9"/></StackPanel>
                                         </Grid>
                                     </Border>
                                     <Border Grid.Column="1" Background="#102334" BorderBrush="#28536A" BorderThickness="1" CornerRadius="7" Padding="11">
                                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                             <Border Width="34" Height="34" CornerRadius="7" Background="#332F50"><TextBlock Text="S" Foreground="#BBA8FF" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-                                            <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="SHOP ITEMS" Foreground="#B3A5E9" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="ShopRecordCountText" Text="0" Foreground="#E8FAFF" FontSize="21" FontWeight="Bold"/><TextBlock Text="Items from shops Skua has seen" Foreground="#7C9FB0" FontSize="9"/></StackPanel>
+                                            <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="CLIENT SYSTEMS" Foreground="#B3A5E9" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="ClientSystemCountText" Text="0" Foreground="#E8FAFF" FontSize="21" FontWeight="Bold"/><TextBlock Text="Distinct client code categories" Foreground="#7C9FB0" FontSize="9"/></StackPanel>
                                         </Grid>
                                     </Border>
                                     <Border Grid.Column="2" Background="#102334" BorderBrush="#28536A" BorderThickness="1" CornerRadius="7" Padding="11">
                                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                             <Border Width="34" Height="34" CornerRadius="7" Background="#17443F"><TextBlock Text="{}" Foreground="#64E5C2" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-                                            <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="GAME DATA RECORDS" Foreground="#72D5BD" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="DataRecordCountText" Text="0" Foreground="#E8FAFF" FontSize="21" FontWeight="Bold"/><TextBlock Text="Searchable game records" Foreground="#7C9FB0" FontSize="9"/></StackPanel>
+                                            <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="FUNCTIONS INDEXED" Foreground="#72D5BD" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="ClientFunctionCountText" Text="0" Foreground="#E8FAFF" FontSize="21" FontWeight="Bold"/><TextBlock Text="Functions across client source" Foreground="#7C9FB0" FontSize="9"/></StackPanel>
                                         </Grid>
                                     </Border>
                                 </Grid>
 
                                 <Grid Grid.Row="1" RowDefinitions="Auto,Auto" RowSpacing="8">
-                                    <TextBox x:Name="DataSearchBox" Grid.Row="0" MinHeight="46" Watermark="Search quests, items, monsters, IDs, or client code..." TextChanged="DataSearchBox_TextChanged" Background="#0B1D2C" Foreground="#E5F8FF" BorderBrush="#3A9DB8" FontSize="14" Padding="13,10"/>
+                                    <TextBox x:Name="DataSearchBox" Grid.Row="0" MinHeight="46" Watermark="Search classes, functions, packets, UI, maps, client systems, or IDs..." TextChanged="DataSearchBox_TextChanged" Background="#0B1D2C" Foreground="#E5F8FF" BorderBrush="#3A9DB8" FontSize="14" Padding="13,10"/>
                                     <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,190" ColumnSpacing="10">
                                         <TextBlock Text="SHOW" Foreground="#7DB4C8" FontSize="9" FontWeight="Bold" VerticalAlignment="Center"/>
                                         <ComboBox x:Name="DataCategoryBox" Grid.Column="1" MinHeight="36" SelectedIndex="0" SelectionChanged="DataCategoryBox_SelectionChanged">
-                                            <ComboBoxItem Content="Everything"/>
-                                            <ComboBoxItem Content="Quests &amp; Rewards"/>
-                                            <ComboBoxItem Content="Shop Items"/>
-                                            <ComboBoxItem Content="Observed Drops"/>
-                                            <ComboBoxItem Content="Monsters"/>
-                                            <ComboBoxItem Content="Achievements"/>
-                                            <ComboBoxItem Content="Item Usage"/>
                                             <ComboBoxItem Content="All Client Code"/>
-                                            <ComboBoxItem Content="Quest Client Code"/>
-                                            <ComboBoxItem Content="Shop Client Code"/>
-                                            <ComboBoxItem Content="Map Client Code"/>
-                                            <ComboBoxItem Content="Drop Client Code"/>
+                                            <ComboBoxItem Content="Client Core"/>
+                                            <ComboBoxItem Content="Network / API"/>
+                                            <ComboBoxItem Content="Game UI"/>
+                                            <ComboBoxItem Content="World / Map"/>
+                                            <ComboBoxItem Content="Player / Avatar"/>
+                                            <ComboBoxItem Content="Inventory / Items"/>
+                                            <ComboBoxItem Content="Combat / Skills"/>
+                                            <ComboBoxItem Content="Game Systems"/>
+                                            <ComboBoxItem Content="Other Client Code"/>
                                         </ComboBox>
                                         <TextBlock Grid.Column="2" Text="SORT" Foreground="#7DB4C8" FontSize="9" FontWeight="Bold" VerticalAlignment="Center"/>
                                         <ComboBox x:Name="DataSortBox" Grid.Column="3" MinHeight="36" SelectedIndex="0" SelectionChanged="DataSortBox_SelectionChanged">
@@ -244,7 +242,7 @@
                                 <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="10">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <Button x:Name="DecompileSwfButton" Content="INDEX GAME SWF" Click="DecompileSwf_Click"/>
-                                        <TextBlock Text="Downloads and indexes the current AQW client. The first run takes longer." Foreground="#7FA9B8" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                        <TextBlock Text="Downloads and decompiles the latest AQW client, then indexes its ActionScript source." Foreground="#7FA9B8" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <TextBlock x:Name="SwfSourceStatusText" Grid.Column="1" Text="GAME CLIENT NOT INDEXED" Foreground="#70B8CB" FontSize="9" VerticalAlignment="Center"/>
                                 </Grid>
@@ -282,17 +280,8 @@
                                                 <TextBlock x:Name="DataDetailMeta" Text="Details and source information will appear here." Foreground="#83B2C3" FontSize="10" TextWrapping="Wrap"/>
                                             </StackPanel>
                                             <Border Grid.Row="1" Height="1" Background="#24485B" Margin="0,9,0,9"/>
-                                            <Grid Grid.Row="2" RowDefinitions="Auto,Auto" RowSpacing="4">
-                                                <TextBlock Text="AVAILABLE ACTIONS" Foreground="#8EB7C6" FontSize="9" FontWeight="Bold"/>
-                                                <WrapPanel Grid.Row="1">
-                                                    <Button x:Name="CheckQuestButton" Content="CHECK QUEST" Click="CheckQuest_Click" IsEnabled="False" Margin="0,0,6,5"/>
-                                                    <Button x:Name="AcceptQuestButton" Content="ACCEPT QUEST" Click="AcceptQuest_Click" IsEnabled="False" Margin="0,0,6,5"/>
-                                                    <Button x:Name="CompleteQuestButton" Content="TURN IN QUEST" Click="CompleteQuest_Click" IsEnabled="False" Margin="0,0,6,5"/>
-                                                    <Button x:Name="LoadShopButton" Content="LOAD SHOP" Click="LoadShop_Click" IsEnabled="False" Margin="0,0,6,5"/>
-                                                    <Button x:Name="EvaluateShopButton" Content="CHECK REQUIREMENTS" Click="EvaluateShopGates_Click" IsEnabled="False" Margin="0,0,6,5"/>
-                                                </WrapPanel>
-                                            </Grid>
-                                            <TextBox x:Name="DataDetailText" Grid.Row="3" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Background="#071522" Foreground="#D0E7EF" BorderBrush="#1F4155" FontFamily="Segoe UI" FontSize="11" Padding="11" Text="Select a result to see its details and available actions."/>
+                                            <TextBlock Grid.Row="2" Text="DECOMPILED ACTIONSCRIPT" Foreground="#8EB7C6" FontSize="9" FontWeight="Bold"/>
+                                            <TextBox x:Name="DataDetailText" Grid.Row="3" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Background="#071522" Foreground="#D0E7EF" BorderBrush="#1F4155" FontFamily="Segoe UI" FontSize="11" Padding="11" Text="Select a source file to inspect its classes, functions, and decompiled ActionScript."/>
                                         </Grid>
                                     </Border>
                                 </Grid>
@@ -304,27 +293,32 @@
                                 <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="12">
                                     <StackPanel Spacing="3">
                                         <TextBlock Text="MAP SWF LOOKUP" Foreground="#E9FAFF" FontSize="19" FontWeight="Bold"/>
-                                        <TextBlock Text="Browse saved map-item and quest links from every map Skua has indexed." Foreground="#8BB3C4" FontSize="10" TextWrapping="Wrap"/>
+                                        <TextBlock Text="Browse saved map-item links, scan map SWFs for shop IDs, and generate map-specific scripts." Foreground="#8BB3C4" FontSize="10" TextWrapping="Wrap"/>
                                     </StackPanel>
-                                    <Button x:Name="AnalyzeMapButton" Grid.Column="1" Content="LOAD SAVED MAP INDEX" Click="AnalyzeMap_Click" VerticalAlignment="Center"/>
+                                    <WrapPanel Grid.Column="1" VerticalAlignment="Center"><Button x:Name="AnalyzeMapButton" Content="LOAD SAVED MAP INDEX" Click="AnalyzeMap_Click" Margin="0,0,6,0"/><Button x:Name="ScanMapShopsButton" Content="SCAN CURRENT MAP SHOPS" Click="ScanCurrentMapShops_Click"/></WrapPanel>
                                 </Grid>
 
-                                <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="10">
+                                <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="10">
                                     <Border Background="#102334" BorderBrush="#28536A" BorderThickness="1" CornerRadius="7" Padding="10">
-                                        <StackPanel Spacing="2"><TextBlock Text="SAVED MAPS" Foreground="#70B8CB" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="MapSwfMapCountText" Text="0" Foreground="#E8FAFF" FontSize="21" FontWeight="Bold"/><TextBlock Text="Maps in the local map index" Foreground="#7C9FB0" FontSize="9"/></StackPanel>
+                                        <StackPanel Spacing="2"><TextBlock Text="SAVED MAPS" Foreground="#70B8CB" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="MapSwfMapCountText" Text="0" Foreground="#E8FAFF" FontSize="21" FontWeight="Bold"/><TextBlock Text="Maps in local cache" Foreground="#7C9FB0" FontSize="9"/></StackPanel>
                                     </Border>
                                     <Border Grid.Column="1" Background="#102334" BorderBrush="#28536A" BorderThickness="1" CornerRadius="7" Padding="10">
-                                        <StackPanel Spacing="2"><TextBlock Text="MAP LINKS" Foreground="#70B8CB" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="MapItemRecordCountText" Text="0" Foreground="#E8FAFF" FontSize="21" FontWeight="Bold"/><TextBlock Text="Map items connected to quests" Foreground="#7C9FB0" FontSize="9"/></StackPanel>
+                                        <StackPanel Spacing="2"><TextBlock Text="MAP SHOPS" Foreground="#BBA8FF" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="MapShopRecordCountText" Text="0" Foreground="#E8FAFF" FontSize="21" FontWeight="Bold"/><TextBlock Text="IDs extracted from map SWFs" Foreground="#7C9FB0" FontSize="9"/></StackPanel>
+                                    </Border>
+                                    <Border Grid.Column="2" Background="#102334" BorderBrush="#28536A" BorderThickness="1" CornerRadius="7" Padding="10">
+                                        <StackPanel Spacing="2"><TextBlock Text="MAP ITEMS" Foreground="#70B8CB" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="MapItemRecordCountText" Text="0" Foreground="#E8FAFF" FontSize="21" FontWeight="Bold"/><TextBlock Text="Quest-linked map item references" Foreground="#7C9FB0" FontSize="9"/></StackPanel>
                                     </Border>
                                 </Grid>
 
                                 <Grid Grid.Row="2" RowDefinitions="Auto,Auto" RowSpacing="8">
-                                    <TextBox x:Name="MapSearchBox" Grid.Row="0" MinHeight="46" Watermark="Search map name, item ID, quest ID, or file..." TextChanged="MapSearchBox_TextChanged" Background="#0B1D2C" Foreground="#E5F8FF" BorderBrush="#3A9DB8" FontSize="14" Padding="13,10"/>
+                                    <TextBox x:Name="MapSearchBox" Grid.Row="0" MinHeight="46" Watermark="Search maps, shop IDs, map items, quest IDs, or files..." TextChanged="MapSearchBox_TextChanged" Background="#0B1D2C" Foreground="#E5F8FF" BorderBrush="#3A9DB8" FontSize="14" Padding="13,10"/>
                                     <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,190" ColumnSpacing="10">
                                         <TextBlock Text="MAPS" Foreground="#7DB4C8" FontSize="9" FontWeight="Bold" VerticalAlignment="Center"/>
                                         <ComboBox x:Name="MapCategoryBox" Grid.Column="1" MinHeight="36" SelectedIndex="0" SelectionChanged="MapCategoryBox_SelectionChanged">
                                             <ComboBoxItem Content="All maps"/>
                                             <ComboBoxItem Content="Current map"/>
+                                            <ComboBoxItem Content="Map shops"/>
+                                            <ComboBoxItem Content="Map items"/>
                                         </ComboBox>
                                         <TextBlock Grid.Column="2" Text="SORT" Foreground="#7DB4C8" FontSize="9" FontWeight="Bold" VerticalAlignment="Center"/>
                                         <ComboBox x:Name="MapSortBox" Grid.Column="3" MinHeight="36" SelectedIndex="0" SelectionChanged="MapSortBox_SelectionChanged">
@@ -332,6 +326,8 @@
                                             <ComboBoxItem Content="Quest ID (low-high)"/>
                                             <ComboBoxItem Content="Map item ID (low-high)"/>
                                             <ComboBoxItem Content="Map item ID (high-low)"/>
+                                            <ComboBoxItem Content="Shop ID (low-high)"/>
+                                            <ComboBoxItem Content="Shop ID (high-low)"/>
                                         </ComboBox>
                                     </Grid>
                                 </Grid>
@@ -341,7 +337,7 @@
                                         <Grid RowDefinitions="Auto,*">
                                             <Grid ColumnDefinitions="*,Auto" Margin="2,0,2,8">
                                                 <TextBlock Text="MAP RESULTS" Foreground="#BCEAF5" FontSize="11" FontWeight="Bold"/>
-                                                <TextBlock x:Name="MapResultMetric" Grid.Column="1" Text="0 MAP REFERENCES" Foreground="#5ADFF4" FontSize="9"/>
+                                                <TextBlock x:Name="MapResultMetric" Grid.Column="1" Text="0 MAP RECORDS" Foreground="#5ADFF4" FontSize="9"/>
                                             </Grid>
                                             <ListBox x:Name="MapRecordList" Grid.Row="1" Background="Transparent" BorderThickness="0" SelectionChanged="MapRecordList_SelectionChanged" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                                 <ListBox.ItemTemplate>
@@ -350,7 +346,7 @@
                                                             <StackPanel Spacing="4">
                                                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                                                                     <TextBlock Text="{Binding Name}" Foreground="#E4F8FF" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                                                                    <TextBlock Grid.Column="1" Text="MAP ITEM" Foreground="#61D8EE" FontSize="9" VerticalAlignment="Top"/>
+                                                                    <TextBlock Grid.Column="1" Text="{Binding DisplayCategory}" Foreground="#61D8EE" FontSize="9" VerticalAlignment="Top"/>
                                                                 </Grid>
                                                                 <TextBlock Text="{Binding Summary}" Foreground="#91B7C7" FontSize="10" TextWrapping="Wrap"/>
                                                                 <TextBlock Text="{Binding Metadata}" Foreground="#6A99AB" FontSize="9" TextWrapping="Wrap"/>
@@ -363,14 +359,15 @@
                                     </Border>
 
                                     <Border Grid.Column="1" Background="#0B1927" BorderBrush="#28536A" BorderThickness="1" CornerRadius="7" ClipToBounds="True" Padding="12">
-                                        <Grid RowDefinitions="Auto,Auto,*">
+                                        <Grid RowDefinitions="Auto,Auto,Auto,*">
                                             <StackPanel Spacing="4">
-                                                <TextBlock Text="MAP LINK DETAILS" Foreground="#5ADFF4" FontSize="9" FontWeight="Bold"/>
+                                                <TextBlock Text="MAP / SHOP DETAILS" Foreground="#5ADFF4" FontSize="9" FontWeight="Bold"/>
                                                 <TextBlock x:Name="MapDetailTitle" Text="Choose a map link on the left" Foreground="#E9FAFF" FontSize="17" FontWeight="Bold" TextWrapping="Wrap"/>
                                                 <TextBlock x:Name="MapDetailMeta" Text="Map file and linked quest information will appear here." Foreground="#83B2C3" FontSize="10" TextWrapping="Wrap"/>
                                             </StackPanel>
                                             <Border Grid.Row="1" Height="1" Background="#24485B" Margin="0,9,0,9"/>
-                                            <TextBox x:Name="MapDetailText" Grid.Row="2" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Background="#071522" Foreground="#D0E7EF" BorderBrush="#1F4155" FontSize="11" Padding="11" Text="Load the saved map index to browse map links."/>
+                                            <WrapPanel Grid.Row="2"><Button x:Name="LoadMapShopButton" Content="LOAD SHOP" Click="LoadMapShop_Click" IsEnabled="False" Margin="0,0,6,5"/><Button x:Name="GenerateMergeShopButton" Content="GENERATE MERGE SHOP" Click="GenerateMergeShop_Click" IsEnabled="False" Margin="0,0,6,5"/><Button x:Name="GenerateMapQuestsButton" Content="GENERATE MAP QUESTS" Click="GenerateMapQuests_Click" IsEnabled="False" Margin="0,0,6,5"/></WrapPanel>
+                                            <TextBox x:Name="MapDetailText" Grid.Row="3" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Background="#071522" Foreground="#D0E7EF" BorderBrush="#1F4155" FontSize="11" Padding="11" Text="Load the saved map index for map items, or scan the currently joined map SWF to find its shop IDs."/>
                                         </Grid>
                                     </Border>
                                 </Grid>

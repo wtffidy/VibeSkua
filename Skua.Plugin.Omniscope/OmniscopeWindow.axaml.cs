@@ -6,6 +6,7 @@ using Avalonia.Interactivity;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Skua.Core.Interfaces;
+using Skua.Core.Models;
 using Skua.Core.Models.Auras;
 using Skua.Core.Models.Monsters;
 using Skua.Core.Models.Skills;
@@ -39,6 +40,7 @@ public partial class OmniscopeWindow : Window
     private readonly ObservableCollection<GameDataRecord> _dataRecords = [];
     private readonly ObservableCollection<GameDataRecord> _mapRecords = [];
     private readonly List<GameDataRecord> _swfSourceRecords = [];
+    private readonly List<GameDataRecord> _mapShopRecords = [];
     private readonly object _dropHistoryLock = new();
     private readonly Queue<DropObservation> _dropHistory = new();
     private readonly Queue<MonsterKillObservation> _killHistory = new();
@@ -48,6 +50,7 @@ public partial class OmniscopeWindow : Window
     private List<GameDataRecord> _mapSnapshot = [];
     private MapItem[] _mapItemSnapshot = [];
     private bool _mapAnalysisRunning;
+    private bool _mapShopIndexRunning;
     private bool _swfIndexRunning;
     private string _lastMap = string.Empty;
     private string _lastTarget = string.Empty;
@@ -376,11 +379,21 @@ public partial class OmniscopeWindow : Window
     private void MapRecordList_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (MapRecordList.SelectedItem is not GameDataRecord record)
+        {
+            LoadMapShopButton.IsEnabled = false;
+            GenerateMergeShopButton.IsEnabled = false;
+            GenerateMapQuestsButton.IsEnabled = false;
             return;
+        }
 
         MapDetailTitle.Text = record.Name;
         MapDetailMeta.Text = $"{record.DisplayCategory}  /  {record.Metadata}";
         MapDetailText.Text = record.Details;
+
+        bool isMapShop = record.Category == "MAP SHOP" && record.SourceShopId is > 1;
+        LoadMapShopButton.IsEnabled = isMapShop;
+        GenerateMergeShopButton.IsEnabled = isMapShop && !string.IsNullOrWhiteSpace(record.SourceMapName);
+        GenerateMapQuestsButton.IsEnabled = !string.IsNullOrWhiteSpace(record.SourceMapName);
     }
 
     private void DataRecordList_SelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -390,365 +403,53 @@ public partial class OmniscopeWindow : Window
 
         DataDetailTitle.Text = record.Name;
         DataDetailMeta.Text = $"{record.DisplayCategory}  /  {record.Metadata}";
-        DataDetailText.Text = $"{record.Details}{Environment.NewLine}{Environment.NewLine}WHAT THIS RESULT MEANS:{Environment.NewLine}{GetRecordActionHint(record)}";
-
-        bool isQuest = record.SourceQuestId is int;
-        bool isShopItem = record.SourceObject is ShopItem;
-        CheckQuestButton.IsEnabled = isQuest;
-        AcceptQuestButton.IsEnabled = false;
-        CompleteQuestButton.IsEnabled = false;
-        LoadShopButton.IsEnabled = isShopItem && record.SourceShopId is > 0;
-        EvaluateShopButton.IsEnabled = isShopItem &&
-            record.SourceShopId == _bot.Shops.ID &&
-            _bot.Shops.IsLoaded &&
-            _bot.Shops.Items.Any(item => item.ID == ((ShopItem)record.SourceObject!).ID &&
-                item.ShopItemID == ((ShopItem)record.SourceObject!).ShopItemID);
-
-        if (record.SourceQuestId is int questId)
-            UpdateQuestActionState(questId);
-    }
-
-    private void UpdateQuestActionState(int questId)
-    {
-        try
-        {
-            bool inProgress = _bot.Quests.IsInProgress(questId);
-            bool available = !inProgress && _bot.Quests.IsAvailable(questId);
-            bool canTurnIn = inProgress && _bot.Quests.CanCompleteFullCheck(questId);
-            AcceptQuestButton.IsEnabled = available;
-            CompleteQuestButton.IsEnabled = canTurnIn;
-        }
-        catch (Exception ex)
-        {
-            AcceptQuestButton.IsEnabled = false;
-            CompleteQuestButton.IsEnabled = false;
-            DataStatusText.Text = $"QUEST STATUS UNAVAILABLE  /  {ex.Message}";
-        }
-    }
-
-    private void CheckQuest_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataRecordList.SelectedItem is not GameDataRecord { SourceQuestId: int questId } record)
-            return;
-
-        try
-        {
-            bool inProgress = _bot.Quests.IsInProgress(questId);
-            bool available = !inProgress && _bot.Quests.IsAvailable(questId);
-            bool canTurnIn = inProgress && _bot.Quests.CanCompleteFullCheck(questId);
-            string status = $"LIVE QUEST STATUS:{Environment.NewLine}" +
-                $"In progress: {inProgress}{Environment.NewLine}" +
-                $"Available to accept: {available}{Environment.NewLine}" +
-                $"Turn-in requirements met: {canTurnIn}{Environment.NewLine}" +
-                $"Registered for auto-completion: {_bot.Quests.Registered.Contains(questId)}";
-            DataDetailText.Text = $"{record.Details}{Environment.NewLine}{Environment.NewLine}{status}";
-            UpdateQuestActionState(questId);
-            DataStatusText.Text = $"QUEST CHECKED  /  {record.Name} [{questId}]";
-        }
-        catch (Exception ex)
-        {
-            DataStatusText.Text = $"QUEST CHECK FAILED  /  {ex.Message}";
-        }
-    }
-
-    private void AcceptQuest_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataRecordList.SelectedItem is not GameDataRecord { SourceQuestId: int questId } record)
-            return;
-
-        try
-        {
-            if (!_bot.Quests.IsAvailable(questId) || _bot.Quests.IsInProgress(questId))
-            {
-                DataStatusText.Text = $"QUEST NOT AVAILABLE TO ACCEPT  /  {record.Name} [{questId}]";
-                UpdateQuestActionState(questId);
-                return;
-            }
-
-            bool accepted = _bot.Quests.Accept(questId);
-            DataStatusText.Text = accepted
-                ? $"QUEST ACCEPT REQUEST SENT  /  {record.Name} [{questId}]"
-                : $"QUEST ACCEPT FAILED  /  {record.Name} [{questId}]";
-            UpdateQuestActionState(questId);
-        }
-        catch (Exception ex)
-        {
-            DataStatusText.Text = $"QUEST ACCEPT FAILED  /  {ex.Message}";
-        }
-    }
-
-    private void CompleteQuest_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataRecordList.SelectedItem is not GameDataRecord { SourceQuestId: int questId } record)
-            return;
-
-        try
-        {
-            if (!_bot.Quests.IsInProgress(questId) || !_bot.Quests.CanCompleteFullCheck(questId))
-            {
-                DataStatusText.Text = $"QUEST NOT READY TO TURN IN  /  {record.Name} [{questId}]";
-                UpdateQuestActionState(questId);
-                return;
-            }
-
-            bool completed = _bot.Quests.Complete(questId);
-            DataStatusText.Text = completed
-                ? $"QUEST TURN-IN REQUEST SENT  /  {record.Name} [{questId}]"
-                : $"QUEST TURN-IN FAILED  /  {record.Name} [{questId}]";
-            UpdateQuestActionState(questId);
-        }
-        catch (Exception ex)
-        {
-            DataStatusText.Text = $"QUEST TURN-IN FAILED  /  {ex.Message}";
-        }
-    }
-
-    private void LoadShop_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataRecordList.SelectedItem is not GameDataRecord { SourceObject: ShopItem item, SourceShopId: int shopId } record ||
-            shopId <= 0)
-            return;
-
-        try
-        {
-            DataStatusText.Text = $"LOADING SHOP  /  {record.Metadata}";
-            _bot.Shops.Load(shopId);
-            if (!_bot.Shops.IsLoaded || _bot.Shops.ID != shopId)
-            {
-                DataStatusText.Text = $"SHOP DID NOT LOAD  /  SHOP {shopId}";
-                return;
-            }
-
-            RefreshDataCatalog();
-            GameDataRecord? refreshedRecord = _dataSnapshot.FirstOrDefault(candidate =>
-                candidate.Category == "SHOP" && candidate.SourceShopId == shopId &&
-                candidate.SourceObject is ShopItem loadedItem &&
-                loadedItem.ID == item.ID && loadedItem.ShopItemID == item.ShopItemID);
-            if (refreshedRecord is not null)
-                DataRecordList.SelectedItem = refreshedRecord;
-
-            DataStatusText.Text = $"SHOP LOADED  /  {_bot.Shops.Name} [{shopId}]  /  NO PURCHASE MADE";
-        }
-        catch (Exception ex)
-        {
-            DataStatusText.Text = $"SHOP LOAD FAILED  /  {ex.Message}";
-        }
-    }
-
-    private void EvaluateShopGates_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataRecordList.SelectedItem is not GameDataRecord record ||
-            record.SourceObject is not ShopItem item ||
-            record.SourceShopId != _bot.Shops.ID ||
-            !_bot.Shops.IsLoaded)
-        {
-            DataStatusText.Text = "SHOP REQUIREMENT CHECK UNAVAILABLE  /  LOAD THE RELEVANT SHOP FIRST";
-            return;
-        }
-
-        try
-        {
-            List<string> unmetRequirements = _bot.Shops.GetUnmetPurchaseRequirements(item);
-            string evaluation = unmetRequirements.Count == 0
-                ? "No unmet quest, inventory material or token requirements were reported by the client-side checker."
-                : string.Join(Environment.NewLine, unmetRequirements.Select(static requirement => $"• {requirement}"));
-            DataDetailText.Text = $"{record.Details}{Environment.NewLine}{Environment.NewLine}" +
-                $"LIVE CLIENT REQUIREMENT CHECK:{Environment.NewLine}{evaluation}{Environment.NewLine}{Environment.NewLine}" +
-                "Note: this checker evaluates the client-visible quest/material/token gates. Server-side validation and any separate level, faction or membership checks remain authoritative.";
-            DataStatusText.Text = $"SHOP GATES INSPECTED  /  {item.Name} [{item.ID}]  /  NO PURCHASE REQUEST SENT";
-        }
-        catch (Exception ex)
-        {
-            DataStatusText.Text = $"SHOP REQUIREMENT CHECK FAILED  /  {ex.Message}";
-            System.Diagnostics.Trace.WriteLine($"OMNISCOPE shop requirement check failed: {ex}");
-        }
+        DataDetailText.Text = $"{record.Details}{Environment.NewLine}{Environment.NewLine}SOURCE INSPECTION:{Environment.NewLine}This is decompiled AQW client code. It describes client-side implementation and does not establish server-side validation.";
     }
 
     private void RefreshDataCatalog()
     {
-        List<GameDataRecord> records = new();
-        Dictionary<int, List<string>> itemReferences = new();
+        _dataSnapshot = _swfSourceRecords
+            .OrderBy(static record => record.Category)
+            .ThenBy(static record => record.Name)
+            .ToList();
 
-        try
-        {
-            _bot.Quests.LoadCachedQuests();
-            QuestData[] cachedQuests = _bot.Quests.Cached.ToArray();
-            foreach (QuestData quest in cachedQuests)
-            {
-                records.Add(CreateQuestRecord(quest));
-                AddItemReferences(itemReferences, quest.AcceptRequirements, $"Quest {quest.Name} [{quest.ID}] / accept");
-                AddItemReferences(itemReferences, quest.Requirements, $"Quest {quest.Name} [{quest.ID}] / turn-in");
-                AddItemReferences(itemReferences, quest.Rewards, $"Quest {quest.Name} [{quest.ID}] / reward");
-                AddItemReferences(itemReferences, quest.SimpleRewards, $"Quest {quest.Name} [{quest.ID}] / reward roll");
-            }
+        SourceFileCountText.Text = _swfSourceRecords.Count.ToString("N0");
+        ClientSystemCountText.Text = _swfSourceRecords.Select(static record => record.Category).Distinct(StringComparer.OrdinalIgnoreCase).Count().ToString("N0");
+        ClientFunctionCountText.Text = _swfSourceRecords.Sum(static record => record.SourceFunctionCount).ToString("N0");
 
-            QuestRecordCountText.Text = cachedQuests.Length.ToString("N0");
-        }
-        catch (Exception ex)
-        {
-            QuestRecordCountText.Text = "0";
-            records.Add(CreateStatusRecord("Quest database unavailable", ex.Message, "QUEST SOURCE"));
-        }
-
-        try
-        {
-            HashSet<int> loadedShopIds = new();
-            foreach (ShopInfo shop in _bot.Shops.LoadedCache.ToArray())
-            {
-                if (!loadedShopIds.Add(shop.ID))
-                    continue;
-
-                foreach (ShopItem item in shop.Items?.ToArray() ?? [])
-                {
-                    records.Add(CreateShopRecord(shop.ID, shop.Name, item));
-                    AddItemReferences(itemReferences, item.Requirements, $"Shop {shop.Name} [{shop.ID}] / {item.Name}");
-                    AddItemReference(itemReferences, item, $"Shop {shop.Name} [{shop.ID}] / listed item");
-                }
-            }
-
-            if (_bot.Shops.IsLoaded && loadedShopIds.Add(_bot.Shops.ID))
-            {
-                foreach (ShopItem item in _bot.Shops.Items?.ToArray() ?? [])
-                {
-                    records.Add(CreateShopRecord(_bot.Shops.ID, _bot.Shops.Name, item));
-                    AddItemReferences(itemReferences, item.Requirements, $"Shop {_bot.Shops.Name} [{_bot.Shops.ID}] / {item.Name}");
-                    AddItemReference(itemReferences, item, $"Shop {_bot.Shops.Name} [{_bot.Shops.ID}] / listed item");
-                }
-            }
-
-            ShopRecordCountText.Text = records.Count(static record => record.Category == "SHOP").ToString("N0");
-        }
-        catch (Exception ex)
-        {
-            ShopRecordCountText.Text = "0";
-            records.Add(CreateStatusRecord("Loaded shop data unavailable", ex.Message, "SHOP SOURCE"));
-        }
-
-        DropObservation[] observedDrops;
-        MonsterKillObservation[] observedKills;
-        lock (_dropHistoryLock)
-        {
-            observedDrops = _dropHistory.ToArray();
-            observedKills = _killHistory.ToArray();
-        }
-
-        foreach (DropObservation observation in observedDrops)
-        {
-            records.Add(CreateObservedDropRecord(observation));
-            AddItemReference(itemReferences, new ItemBase { ID = observation.ItemId, Name = observation.Name, Quantity = observation.ItemQuantity }, "Observed item-drop event history");
-        }
-
-        foreach (IGrouping<int, MonsterKillObservation> killGroup in observedKills.GroupBy(static kill => kill.MapId))
-        {
-            MonsterKillObservation[] kills = killGroup.OrderBy(static kill => kill.Timestamp).ToArray();
-            string details = $"MONSTER MAP ID: {killGroup.Key}{Environment.NewLine}" +
-                $"OBSERVED KILLS: {kills.Length:N0}{Environment.NewLine}" +
-                $"FIRST OBSERVED: {kills[0].Timestamp:O}{Environment.NewLine}" +
-                $"MOST RECENT: {kills[^1].Timestamp:O}{Environment.NewLine}{Environment.NewLine}" +
-                "These are event observations. MapID can be cross-referenced with the current monster snapshot when that monster is present.";
-            records.Add(new GameDataRecord
-            {
-                Category = "MONSTER",
-                Name = $"Kill observations / MapID {killGroup.Key}",
-                Summary = $"{kills.Length:N0} event observations in this OMNISCOPE session",
-                Metadata = "Runtime MonsterKilled events",
-                Details = details,
-                SearchText = details
-            });
-        }
-
-        MapItemRecordCountText.Text = _mapSnapshot.Count.ToString("N0");
-
-        try
-        {
-            foreach (ItemBase drop in _bot.Drops.CurrentDropInfos.ToArray())
-            {
-                records.Add(CreateDropRecord(drop));
-                AddItemReference(itemReferences, drop, "Current runtime drop queue");
-            }
-        }
-        catch (Exception ex)
-        {
-            records.Add(CreateStatusRecord("Runtime drop queue unavailable", ex.Message, "DROP SOURCE"));
-        }
-
-        try
-        {
-            Monster[] monsters = _bot.Monsters.MapMonsters.ToArray();
-            foreach (Monster monster in monsters)
-                records.Add(CreateMonsterRecord(monster));
-        }
-        catch (Exception ex)
-        {
-            records.Add(CreateStatusRecord("Current monster field unavailable", ex.Message, "MONSTERS"));
-        }
-
-        foreach ((int itemId, List<string> references) in itemReferences.OrderBy(static pair => pair.Key))
-        {
-            string[] distinctReferences = references.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-            string title = $"Item #{itemId}";
-            string details = $"ITEM ID: {itemId}{Environment.NewLine}" +
-                $"REFERENCE COUNT: {distinctReferences.Length:N0}{Environment.NewLine}{Environment.NewLine}" +
-                string.Join(Environment.NewLine, distinctReferences.Select(static reference => $"• {reference}"));
-            records.Add(new GameDataRecord
-            {
-                Category = "ITEM REFERENCE",
-                Name = title,
-                Summary = $"{distinctReferences.Length:N0} quest, shop, reward or runtime references",
-                Metadata = $"Item ID {itemId}",
-                Details = details,
-                SearchText = $"{title} {details}"
-            });
-        }
-
-        records.Add(CreateStatusRecord(
-            "Achievement requirement coverage",
-            "No structured server-side achievement requirement catalogue is exposed by the current public game interfaces or QuestData cache. The SWF source index can reveal achievement and badge-related client logic, but client references are not proof of the complete server-side requirements.",
-            "ACHIEVEMENT"));
-        records.Add(CreateStatusRecord(
-            "Monster loot table coverage",
-            "OMNISCOPE indexes observed runtime drops and quest reward-rate entries. The public monster snapshot does not include an authoritative per-monster loot table. Decompiled client references may help trace drop logic but are not a verified loot table.",
-            "DROP"));
-
-        records.AddRange(_swfSourceRecords);
-        _dataSnapshot = records.OrderBy(static record => record.Category).ThenBy(static record => record.Name).ToList();
-        DataRecordCountText.Text = _dataSnapshot.Count.ToString("N0");
-        DataStatusText.Text = $"GAME DATA READY  /  {_dataSnapshot.Count:N0} records across quests, shops, drops, monsters and client code.";
         SwfSourceStatusText.Text = _swfSourceRecords.Count > 0
             ? $"CLIENT SWF INDEXED  /  {_swfSourceRecords.Count:N0} SOURCE FILES"
             : "CLIENT SWF SOURCE NOT INDEXED";
+        DataStatusText.Text = _swfSourceRecords.Count > 0
+            ? $"CLIENT SOURCE READY  /  {_swfSourceRecords.Count:N0} FILES  /  {ClientFunctionCountText.Text} FUNCTIONS"
+            : "CLIENT SOURCE NOT INDEXED  /  USE INDEX GAME SWF TO DECOMPILE THE CURRENT AQW CLIENT";
 
         ApplyDataFilter();
     }
 
     private void ApplyDataFilter()
     {
-        // Avalonia can raise SelectionChanged while InitializeComponent is still populating controls.
         if (!_xamlInitialized || DataSearchBox is null || DataCategoryBox is null || DataSortBox is null ||
             DataRecordList is null || DataResultMetric is null || DataDetailTitle is null ||
-            DataDetailMeta is null || DataDetailText is null || EvaluateShopButton is null ||
-            CheckQuestButton is null || AcceptQuestButton is null || CompleteQuestButton is null ||
-            LoadShopButton is null)
+            DataDetailMeta is null || DataDetailText is null)
             return;
 
         string search = DataSearchBox.Text?.Trim() ?? string.Empty;
-        string category = (DataCategoryBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Everything";
+        string category = (DataCategoryBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "All Client Code";
         string sort = (DataSortBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Name (A-Z)";
         IEnumerable<GameDataRecord> query = _dataSnapshot;
 
         query = category switch
         {
-            "Quests & Rewards" => query.Where(static record => record.Category is "QUEST" or "QUEST SOURCE"),
-            "Shop Items" => query.Where(static record => record.Category is "SHOP" or "SHOP SOURCE"),
-            "Observed Drops" => query.Where(static record => record.Category is "DROP" or "DROP SOURCE"),
-            "Monsters" => query.Where(static record => record.Category == "MONSTER"),
-            "Achievements" => query.Where(static record => record.Category == "ACHIEVEMENT"),
-            "Item Usage" => query.Where(static record => record.Category == "ITEM REFERENCE"),
-            "All Client Code" => query.Where(record => _swfSourceRecords.Contains(record)),
-            "Quest Client Code" => query.Where(static record => record.Category == "QUEST SOURCE"),
-            "Shop Client Code" => query.Where(static record => record.Category == "SHOP SOURCE"),
-            "Map Client Code" => query.Where(static record => record.Category == "MAP SOURCE"),
-            "Drop Client Code" => query.Where(static record => record.Category == "DROP SOURCE"),
+            "Client Core" => query.Where(static record => record.Category == "CLIENT CORE"),
+            "Network / API" => query.Where(static record => record.Category == "NETWORK / API"),
+            "Game UI" => query.Where(static record => record.Category == "GAME UI"),
+            "World / Map" => query.Where(static record => record.Category == "WORLD / MAP"),
+            "Player / Avatar" => query.Where(static record => record.Category == "PLAYER / AVATAR"),
+            "Inventory / Items" => query.Where(static record => record.Category == "INVENTORY / ITEMS"),
+            "Combat / Skills" => query.Where(static record => record.Category == "COMBAT / SKILLS"),
+            "Game Systems" => query.Where(static record => record.Category == "GAME SYSTEMS"),
+            "Other Client Code" => query.Where(static record => record.Category == "OTHER"),
             _ => query
         };
 
@@ -758,13 +459,13 @@ public partial class OmniscopeWindow : Window
         query = sort switch
         {
             "Name (Z-A)" => query.OrderByDescending(static record => record.Name, StringComparer.OrdinalIgnoreCase),
-            "Category" => query.OrderBy(static record => record.DisplayCategory).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase),
+            "Category" => query.OrderBy(static record => record.Category).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase),
             "ID (low-high)" => query.OrderBy(GetRecordId).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase),
             "ID (high-low)" => query.OrderByDescending(GetRecordId).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase),
             _ => query.OrderBy(static record => record.Name, StringComparer.OrdinalIgnoreCase)
         };
 
-        GameDataRecord[] matches = query.Take(2000).ToArray();
+        GameDataRecord[] matches = query.Take(5000).ToArray();
         _dataRecords.Clear();
         foreach (GameDataRecord record in matches)
             _dataRecords.Add(record);
@@ -772,14 +473,11 @@ public partial class OmniscopeWindow : Window
         DataResultMetric.Text = $"{matches.Length:N0} MATCHES";
         if (matches.Length == 0)
         {
-            DataDetailTitle.Text = "No matching records";
-            DataDetailMeta.Text = "Try a broader search or refresh the source catalog.";
+            DataDetailTitle.Text = _dataSnapshot.Count == 0 ? "Client source not indexed" : "No matching source files";
+            DataDetailMeta.Text = _dataSnapshot.Count == 0
+                ? "Use INDEX GAME SWF to download and decompile the current AQW client."
+                : "Try another client category or search term.";
             DataDetailText.Text = string.Empty;
-            EvaluateShopButton.IsEnabled = false;
-            CheckQuestButton.IsEnabled = false;
-            AcceptQuestButton.IsEnabled = false;
-            CompleteQuestButton.IsEnabled = false;
-            LoadShopButton.IsEnabled = false;
         }
         else if (DataRecordList.SelectedItem is not GameDataRecord selected || !matches.Contains(selected))
         {
@@ -797,15 +495,16 @@ public partial class OmniscopeWindow : Window
         string search = MapSearchBox.Text?.Trim() ?? string.Empty;
         string category = (MapCategoryBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "All maps";
         string sort = (MapSortBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Map (A-Z)";
-        string currentMap = _bot.Map.FileName ?? string.Empty;
+        string currentMap = GetMapScriptName(_bot.Map.Name);
         IEnumerable<GameDataRecord> query = _mapSnapshot;
 
-        if (string.Equals(category, "Current map", StringComparison.OrdinalIgnoreCase))
+        query = category switch
         {
-            query = string.IsNullOrWhiteSpace(currentMap)
-                ? Enumerable.Empty<GameDataRecord>()
-                : query.Where(record => record.Metadata.Contains(currentMap, StringComparison.OrdinalIgnoreCase));
-        }
+            "Current map" => query.Where(record => string.Equals(record.SourceMapName, currentMap, StringComparison.OrdinalIgnoreCase)),
+            "Map shops" => query.Where(static record => record.Category == "MAP SHOP"),
+            "Map items" => query.Where(static record => record.Category == "MAP ITEM"),
+            _ => query
+        };
 
         if (!string.IsNullOrWhiteSpace(search))
             query = query.Where(record => record.SearchText.Contains(search, StringComparison.OrdinalIgnoreCase));
@@ -813,8 +512,10 @@ public partial class OmniscopeWindow : Window
         query = sort switch
         {
             "Quest ID (low-high)" => query.OrderBy(static record => record.SourceObject is MapItem mapItem ? mapItem.QuestID : int.MaxValue).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase),
-            "Map item ID (low-high)" => query.OrderBy(GetRecordId).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase),
-            "Map item ID (high-low)" => query.OrderByDescending(GetRecordId).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase),
+            "Map item ID (low-high)" => query.Where(static record => record.Category == "MAP ITEM").OrderBy(GetRecordId).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase),
+            "Map item ID (high-low)" => query.Where(static record => record.Category == "MAP ITEM").OrderByDescending(GetRecordId).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase),
+            "Shop ID (low-high)" => query.Where(static record => record.Category == "MAP SHOP").OrderBy(GetRecordId).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase),
+            "Shop ID (high-low)" => query.Where(static record => record.Category == "MAP SHOP").OrderByDescending(GetRecordId).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase),
             _ => query.OrderBy(static record => record.Metadata, StringComparer.OrdinalIgnoreCase).ThenBy(static record => record.Name, StringComparer.OrdinalIgnoreCase)
         };
 
@@ -823,14 +524,17 @@ public partial class OmniscopeWindow : Window
         foreach (GameDataRecord record in matches)
             _mapRecords.Add(record);
 
-        MapResultMetric.Text = $"{matches.Length:N0} MAP REFERENCES";
+        MapResultMetric.Text = $"{matches.Length:N0} MAP RECORDS";
         if (matches.Length == 0)
         {
-            MapDetailTitle.Text = _mapSnapshot.Count == 0 ? "Map index not loaded" : "No matching map links";
+            MapDetailTitle.Text = _mapSnapshot.Count == 0 ? "Map index not loaded" : "No matching map records";
             MapDetailMeta.Text = _mapSnapshot.Count == 0
-                ? "Choose LOAD SAVED MAP INDEX to browse every map Skua has saved."
-                : "Try a different search, choose All maps, or check the current map filter.";
+                ? "Load the saved map index for map items, then join a map and use SCAN CURRENT MAP SHOPS."
+                : "Try another map category or search term. Shop scanning indexes the currently joined map.";
             MapDetailText.Text = string.Empty;
+            LoadMapShopButton.IsEnabled = false;
+            GenerateMergeShopButton.IsEnabled = false;
+            GenerateMapQuestsButton.IsEnabled = false;
         }
         else if (MapRecordList.SelectedItem is not GameDataRecord selected || !matches.Contains(selected))
         {
@@ -840,6 +544,9 @@ public partial class OmniscopeWindow : Window
 
     private static int GetRecordId(GameDataRecord record)
     {
+        if (record.SourceShopId is int shopId)
+            return shopId;
+
         if (record.SourceQuestId is int questId)
             return questId;
 
@@ -906,10 +613,12 @@ public partial class OmniscopeWindow : Window
             _mapSnapshot = mapRecords
                 .GroupBy(static record => $"{record.Metadata}|{GetRecordId(record)}")
                 .Select(static group => group.First())
+                .Concat(_mapShopRecords)
                 .ToList();
 
             MapSwfMapCountText.Text = mapEntries.Length.ToString("N0");
-            MapItemRecordCountText.Text = _mapSnapshot.Count.ToString("N0");
+            MapItemRecordCountText.Text = _mapSnapshot.Count(static record => record.Category == "MAP ITEM").ToString("N0");
+            MapShopRecordCountText.Text = _mapShopRecords.Count.ToString("N0");
             ApplyMapFilter();
             DataStatusText.Text = $"LOADED {_mapSnapshot.Count:N0} MAP REFERENCES FROM {mapEntries.Length:N0} SAVED MAPS";
         }
@@ -922,6 +631,176 @@ public partial class OmniscopeWindow : Window
         {
             _mapAnalysisRunning = false;
             AnalyzeMapButtonState(false);
+        }
+    }
+
+    private async void ScanCurrentMapShops_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_mapShopIndexRunning)
+            return;
+
+        if (!_bot.Map.Loaded)
+        {
+            DataStatusText.Text = "MAP SHOP SCAN UNAVAILABLE  /  JOIN THE MAP YOU WANT TO INDEX FIRST";
+            return;
+        }
+
+        string mapFilePath = _bot.Map.FilePath?.Split('?')[0] ?? string.Empty;
+        string mapName = GetMapScriptName(_bot.Map.Name);
+        if (string.IsNullOrWhiteSpace(mapFilePath) || !File.Exists(mapFilePath))
+        {
+            DataStatusText.Text = "MAP SHOP SCAN FAILED  /  CURRENT MAP SWF IS NOT AVAILABLE LOCALLY";
+            return;
+        }
+
+        _mapShopIndexRunning = true;
+        ScanMapShopsButton.IsEnabled = false;
+        ScanMapShopsButton.Content = "SCANNING MAP SWF...";
+        DataStatusText.Text = $"DECOMPILING /{mapName} TO EXTRACT SHOP IDS";
+        try
+        {
+            string ffdecDirectory = SwfSourceIndexer.ResolveFfdecDirectory();
+            SwfSourceIndexResult result = await SwfSourceIndexer.DecompileAsync(mapFilePath, ffdecDirectory);
+            int[] shopIds = LocationSwfShopIndexer.ReadShopIds(result.ExportDirectory);
+            List<GameDataRecord> mapShopRecords = shopIds
+                .Select(shopId => CreateMapShopRecord(shopId, mapName, mapFilePath))
+                .ToList();
+
+            _mapShopRecords.RemoveAll(record => string.Equals(record.SourceMapName, mapName, StringComparison.OrdinalIgnoreCase));
+            _mapShopRecords.AddRange(mapShopRecords);
+            _mapSnapshot = _mapSnapshot
+                .Where(record => record.Category != "MAP SHOP" ||
+                    !string.Equals(record.SourceMapName, mapName, StringComparison.OrdinalIgnoreCase))
+                .Concat(mapShopRecords)
+                .ToList();
+
+            MapShopRecordCountText.Text = _mapShopRecords.Count.ToString("N0");
+            ApplyMapFilter();
+            DataStatusText.Text = shopIds.Length > 0
+                ? $"FOUND {shopIds.Length:N0} SHOP ID(S) IN /{mapName}  /  SELECT A SHOP TO LOAD OR GENERATE ITS MERGE SCRIPT"
+                : $"NO SHOP IDS FOUND IN /{mapName}  /  MAP SWF SCAN COMPLETED";
+        }
+        catch (Exception ex)
+        {
+            DataStatusText.Text = $"MAP SHOP SCAN FAILED  /  {ex.Message}";
+            System.Diagnostics.Trace.WriteLine($"OMNISCOPE map shop scan failed: {ex}");
+        }
+        finally
+        {
+            _mapShopIndexRunning = false;
+            ScanMapShopsButton.IsEnabled = true;
+            ScanMapShopsButton.Content = "SCAN CURRENT MAP SHOPS";
+        }
+    }
+
+    private void LoadMapShop_Click(object? sender, RoutedEventArgs e)
+    {
+        if (MapRecordList.SelectedItem is not GameDataRecord { Category: "MAP SHOP", SourceShopId: int shopId } record ||
+            shopId <= 1)
+            return;
+
+        try
+        {
+            DataStatusText.Text = $"LOADING SHOP {shopId} FROM /{record.SourceMapName}";
+            _bot.Shops.Load(shopId);
+            if (!_bot.Shops.IsLoaded || _bot.Shops.ID != shopId)
+            {
+                DataStatusText.Text = $"SHOP {shopId} DID NOT LOAD";
+                return;
+            }
+
+            string items = _bot.Shops.Items.Count == 0
+                ? "The shop loaded, but no items were exposed by the client."
+                : string.Join(Environment.NewLine, _bot.Shops.Items.Select(item =>
+                    $"{item.Name} [{item.ID}]  /  ShopItemID {item.ShopItemID}"));
+            MapDetailText.Text = $"{record.Details}{Environment.NewLine}{Environment.NewLine}" +
+                $"LOADED SHOP: {_bot.Shops.Name} [{shopId}]{Environment.NewLine}" +
+                $"ITEMS: {_bot.Shops.Items.Count:N0}{Environment.NewLine}{items}{Environment.NewLine}{Environment.NewLine}" +
+                "No purchase request was sent.";
+            DataStatusText.Text = $"SHOP LOADED  /  {_bot.Shops.Name} [{shopId}]  /  NO PURCHASE MADE";
+        }
+        catch (Exception ex)
+        {
+            DataStatusText.Text = $"SHOP LOAD FAILED  /  {ex.Message}";
+            System.Diagnostics.Trace.WriteLine($"OMNISCOPE map shop load failed: {ex}");
+        }
+    }
+
+    private async void GenerateMergeShop_Click(object? sender, RoutedEventArgs e)
+    {
+        if (MapRecordList.SelectedItem is not GameDataRecord { Category: "MAP SHOP", SourceShopId: int shopId, SourceMapName: string mapName } ||
+            shopId <= 1 || string.IsNullOrWhiteSpace(mapName))
+            return;
+
+        await RunDeveloperHelperAsync(
+            "MergeTemplateHelperV3.cs",
+            ("regenerateExisting", false),
+            ("location", mapName),
+            ("shopID", shopId),
+            ("ignoreCaseStorage", false));
+    }
+
+    private async void GenerateMapQuests_Click(object? sender, RoutedEventArgs e)
+    {
+        if (MapRecordList.SelectedItem is not GameDataRecord record || string.IsNullOrWhiteSpace(record.SourceMapName))
+            return;
+
+        await RunDeveloperHelperAsync(
+            "WeeklyReleaseGeneratorV3.cs",
+            ("UseCurrentMap", false),
+            ("MapName", record.SourceMapName));
+    }
+
+    private async Task RunDeveloperHelperAsync(string fileName, params (string Name, object Value)[] optionValues)
+    {
+        if (_bot.Manager is not IScriptManager manager)
+        {
+            DataStatusText.Text = "SCRIPT GENERATION UNAVAILABLE  /  SCRIPT MANAGER INTERFACE NOT FOUND";
+            return;
+        }
+
+        if (manager.ScriptRunning)
+        {
+            DataStatusText.Text = "STOP THE CURRENT SCRIPT BEFORE STARTING A DEVELOPER GENERATOR";
+            return;
+        }
+
+        string scriptPath = Path.Combine(ClientFileSources.SkuaScriptsDIR, "Tools", "ForDevelopers", fileName);
+        if (!File.Exists(scriptPath))
+        {
+            DataStatusText.Text = $"GENERATOR SCRIPT NOT FOUND  /  {scriptPath}  /  UPDATE YOUR SCRIPTS REPOSITORY";
+            return;
+        }
+
+        try
+        {
+            DataStatusText.Text = $"PREPARING {Path.GetFileNameWithoutExtension(fileName)} WITH MAP OPTIONS...";
+            manager.SetLoadedScript(scriptPath);
+            string source = await File.ReadAllTextAsync(scriptPath);
+            object? scriptInstance = await Task.Run(() => manager.Compile(source));
+            if (scriptInstance is null)
+                throw new InvalidOperationException($"Skua could not compile {fileName}. Check the script compiler output.");
+
+            manager.LoadScriptConfig(scriptInstance);
+            IScriptOptionContainer? config = manager.Config;
+            if (config is null)
+                throw new InvalidOperationException($"{fileName} did not expose a script option container.");
+
+            foreach ((string name, object value) in optionValues)
+                config.Set(name, value);
+            config.Save();
+
+            manager.SetLoadedScript(scriptPath);
+            Exception? startFailure = await manager.StartScript();
+            if (startFailure is not null)
+                throw startFailure;
+
+            DataStatusText.Text = $"STARTED {Path.GetFileNameWithoutExtension(fileName)}  /  MAP OPTIONS PREFILLED";
+        }
+        catch (Exception ex)
+        {
+            DataStatusText.Text = $"SCRIPT GENERATION FAILED  /  {ex.Message}";
+            System.Diagnostics.Trace.WriteLine($"OMNISCOPE developer script launch failed: {ex}");
         }
     }
 
@@ -951,7 +830,7 @@ public partial class OmniscopeWindow : Window
             _swfSourceRecords.Clear();
             _swfSourceRecords.Add(new GameDataRecord
             {
-                Category = "SWF SOURCE",
+                Category = "CLIENT CORE",
                 Name = $"AQW game client / {clientFile.FileName}",
                 Summary = $"{clientFile.ResolutionMethod}  /  {result.Records.Count:N0} source files indexed",
                 Metadata = clientFile.SourceUri.ToString(),
@@ -965,15 +844,7 @@ public partial class OmniscopeWindow : Window
                 SearchText = $"AQW game client {clientFile.FileName} {clientFile.SourceUri} {clientFile.LocalPath}"
             });
             _swfSourceRecords.AddRange(result.Records);
-            _dataSnapshot = _dataSnapshot
-                .Where(static record => !record.Metadata.EndsWith(".as", StringComparison.OrdinalIgnoreCase) &&
-                    !record.Name.StartsWith("AQW game client / ", StringComparison.OrdinalIgnoreCase))
-                .Concat(_swfSourceRecords)
-                .OrderBy(static record => record.Category)
-                .ThenBy(static record => record.Name)
-                .ToList();
-            DataRecordCountText.Text = _dataSnapshot.Count.ToString("N0");
-            ApplyDataFilter();
+            RefreshDataCatalog();
             SwfSourceStatusText.Text = $"AQW CLIENT INDEXED  /  {clientFile.FileName}  /  {_swfSourceRecords.Count:N0} RECORDS";
             DataStatusText.Text = $"AQW GAME CLIENT DECOMPILED  /  {result.Records.Count:N0} ACTIONSCRIPT FILES INDEXED";
         }
@@ -1097,6 +968,41 @@ public partial class OmniscopeWindow : Window
         };
     }
 
+    private static GameDataRecord CreateMapShopRecord(int shopId, string mapName, string mapFilePath)
+    {
+        string details =
+            $"MAP: /{mapName}{Environment.NewLine}" +
+            $"MAP SWF: {mapFilePath}{Environment.NewLine}" +
+            $"SHOP ID: {shopId}{Environment.NewLine}{Environment.NewLine}" +
+            "This shop ID was extracted from ActionScript in the map SWF. LOAD SHOP opens it without buying anything. " +
+            "GENERATE MERGE SHOP runs MergeTemplateHelperV3 with this map and shop ID prefilled.";
+        return new GameDataRecord
+        {
+            Category = "MAP SHOP",
+            Name = $"Shop {shopId}",
+            Summary = $"Shop ID {shopId}  /  /{mapName}",
+            Metadata = mapFilePath,
+            Details = details,
+            SearchText = $"{details} {shopId} {mapName} {mapFilePath}",
+            SourceShopId = shopId,
+            SourceMapName = mapName
+        };
+    }
+
+    private static string GetMapScriptName(string? mapName)
+    {
+        if (string.IsNullOrWhiteSpace(mapName))
+            return string.Empty;
+
+        string value = mapName.Trim().Replace('\\', '/');
+        int mapsIndex = value.LastIndexOf("maps/", StringComparison.OrdinalIgnoreCase);
+        if (mapsIndex >= 0)
+            value = value[(mapsIndex + 5)..];
+
+        string map = Path.GetFileNameWithoutExtension(value).Trim().ToLowerInvariant();
+        return string.IsNullOrWhiteSpace(map) ? value.ToLowerInvariant() : map;
+    }
+
     private static GameDataRecord CreateMapItemRecord(MapItem mapItem, string questName, string mapKey)
     {
         string mapName = string.IsNullOrWhiteSpace(mapItem.MapName) ? mapKey : mapItem.MapName;
@@ -1116,6 +1022,7 @@ public partial class OmniscopeWindow : Window
             Metadata = mapFilePath,
             Details = details,
             SearchText = $"{details} {mapItem.ID} {mapItem.QuestID} {questName} {mapName} {mapKey}",
+            SourceMapName = GetMapScriptName(mapName),
             SourceObject = mapItem
         };
     }
