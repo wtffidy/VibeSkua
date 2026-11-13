@@ -31,6 +31,10 @@ public class WinFormsFlashHost : NativeControlHost
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(IntPtr hWnd);
 
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool EnumChildWindows(IntPtr parent, EnumChildProc callback, IntPtr lParam);
+
     [DllImport("gdi32.dll", SetLastError = true)]
     private static extern IntPtr CreateRoundRectRgn(int left, int top, int right, int bottom, int ellipseWidth, int ellipseHeight);
 
@@ -43,6 +47,10 @@ public class WinFormsFlashHost : NativeControlHost
     [DllImport("gdi32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool DeleteObject(IntPtr handle);
+
+    private delegate bool EnumChildProc(IntPtr hWnd, IntPtr lParam);
+
+    private static readonly EnumChildProc DescendantCornerRegionCallback = ApplyDescendantCornerRegion;
 
     private WinForms.Panel? _panel;
     private WinForms.Control? _child;
@@ -59,6 +67,7 @@ public class WinFormsFlashHost : NativeControlHost
     public void SetScaleMode(bool isExactFit = false)
     {
         ApplyScaleMode();
+        ApplyNativeCornerRegions();
     }
 
     private void ApplyScaleMode()
@@ -135,8 +144,33 @@ public class WinFormsFlashHost : NativeControlHost
     /// </summary>
     private void ApplyNativeCornerRegions()
     {
+        if (_panel is null || !_panel.IsHandleCreated)
+            return;
+
         ApplyBottomCornerRegion(_panel);
         ApplyBottomCornerRegion(_child);
+        EnumChildWindows(_panel.Handle, DescendantCornerRegionCallback, _panel.Handle);
+    }
+
+    /// <summary>
+    /// Clips full-viewport native descendants created internally by the Flash ActiveX control.
+    /// </summary>
+    private static bool ApplyDescendantCornerRegion(IntPtr hWnd, IntPtr rootHandle)
+    {
+        if (!GetWindowRect(rootHandle, out NativeRect rootBounds) ||
+            !GetWindowRect(hWnd, out NativeRect childBounds))
+            return true;
+
+        int rootWidth = rootBounds.Right - rootBounds.Left;
+        int rootHeight = rootBounds.Bottom - rootBounds.Top;
+        int childWidth = childBounds.Right - childBounds.Left;
+        int childHeight = childBounds.Bottom - childBounds.Top;
+
+        // Avoid clipping small internal controls. The leaking Flash surface occupies the full viewport.
+        if (childWidth >= rootWidth - 4 && childHeight >= rootHeight - 4)
+            ApplyBottomCornerRegion(hWnd);
+
+        return true;
     }
 
     /// <summary>
@@ -147,8 +181,15 @@ public class WinFormsFlashHost : NativeControlHost
         if (control is null || !control.IsHandleCreated)
             return;
 
-        IntPtr handle = control.Handle;
-        if (!GetWindowRect(handle, out NativeRect bounds))
+        ApplyBottomCornerRegion(control.Handle);
+    }
+
+    /// <summary>
+    /// Applies a native rounded-bottom region to a window handle.
+    /// </summary>
+    private static void ApplyBottomCornerRegion(IntPtr handle)
+    {
+        if (handle == IntPtr.Zero || !GetWindowRect(handle, out NativeRect bounds))
             return;
 
         int width = bounds.Right - bounds.Left;
