@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Platform;
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace Skua.App.Avalonia.Controls;
@@ -11,24 +12,19 @@ public class WinFormsFlashHost : NativeControlHost
 {
     private WinForms.Panel? _panel;
     private WinForms.Control? _child;
-    private ResizeHitTestPassthrough? _panelResizeHitTest;
-    private ResizeHitTestPassthrough? _childResizeHitTest;
+    private ResizeHitTestRouter? _resizeHitTestRouter;
 
     public void SetChild(WinForms.Control child)
     {
-        _childResizeHitTest?.Dispose();
         _child = child;
-        _childResizeHitTest = new ResizeHitTestPassthrough(child);
         if (_panel is null)
             return;
 
         AttachChildToPanel();
+        _resizeHitTestRouter?.RefreshChildHooks();
     }
 
-    public void SetScaleMode(bool isExactFit = false)
-    {
-        ApplyScaleMode();
-    }
+    public void SetScaleMode(bool isExactFit = false) => ApplyScaleMode();
 
     private void ApplyScaleMode()
     {
@@ -45,30 +41,34 @@ public class WinFormsFlashHost : NativeControlHost
 
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {
-        _childResizeHitTest?.Dispose();
-        _childResizeHitTest = _child is not null ? new ResizeHitTestPassthrough(_child) : null;
+        _resizeHitTestRouter?.Dispose();
+        _resizeHitTestRouter = null;
 
         _panel = new WinForms.Panel
         {
             Dock = WinForms.DockStyle.Fill,
             BackColor = System.Drawing.Color.FromArgb(20, 20, 20)
         };
-        _panelResizeHitTest = new ResizeHitTestPassthrough(_panel);
 
-        _panel.Resize += (s, e) => ApplyScaleMode();
+        _resizeHitTestRouter = new ResizeHitTestRouter(_panel);
+        _panel.Resize += (s, e) =>
+        {
+            ApplyScaleMode();
+            _resizeHitTestRouter?.RefreshChildHooks();
+        };
 
         if (_child is not null)
             AttachChildToPanel();
 
+        _resizeHitTestRouter.RefreshChildHooks();
         return new PlatformHandle(_panel.Handle, "HWND");
     }
 
     protected override void DestroyNativeControlCore(IPlatformHandle control)
     {
-        _childResizeHitTest?.Dispose();
-        _childResizeHitTest = null;
-        _panelResizeHitTest?.Dispose();
-        _panelResizeHitTest = null;
+        _resizeHitTestRouter?.Dispose();
+        _resizeHitTestRouter = null;
+
         if (_panel is not null)
         {
             _panel.Controls.Clear();
@@ -92,20 +92,27 @@ public class WinFormsFlashHost : NativeControlHost
     }
 
     /// <summary>
-    /// Passes resize-border hit tests through native Flash child HWNDs to the top-level client.
-    /// This prevents the embedded ActiveX viewport from consuming edge and corner pointers before Windows can resize VibeSkua.
+    /// Routes native resize hit tests from every descendant of the embedded Flash viewport to the top-level VibeSkua window.
     /// </summary>
-    private sealed class ResizeHitTestPassthrough : IDisposable
+    private sealed class ResizeHitTestRouter : IDisposable
     {
         private const uint WmNcHitTest = 0x0084;
-        private const uint WmLButtonDown = 0x0201;
         private const uint WmNcLButtonDown = 0x00A1;
+        private const uint WmNcDestroy = 0x0082;
         private const uint GaRoot = 2;
-        private const int HtClient = 1;
+        private const int HtLeft = 10;
+        private const int HtRight = 11;
+        private const int HtTop = 12;
+        private const int HtTopLeft = 13;
+        private const int HtTopRight = 14;
+        private const int HtBottom = 15;
+        private const int HtBottomLeft = 16;
+        private const int HtBottomRight = 17;
         private const int ResizeBorderDip = 12;
         private static readonly nuint SubclassId = 1;
 
         private delegate IntPtr SubclassProc(IntPtr hWnd, uint message, IntPtr wParam, IntPtr lParam, nuint subclassId, IntPtr referenceData);
+        private delegate bool EnumChildProc(IntPtr hWnd, IntPtr lParam);
 
         [DllImport("comctl32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -130,7 +137,7 @@ public class WinFormsFlashHost : NativeControlHost
 
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool GetCursorPos(out NativePoint point);
+        private static extern bool EnumChildWindows(IntPtr parent, EnumChildProc callback, IntPtr lParam);
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -148,90 +155,93 @@ public class WinFormsFlashHost : NativeControlHost
             public int Bottom;
         }
 
-        [StructLayout(LayoutKind.Sequential)]
-        private struct NativePoint
+        private readonly WinForms.Control _rootControl;
+        private readonly HashSet<IntPtr> _hookedHandles = new();
+        private readonly SubclassProc _subclassCallback;
+        private readonly EnumChildProc _enumChildCallback;
+        private readonly WinForms.Timer _refreshTimer;
+        private bool _disposed;
+
+        public ResizeHitTestRouter(WinForms.Control rootControl)
         {
-            public int X;
-            public int Y;
+            _rootControl = rootControl;
+            _subclassCallback = WindowSubclassProc;
+            _enumChildCallback = EnumerateChildWindow;
+            _refreshTimer = new WinForms.Timer { Interval = 250 };
+            _refreshTimer.Tick += RefreshTimer_Tick;
+
+            if (_rootControl.IsHandleCreated)
+                Attach(_rootControl.Handle);
+
+            RefreshChildHooks();
+            _refreshTimer.Start();
         }
 
-        private readonly WinForms.Control _control;
-        private readonly SubclassProc _callback;
-        private IntPtr _hookedHandle;
-
-        public ResizeHitTestPassthrough(WinForms.Control control)
+        /// <summary>
+        /// Enumerates the complete native child-window tree and hooks windows created after Flash initialization.
+        /// </summary>
+        public void RefreshChildHooks()
         {
-            _control = control;
-            _callback = WindowSubclassProc;
-            _control.HandleCreated += Control_HandleCreated;
-            _control.HandleDestroyed += Control_HandleDestroyed;
-            if (_control.IsHandleCreated)
-                Attach(_control.Handle);
-        }
-
-        private void Control_HandleCreated(object? sender, EventArgs e) => Attach(_control.Handle);
-
-        private void Control_HandleDestroyed(object? sender, EventArgs e) => Detach();
-
-        private void Attach(IntPtr handle)
-        {
-            if (handle == IntPtr.Zero || _hookedHandle == handle)
+            if (_disposed || !_rootControl.IsHandleCreated)
                 return;
 
-            Detach();
-            if (SetWindowSubclass(handle, _callback, SubclassId, IntPtr.Zero))
-                _hookedHandle = handle;
+            IntPtr rootHandle = _rootControl.Handle;
+            Attach(rootHandle);
+            EnumChildWindows(rootHandle, _enumChildCallback, IntPtr.Zero);
         }
 
-        private void Detach()
+        private void RefreshTimer_Tick(object? sender, EventArgs e) => RefreshChildHooks();
+
+        private bool EnumerateChildWindow(IntPtr hWnd, IntPtr lParam)
         {
-            if (_hookedHandle == IntPtr.Zero)
+            Attach(hWnd);
+            return true;
+        }
+
+        private void Attach(IntPtr hWnd)
+        {
+            if (hWnd == IntPtr.Zero || !_hookedHandles.Add(hWnd))
                 return;
 
-            RemoveWindowSubclass(_hookedHandle, _callback, SubclassId);
-            _hookedHandle = IntPtr.Zero;
+            if (!SetWindowSubclass(hWnd, _subclassCallback, SubclassId, IntPtr.Zero))
+                _hookedHandles.Remove(hWnd);
         }
 
         private IntPtr WindowSubclassProc(IntPtr hWnd, uint message, IntPtr wParam, IntPtr lParam, nuint subclassId, IntPtr referenceData)
         {
-            if (message == WmNcHitTest && TryGetResizeHitTest(hWnd, lParam, out _))
-                return (IntPtr)HtClient;
+            if (message == WmNcHitTest && TryGetResizeHitTest(hWnd, lParam, out IntPtr hitTest))
+                return hitTest;
 
-            if (message == WmLButtonDown && GetCursorPos(out NativePoint cursor) &&
-                TryGetResizeHitTest(hWnd, PackPoint(cursor.X, cursor.Y), out IntPtr resizeHit))
+            if (message == WmNcLButtonDown && IsResizeHitTest(wParam))
             {
-                IntPtr rootHandle = GetAncestor(hWnd, GaRoot);
-                if (rootHandle != IntPtr.Zero)
+                IntPtr topLevelHandle = GetAncestor(hWnd, GaRoot);
+                if (topLevelHandle != IntPtr.Zero)
                 {
                     ReleaseCapture();
-                    SendMessage(rootHandle, WmNcLButtonDown, resizeHit, IntPtr.Zero);
-                    return IntPtr.Zero;
+                    return SendMessage(topLevelHandle, WmNcLButtonDown, wParam, lParam);
                 }
             }
+
+            if (message == WmNcDestroy)
+                _hookedHandles.Remove(hWnd);
 
             return DefSubclassProc(hWnd, message, wParam, lParam);
         }
 
-        private static IntPtr PackPoint(int x, int y)
-        {
-            long packed = ((long)(ushort)y << 16) | (ushort)x;
-            return new IntPtr(packed);
-        }
-
         /// <summary>
-        /// Identifies the top-level window resize edge beneath the embedded game viewport.
+        /// Identifies the top-level resize edge beneath the embedded game viewport.
         /// </summary>
         private static bool TryGetResizeHitTest(IntPtr hWnd, IntPtr lParam, out IntPtr hitTest)
         {
             hitTest = IntPtr.Zero;
-            IntPtr rootHandle = GetAncestor(hWnd, GaRoot);
-            if (rootHandle == IntPtr.Zero || !GetWindowRect(rootHandle, out NativeRect bounds))
+            IntPtr topLevelHandle = GetAncestor(hWnd, GaRoot);
+            if (topLevelHandle == IntPtr.Zero || !GetWindowRect(topLevelHandle, out NativeRect bounds))
                 return false;
 
             long packedPoint = lParam.ToInt64();
             int x = unchecked((short)(packedPoint & 0xFFFF));
             int y = unchecked((short)((packedPoint >> 16) & 0xFFFF));
-            uint dpi = GetDpiForWindow(rootHandle);
+            uint dpi = GetDpiForWindow(topLevelHandle);
             double scale = dpi > 0 ? dpi / 96.0 : 1.0;
             int resizeBand = Math.Max(8, (int)Math.Ceiling(ResizeBorderDip * scale));
 
@@ -244,38 +254,54 @@ public class WinFormsFlashHost : NativeControlHost
             bool bottom = y >= bounds.Bottom - resizeBand;
 
             if (top && left)
-                hitTest = (IntPtr)13;
+                hitTest = (IntPtr)HtTopLeft;
             else if (top && right)
-                hitTest = (IntPtr)14;
+                hitTest = (IntPtr)HtTopRight;
             else if (bottom && left)
-                hitTest = (IntPtr)16;
+                hitTest = (IntPtr)HtBottomLeft;
             else if (bottom && right)
-                hitTest = (IntPtr)17;
+                hitTest = (IntPtr)HtBottomRight;
             else if (left)
-                hitTest = (IntPtr)10;
+                hitTest = (IntPtr)HtLeft;
             else if (right)
-                hitTest = (IntPtr)11;
+                hitTest = (IntPtr)HtRight;
             else if (top)
-                hitTest = (IntPtr)12;
+                hitTest = (IntPtr)HtTop;
             else if (bottom)
-                hitTest = (IntPtr)15;
+                hitTest = (IntPtr)HtBottom;
             else
                 return false;
 
             return true;
         }
 
+        private static bool IsResizeHitTest(IntPtr hitTest)
+        {
+            int value = hitTest.ToInt32();
+            return value is HtLeft or HtRight or HtTop or HtTopLeft or HtTopRight or HtBottom or HtBottomLeft or HtBottomRight;
+        }
+
         public void Dispose()
         {
-            _control.HandleCreated -= Control_HandleCreated;
-            _control.HandleDestroyed -= Control_HandleDestroyed;
-            Detach();
+            if (_disposed)
+                return;
+
+            _disposed = true;
+            _refreshTimer.Stop();
+            _refreshTimer.Tick -= RefreshTimer_Tick;
+            _refreshTimer.Dispose();
+
+            IntPtr[] handles = new IntPtr[_hookedHandles.Count];
+            _hookedHandles.CopyTo(handles);
+            foreach (IntPtr handle in handles)
+                RemoveWindowSubclass(handle, _subclassCallback, SubclassId);
+
+            _hookedHandles.Clear();
         }
     }
 }
 #else
 public class WinFormsFlashHost : NativeControlHost
 {
-    
 }
 #endif
