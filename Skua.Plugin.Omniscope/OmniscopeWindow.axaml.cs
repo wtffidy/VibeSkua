@@ -65,6 +65,8 @@ public partial class OmniscopeWindow : Window
     private MapItem[] _mapItemSnapshot = [];
     private bool _mapAnalysisRunning;
     private bool _mapShopIndexRunning;
+    private bool _mapShopLoadRunning;
+    private bool _developerHelperRunning;
     private bool _swfIndexRunning;
     private string _lastMap = string.Empty;
     private string _lastTarget = string.Empty;
@@ -403,11 +405,27 @@ public partial class OmniscopeWindow : Window
         MapDetailTitle.Text = record.Name;
         MapDetailMeta.Text = $"{record.DisplayCategory}  /  {record.Metadata}";
         MapDetailText.Text = record.Details;
+        UpdateDeveloperHelperButtons();
+    }
 
-        bool isMapShop = record.Category == "MAP SHOP" && record.SourceShopId is > 1;
-        LoadMapShopButton.IsEnabled = isMapShop;
-        GenerateMergeShopButton.IsEnabled = isMapShop && !string.IsNullOrWhiteSpace(record.SourceMapName);
-        GenerateMapQuestsButton.IsEnabled = !string.IsNullOrWhiteSpace(record.SourceMapName);
+    /// <summary>
+    /// Keeps map actions disabled while a shop load or developer generator is already active.
+    /// </summary>
+    private void UpdateDeveloperHelperButtons()
+    {
+        bool ready = !_developerHelperRunning;
+        bool isMapShop = MapRecordList.SelectedItem is GameDataRecord
+        {
+            Category: "MAP SHOP",
+            SourceShopId: > 1
+        } selectedShop;
+        bool hasMap = MapRecordList.SelectedItem is GameDataRecord selectedRecord &&
+            !string.IsNullOrWhiteSpace(selectedRecord.SourceMapName);
+
+        LoadMapShopButton.IsEnabled = !_mapShopLoadRunning && isMapShop;
+        GenerateMergeShopButton.IsEnabled = ready && isMapShop && hasMap;
+        GenerateMapQuestsButton.IsEnabled = ready && hasMap;
+        GenerateCurrentMapQuestsButton.IsEnabled = ready && _bot.Map.Loaded;
     }
 
     private void DataRecordList_SelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -865,36 +883,60 @@ public partial class OmniscopeWindow : Window
         }
     }
 
-    private void LoadMapShop_Click(object? sender, RoutedEventArgs e)
+    private async void LoadMapShop_Click(object? sender, RoutedEventArgs e)
     {
-        if (MapRecordList.SelectedItem is not GameDataRecord { Category: "MAP SHOP", SourceShopId: int shopId } record ||
+        if (_mapShopLoadRunning ||
+            MapRecordList.SelectedItem is not GameDataRecord { Category: "MAP SHOP", SourceShopId: int shopId } record ||
             shopId <= 1)
             return;
 
+        _mapShopLoadRunning = true;
+        LoadMapShopButton.IsEnabled = false;
+        LoadMapShopButton.Content = "WAITING FOR AQW...";
+        DataStatusText.Text = $"REQUESTING SHOP {shopId}  /  WAITING FOR THE GAME CLIENT";
         try
         {
-            DataStatusText.Text = $"LOADING SHOP {shopId} FROM /{record.SourceMapName}";
-            _bot.Shops.Load(shopId);
-            if (!_bot.Shops.IsLoaded || _bot.Shops.ID != shopId)
+            // ScriptShop.Load waits synchronously for the server response (up to 20 seconds).
+            // Run it off the Avalonia UI thread, then copy the results into plain strings before returning.
+            ShopLoadResult result = await Task.Run(() =>
             {
-                DataStatusText.Text = $"SHOP {shopId} DID NOT LOAD";
+                _bot.Shops.Load(shopId);
+                if (!_bot.Shops.IsLoaded || _bot.Shops.ID != shopId)
+                    return new ShopLoadResult(false, shopId, string.Empty, []);
+
+                string shopName = _bot.Shops.Name;
+                string[] itemLines = _bot.Shops.Items
+                    .Select(static item => $"{item.Name} [{item.ID}]  /  ShopItemID {item.ShopItemID}")
+                    .ToArray();
+
+                return new ShopLoadResult(true, shopId, shopName, itemLines);
+            });
+
+            if (!result.Loaded)
+            {
+                DataStatusText.Text = $"SHOP {shopId} DID NOT LOAD  /  AQW DID NOT CONFIRM THE REQUEST";
                 return;
             }
 
-            string items = _bot.Shops.Items.Count == 0
+            string items = result.ItemLines.Length == 0
                 ? "The shop loaded, but no items were exposed by the client."
-                : string.Join(Environment.NewLine, _bot.Shops.Items.Select(item =>
-                    $"{item.Name} [{item.ID}]  /  ShopItemID {item.ShopItemID}"));
+                : string.Join(Environment.NewLine, result.ItemLines);
             MapDetailText.Text = $"{record.Details}{Environment.NewLine}{Environment.NewLine}" +
-                $"LOADED SHOP: {_bot.Shops.Name} [{shopId}]{Environment.NewLine}" +
-                $"ITEMS: {_bot.Shops.Items.Count:N0}{Environment.NewLine}{items}{Environment.NewLine}{Environment.NewLine}" +
+                $"LOADED SHOP: {result.ShopName} [{result.ShopId}]{Environment.NewLine}" +
+                $"ITEMS: {result.ItemLines.Length:N0}{Environment.NewLine}{items}{Environment.NewLine}{Environment.NewLine}" +
                 "No purchase request was sent.";
-            DataStatusText.Text = $"SHOP LOADED  /  {_bot.Shops.Name} [{shopId}]  /  NO PURCHASE MADE";
+            DataStatusText.Text = $"SHOP LOADED  /  {result.ShopName} [{result.ShopId}]  /  NO PURCHASE MADE";
         }
         catch (Exception ex)
         {
             DataStatusText.Text = $"SHOP LOAD FAILED  /  {ex.Message}";
             System.Diagnostics.Trace.WriteLine($"OMNISCOPE map shop load failed: {ex}");
+        }
+        finally
+        {
+            _mapShopLoadRunning = false;
+            LoadMapShopButton.Content = "LOAD SHOP";
+            UpdateDeveloperHelperButtons();
         }
     }
 
@@ -940,6 +982,9 @@ public partial class OmniscopeWindow : Window
 
     private async Task RunDeveloperHelperAsync(string fileName, params (string Name, object Value)[] optionValues)
     {
+        if (_developerHelperRunning)
+            return;
+
         if (_bot.Manager is not IScriptManager manager)
         {
             DataStatusText.Text = "SCRIPT GENERATION UNAVAILABLE  /  SCRIPT MANAGER INTERFACE NOT FOUND";
@@ -959,26 +1004,36 @@ public partial class OmniscopeWindow : Window
             return;
         }
 
+        _developerHelperRunning = true;
+        UpdateDeveloperHelperButtons();
+        DataStatusText.Text = $"PREPARING {Path.GetFileNameWithoutExtension(fileName)}  /  COMPILING + APPLYING MAP OPTIONS";
         try
         {
-            DataStatusText.Text = $"PREPARING {Path.GetFileNameWithoutExtension(fileName)} WITH MAP OPTIONS...";
+            // Compilation, reflected option discovery, config reads, and config writes can all touch disk.
+            // Keep the complete preparation phase away from the UI thread.
             manager.SetLoadedScript(scriptPath);
-            string source = await File.ReadAllTextAsync(scriptPath);
-            object? scriptInstance = await Task.Run(() => manager.Compile(source));
-            if (scriptInstance is null)
-                throw new InvalidOperationException($"Skua could not compile {fileName}. Check the script compiler output.");
+            await Task.Run(() =>
+            {
+                string source = File.ReadAllText(scriptPath);
+                object? scriptInstance = manager.Compile(source);
+                if (scriptInstance is null)
+                    throw new InvalidOperationException($"Skua could not compile {fileName}. Check the script compiler output.");
 
-            manager.LoadScriptConfig(scriptInstance);
-            IScriptOptionContainer? config = manager.Config;
-            if (config is null)
-                throw new InvalidOperationException($"{fileName} did not expose a script option container.");
+                manager.LoadScriptConfig(scriptInstance);
+                IScriptOptionContainer? config = manager.Config;
+                if (config is null)
+                    throw new InvalidOperationException($"{fileName} did not expose a script option container.");
 
-            foreach ((string name, object value) in optionValues)
-                config.Set(name, value);
-            config.Save();
+                foreach ((string name, object value) in optionValues)
+                    config.Set(name, value);
+                config.Save();
+            });
 
-            manager.SetLoadedScript(scriptPath);
-            Exception? startFailure = await manager.StartScript();
+            DataStatusText.Text = $"STARTING {Path.GetFileNameWithoutExtension(fileName)}  /  HANDING OFF TO SCRIPT MANAGER";
+            // StartScript performs synchronous setup after its awaits. Run the whole start flow off-thread too;
+            // the actual script still executes on Skua's dedicated Script Thread.
+            Exception? startFailure = await Task.Run(async () =>
+                await manager.StartScript().ConfigureAwait(false));
             if (startFailure is not null)
                 throw startFailure;
 
@@ -988,6 +1043,11 @@ public partial class OmniscopeWindow : Window
         {
             DataStatusText.Text = $"SCRIPT GENERATION FAILED  /  {ex.Message}";
             System.Diagnostics.Trace.WriteLine($"OMNISCOPE developer script launch failed: {ex}");
+        }
+        finally
+        {
+            _developerHelperRunning = false;
+            UpdateDeveloperHelperButtons();
         }
     }
 
@@ -1709,6 +1769,8 @@ public partial class OmniscopeWindow : Window
         public string MapFilePath { get; set; } = string.Empty;
         public int[] ShopIds { get; set; } = [];
     }
+
+    private sealed record ShopLoadResult(bool Loaded, int ShopId, string ShopName, string[] ItemLines);
 
     private sealed class EventRow
     {

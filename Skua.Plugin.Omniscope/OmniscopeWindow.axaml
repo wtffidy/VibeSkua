@@ -6,39 +6,97 @@
         Title="OMNISCOPE | Live Game Intelligence"
         Width="1400" Height="900"
         MinWidth="1080" MinHeight="700"
-        Background="#111827"
+        Background="#080D1C"
         SystemDecorations="BorderOnly"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaChromeHints="NoChrome"
         ExtendClientAreaTitleBarHeightHint="32"
         WindowStartupLocation="CenterScreen">
-    <Grid RowDefinitions="Auto,*" Background="#111827">
+    <Grid RowDefinitions="Auto,*">
+        <Grid.Background>
+            <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                <GradientStop Color="#080D1C" Offset="0"/>
+                <GradientStop Color="#11132B" Offset="0.48"/>
+                <GradientStop Color="#0A1928" Offset="1"/>
+            </LinearGradientBrush>
+        </Grid.Background>
+        <Grid.Styles>
+            <Style Selector="Button">
+                <Setter Property="Background" Value="#172746"/>
+                <Setter Property="BorderBrush" Value="#3A5A88"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Foreground" Value="#DFF5FF"/>
+                <Setter Property="Padding" Value="12,7"/>
+                <Setter Property="FontSize" Value="10"/>
+            </Style>
+            <Style Selector="Button:pointerover">
+                <Setter Property="Background" Value="#203B63"/>
+                <Setter Property="BorderBrush" Value="#48DDF5"/>
+                <Setter Property="Foreground" Value="#FFFFFF"/>
+            </Style>
+            <Style Selector="Button:pressed">
+                <Setter Property="Background" Value="#294B70"/>
+                <Setter Property="BorderBrush" Value="#A88BFF"/>
+            </Style>
+            <Style Selector="Button:disabled">
+                <Setter Property="Background" Value="#111A2D"/>
+                <Setter Property="BorderBrush" Value="#293B59"/>
+                <Setter Property="Foreground" Value="#6D809D"/>
+            </Style>
+            <Style Selector="TabItem">
+                <Setter Property="Background" Value="#111A30"/>
+                <Setter Property="Foreground" Value="#9DB7D7"/>
+                <Setter Property="Padding" Value="14,9"/>
+            </Style>
+            <Style Selector="TabItem:selected">
+                <Setter Property="Background" Value="#1A2C4C"/>
+                <Setter Property="Foreground" Value="#55E8FF"/>
+            </Style>
+            <Style Selector="TextBox">
+                <Setter Property="Background" Value="#111C34"/>
+                <Setter Property="Foreground" Value="#E3F2FF"/>
+                <Setter Property="BorderBrush" Value="#39577F"/>
+                <Setter Property="SelectionBrush" Value="#5B5FEA"/>
+            </Style>
+            <Style Selector="ComboBox">
+                <Setter Property="Background" Value="#172542"/>
+                <Setter Property="Foreground" Value="#E3F2FF"/>
+                <Setter Property="BorderBrush" Value="#42628C"/>
+            </Style>
+            <Style Selector="ListBoxItem:pointerover">
+                <Setter Property="Background" Value="#213B5A"/>
+            </Style>
+            <Style Selector="ListBoxItem:selected">
+                <Setter Property="Background" Value="#263F68"/>
+                <Setter Property="Foreground" Value="#FFFFFF"/>
+            </Style>
+        </Grid.Styles>
         <shell:WindowTitleBar Grid.Row="0" TitleText="OMNISCOPE  /  LIVE GAME INTELLIGENCE" />
-        <TabControl Grid.Row="1" Background="#111827" BorderThickness="0">
+        <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0">
             <TabItem Header="LIVE OBSERVATORY">
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <Grid Margin="22" MinWidth="0" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="14">
                 <Grid Grid.Row="0" MinWidth="0" ColumnDefinitions="*,Auto" ColumnSpacing="18">
                     <StackPanel Spacing="4" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" Spacing="12">
-                            <Border Width="4" Height="34" Background="#77DDF4" CornerRadius="2"/>
+                            <Border Width="4" Height="34" Background="#3FE8FF" CornerRadius="2"/>
                             <StackPanel Spacing="0">
-                                <TextBlock Text="OMNISCOPE" FontSize="28" FontWeight="Black" Foreground="#F4F7FC"/>
-                                <TextBlock Text="VIBESKUA  /  GAME STATE OBSERVATORY" FontSize="10" Foreground="#82CEF2"/>
+                                <TextBlock Text="OMNISCOPE" FontSize="28" FontWeight="Black" Foreground="#ECF7FF"/>
+                                <TextBlock Text="VIBESKUA  /  GAME STATE OBSERVATORY" FontSize="10" Foreground="#65C8FF"/>
                             </StackPanel>
                         </StackPanel>
-                        <TextBlock Text="A live operational picture of the world, your avatar, and everything the client exposes." Foreground="#9DAFC3" FontSize="11" Margin="16,4,0,0"/>
+                        <TextBlock Text="A live operational picture of the world, your avatar, and everything the client exposes." Foreground="#91A9CB" FontSize="11" Margin="16,4,0,0"/>
                     </StackPanel>
-                    <Border Grid.Column="1" BorderBrush="#47637A" BorderThickness="1" CornerRadius="8" Padding="16,10" VerticalAlignment="Center" Background="#28384E">
+                    <Border Grid.Column="1" BorderBrush="#2E456D" BorderThickness="1" CornerRadius="8" Padding="16,10" VerticalAlignment="Center" Background="#182643">
                         <StackPanel Orientation="Horizontal" Spacing="12">
-                            <Ellipse x:Name="ConnectionIndicator" Width="9" Height="9" Fill="#F5CD83" VerticalAlignment="Center"/>
+                            <Ellipse x:Name="ConnectionIndicator" Width="9" Height="9" Fill="#FFD27F" VerticalAlignment="Center"/>
                             <StackPanel Spacing="2">
-                                <TextBlock x:Name="ConnectionText" Text="INITIALIZING TELEMETRY" Foreground="#C8F3FF" FontSize="12" FontWeight="Bold"/>
-                                <TextBlock x:Name="ClockText" Text="--:--:--" Foreground="#82CEF2" FontSize="11" FontFamily="Consolas"/>
+                                <TextBlock x:Name="ConnectionText" Text="INITIALIZING TELEMETRY" Foreground="#C8F5FF" FontSize="12" FontWeight="Bold"/>
+                                <TextBlock x:Name="ClockText" Text="--:--:--" Foreground="#65C8FF" FontSize="11" FontFamily="Consolas"/>
                             </StackPanel>
-                            <Border Width="1" Height="34" Background="#4B657F"/>
+                            <Border Width="1" Height="34" Background="#39527E"/>
                             <StackPanel Spacing="3">
-                                <TextBlock Text="REFRESH RATE" Foreground="#A6C5D9" FontSize="9" FontWeight="SemiBold"/>
+                                <TextBlock Text="REFRESH RATE" Foreground="#B5CBE9" FontSize="9" FontWeight="SemiBold"/>
                                 <ComboBox x:Name="TelemetryRateBox" Width="100" SelectedIndex="2" SelectionChanged="TelemetryRateBox_SelectionChanged">
                                     <ComboBoxItem Content="250 ms" Tag="250"/>
                                     <ComboBoxItem Content="500 ms" Tag="500"/>
@@ -53,87 +111,87 @@
                 </Grid>
 
                 <Grid Grid.Row="1" MinWidth="0" ColumnDefinitions="*,*,*,*" ColumnSpacing="12">
-                    <Border MinWidth="0" ClipToBounds="True" Background="#202E42" BorderBrush="#445B73" BorderThickness="1" CornerRadius="8" Padding="15">
+                    <Border MinWidth="0" ClipToBounds="True" Background="#151E37" BorderBrush="#33496F" BorderThickness="1" CornerRadius="8" Padding="15">
                         <Grid MinWidth="0" ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                            <Border Width="34" Height="34" CornerRadius="8" Background="#3A526B" VerticalAlignment="Center"><TextBlock Text="◈" Foreground="#77DDF4" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-                            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="WORLD / INSTANCE" Foreground="#A7B8C9" FontSize="9" TextWrapping="Wrap"/><TextBlock x:Name="MapMetric" Text="Awaiting world" Foreground="#F1F5FA" FontSize="17" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="RoomMetric" Text="Room --  /  -- players" Foreground="#A6C5D9" FontSize="10" TextWrapping="Wrap"/></StackPanel>
+                            <Border Width="34" Height="34" CornerRadius="8" Background="#2B4267" VerticalAlignment="Center"><TextBlock Text="◈" Foreground="#3FE8FF" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="WORLD / INSTANCE" Foreground="#A6B9D9" FontSize="9" TextWrapping="Wrap"/><TextBlock x:Name="MapMetric" Text="Awaiting world" Foreground="#E5F3FF" FontSize="17" FontWeight="Bold" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="RoomMetric" Text="Room --  /  -- players" Foreground="#B5CBE9" FontSize="10" TextWrapping="Wrap"/></StackPanel>
                         </Grid>
                     </Border>
-                    <Border Grid.Column="1" MinWidth="0" ClipToBounds="True" Background="#202E42" BorderBrush="#445B73" BorderThickness="1" CornerRadius="8" Padding="15">
+                    <Border Grid.Column="1" MinWidth="0" ClipToBounds="True" Background="#151E37" BorderBrush="#33496F" BorderThickness="1" CornerRadius="8" Padding="15">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                            <Border Width="34" Height="34" CornerRadius="8" Background="#3A526B" VerticalAlignment="Center"><TextBlock Text="♥" Foreground="#FF9EAA" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-                            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="VITALITY" Foreground="#A7B8C9" FontSize="9"/><TextBlock x:Name="VitalsMetric" Text="-- / -- HP" Foreground="#F1F5FA" FontSize="17" FontWeight="Bold"/><Border Height="4" Background="#39485A" CornerRadius="2"><Border x:Name="HealthProgressBar" HorizontalAlignment="Left" Width="0" Background="#FF9EAA" CornerRadius="2"/></Border></StackPanel>
+                            <Border Width="34" Height="34" CornerRadius="8" Background="#2B4267" VerticalAlignment="Center"><TextBlock Text="♥" Foreground="#FF83B9" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="VITALITY" Foreground="#A6B9D9" FontSize="9"/><TextBlock x:Name="VitalsMetric" Text="-- / -- HP" Foreground="#E5F3FF" FontSize="17" FontWeight="Bold"/><Border Height="4" Background="#273854" CornerRadius="2"><Border x:Name="HealthProgressBar" HorizontalAlignment="Left" Width="0" Background="#FF83B9" CornerRadius="2"/></Border></StackPanel>
                         </Grid>
                     </Border>
-                    <Border Grid.Column="2" MinWidth="0" ClipToBounds="True" Background="#202E42" BorderBrush="#445B73" BorderThickness="1" CornerRadius="8" Padding="15">
+                    <Border Grid.Column="2" MinWidth="0" ClipToBounds="True" Background="#151E37" BorderBrush="#33496F" BorderThickness="1" CornerRadius="8" Padding="15">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                            <Border Width="34" Height="34" CornerRadius="8" Background="#3A526B" VerticalAlignment="Center"><TextBlock Text="⌖" Foreground="#8BC5FF" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-                            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="ENTITY FIELD" Foreground="#A7B8C9" FontSize="9" TextWrapping="Wrap"/><TextBlock x:Name="EntityMetric" Text="0" Foreground="#F1F5FA" FontSize="17" FontWeight="Bold"/><TextBlock x:Name="EntitySubMetric" Text="No entities observed" Foreground="#A6C5D9" FontSize="10" TextWrapping="Wrap"/></StackPanel>
+                            <Border Width="34" Height="34" CornerRadius="8" Background="#2B4267" VerticalAlignment="Center"><TextBlock Text="⌖" Foreground="#8FBEFF" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="ENTITY FIELD" Foreground="#A6B9D9" FontSize="9" TextWrapping="Wrap"/><TextBlock x:Name="EntityMetric" Text="0" Foreground="#E5F3FF" FontSize="17" FontWeight="Bold"/><TextBlock x:Name="EntitySubMetric" Text="No entities observed" Foreground="#B5CBE9" FontSize="10" TextWrapping="Wrap"/></StackPanel>
                         </Grid>
                     </Border>
-                    <Border Grid.Column="3" MinWidth="0" ClipToBounds="True" Background="#202E42" BorderBrush="#445B73" BorderThickness="1" CornerRadius="8" Padding="15">
+                    <Border Grid.Column="3" MinWidth="0" ClipToBounds="True" Background="#151E37" BorderBrush="#33496F" BorderThickness="1" CornerRadius="8" Padding="15">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                            <Border Width="34" Height="34" CornerRadius="8" Background="#3A526B" VerticalAlignment="Center"><TextBlock Text="⌁" Foreground="#C1ADFF" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-                            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="POSITION / CELL" Foreground="#A7B8C9" FontSize="9" TextWrapping="Wrap"/><TextBlock x:Name="PositionMetric" Text="X --  /  Y --" Foreground="#F1F5FA" FontSize="17" FontWeight="Bold"/><TextBlock x:Name="CellMetric" Text="Cell --  /  Pad --" Foreground="#A6C5D9" FontSize="10" TextWrapping="Wrap"/></StackPanel>
+                            <Border Width="34" Height="34" CornerRadius="8" Background="#2B4267" VerticalAlignment="Center"><TextBlock Text="⌁" Foreground="#C493FF" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="POSITION / CELL" Foreground="#A6B9D9" FontSize="9" TextWrapping="Wrap"/><TextBlock x:Name="PositionMetric" Text="X --  /  Y --" Foreground="#E5F3FF" FontSize="17" FontWeight="Bold"/><TextBlock x:Name="CellMetric" Text="Cell --  /  Pad --" Foreground="#B5CBE9" FontSize="10" TextWrapping="Wrap"/></StackPanel>
                         </Grid>
                     </Border>
                 </Grid>
 
                 <Grid Grid.Row="2" MinWidth="0" ClipToBounds="True" ColumnDefinitions="1*,1.15*,1.15*" ColumnSpacing="14" MinHeight="410">
                     <Grid Grid.Column="0" RowDefinitions="Auto,*" RowSpacing="8">
-                        <Grid ColumnDefinitions="*,Auto"><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="01" Foreground="#72D8F3" FontSize="10" FontWeight="Bold"/><TextBlock Text="AVATAR TELEMETRY" Foreground="#C4E8F4" FontSize="11" FontWeight="Bold"/><TextBlock x:Name="AvatarFollowStatus" Text="LIVE" Foreground="#70DDB7" FontSize="9" VerticalAlignment="Center"/></StackPanel><Button x:Name="AvatarFollowButton" Grid.Column="1" Content="PAUSE" MinWidth="72" Padding="9,4" FontSize="9" Background="#334960" BorderBrush="#4C6683" BorderThickness="1" Foreground="#83DDF5" Click="AvatarFollowButton_Click"/></Grid>
-                        <Border Grid.Row="1" MinWidth="0" ClipToBounds="True" Background="#1B2739" BorderBrush="#41556D" BorderThickness="1" CornerRadius="8" Padding="16">
+                        <Grid ColumnDefinitions="*,Auto"><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="01" Foreground="#42D8F6" FontSize="10" FontWeight="Bold"/><TextBlock Text="AVATAR TELEMETRY" Foreground="#BDEEFF" FontSize="11" FontWeight="Bold"/><TextBlock x:Name="AvatarFollowStatus" Text="LIVE" Foreground="#79F2C3" FontSize="9" VerticalAlignment="Center"/></StackPanel><Button x:Name="AvatarFollowButton" Grid.Column="1" Content="PAUSE" MinWidth="72" Padding="9,4" FontSize="9" Background="#263B65" BorderBrush="#405C8A" BorderThickness="1" Foreground="#79E8FF" Click="AvatarFollowButton_Click"/></Grid>
+                        <Border Grid.Row="1" MinWidth="0" ClipToBounds="True" Background="#131D35" BorderBrush="#32496E" BorderThickness="1" CornerRadius="8" Padding="16">
                             <StackPanel Spacing="12">
-                                <StackPanel Spacing="3"><TextBlock Text="IDENTITY" Foreground="#A0B1C4" FontSize="9"/><TextBlock x:Name="PlayerNameText" Text="Waiting for player session" Foreground="#F4F7FC" FontSize="21" FontWeight="SemiBold"/><TextBlock x:Name="PlayerClassText" Text="Class: unavailable" Foreground="#B5C7D8" FontSize="11"/></StackPanel>
-                                <StackPanel Spacing="5"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="HEALTH" Foreground="#A7B8C9" FontSize="9"/><TextBlock x:Name="HealthText" Grid.Column="1" Text="-- / --" Foreground="#FFB0BA" FontSize="10"/></Grid><Border Height="7" Background="#39485A" CornerRadius="4"><Border x:Name="HealthDetailBar" Width="0" HorizontalAlignment="Left" Background="#FF9EAA" CornerRadius="4"/></Border></StackPanel>
-                                <StackPanel Spacing="5"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="MANA" Foreground="#A7B8C9" FontSize="9"/><TextBlock x:Name="ManaText" Grid.Column="1" Text="-- / --" Foreground="#9BCFFF" FontSize="10"/></Grid><Border Height="7" Background="#39485A" CornerRadius="4"><Border x:Name="ManaProgressBar" Width="0" HorizontalAlignment="Left" Background="#8BC5FF" CornerRadius="4"/></Border></StackPanel>
-                                <Border Height="1" Background="#41556D"/>
+                                <StackPanel Spacing="3"><TextBlock Text="IDENTITY" Foreground="#9CB2D2" FontSize="9"/><TextBlock x:Name="PlayerNameText" Text="Waiting for player session" Foreground="#ECF7FF" FontSize="21" FontWeight="SemiBold"/><TextBlock x:Name="PlayerClassText" Text="Class: unavailable" Foreground="#BED2EF" FontSize="11"/></StackPanel>
+                                <StackPanel Spacing="5"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="HEALTH" Foreground="#A6B9D9" FontSize="9"/><TextBlock x:Name="HealthText" Grid.Column="1" Text="-- / --" Foreground="#FFA0C8" FontSize="10"/></Grid><Border Height="7" Background="#273854" CornerRadius="4"><Border x:Name="HealthDetailBar" Width="0" HorizontalAlignment="Left" Background="#FF83B9" CornerRadius="4"/></Border></StackPanel>
+                                <StackPanel Spacing="5"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="MANA" Foreground="#A6B9D9" FontSize="9"/><TextBlock x:Name="ManaText" Grid.Column="1" Text="-- / --" Foreground="#9BC7FF" FontSize="10"/></Grid><Border Height="7" Background="#273854" CornerRadius="4"><Border x:Name="ManaProgressBar" Width="0" HorizontalAlignment="Left" Background="#8FBEFF" CornerRadius="4"/></Border></StackPanel>
+                                <Border Height="1" Background="#32496E"/>
                                 <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="12" ColumnSpacing="8">
-                                    <StackPanel><TextBlock Text="LEVEL / XP" Foreground="#A0B1C4" FontSize="9"/><TextBlock x:Name="LevelText" Text="--" Foreground="#EDF4FA" FontSize="16" FontWeight="SemiBold"/><TextBlock x:Name="XpText" Text="XP unavailable" Foreground="#78A8BA" FontSize="9"/><Border Height="4" Background="#39485A" CornerRadius="2" Margin="0,4,0,0"><Border x:Name="XpProgressBar" Width="0" HorizontalAlignment="Left" Background="#77DDF4" CornerRadius="2"/></Border></StackPanel>
-                                    <StackPanel Grid.Column="1"><TextBlock Text="PLAYER STATE" Foreground="#A0B1C4" FontSize="9"/><TextBlock x:Name="StateText" Text="UNKNOWN" Foreground="#EDF4FA" FontSize="16" FontWeight="SemiBold"/></StackPanel>
-                                    <StackPanel Grid.Row="1"><TextBlock Text="GOLD" Foreground="#A0B1C4" FontSize="9"/><TextBlock x:Name="GoldText" Text="--" Foreground="#F5CD83" FontSize="15"/></StackPanel>
-                                    <StackPanel Grid.Row="1" Grid.Column="1"><TextBlock Text="ADVENTURE COINS" Foreground="#A0B1C4" FontSize="9"/><TextBlock x:Name="CoinsText" Text="--" Foreground="#EDF4FA" FontSize="15"/></StackPanel>
-                                    <StackPanel Grid.Row="2"><TextBlock Text="GUILD" Foreground="#A0B1C4" FontSize="9"/><TextBlock x:Name="GuildText" Text="--" Foreground="#EDF4FA" FontSize="12"/></StackPanel>
-                                    <StackPanel Grid.Row="2" Grid.Column="1"><TextBlock Text="SERVER" Foreground="#A0B1C4" FontSize="9"/><TextBlock x:Name="ServerText" Text="--" Foreground="#EDF4FA" FontSize="12"/></StackPanel>
+                                    <StackPanel><TextBlock Text="LEVEL / XP" Foreground="#9CB2D2" FontSize="9"/><TextBlock x:Name="LevelText" Text="--" Foreground="#E1F2FF" FontSize="16" FontWeight="SemiBold"/><TextBlock x:Name="XpText" Text="XP unavailable" Foreground="#90B0C9" FontSize="9"/><Border Height="4" Background="#273854" CornerRadius="2" Margin="0,4,0,0"><Border x:Name="XpProgressBar" Width="0" HorizontalAlignment="Left" Background="#3FE8FF" CornerRadius="2"/></Border></StackPanel>
+                                    <StackPanel Grid.Column="1"><TextBlock Text="PLAYER STATE" Foreground="#9CB2D2" FontSize="9"/><TextBlock x:Name="StateText" Text="UNKNOWN" Foreground="#E1F2FF" FontSize="16" FontWeight="SemiBold"/></StackPanel>
+                                    <StackPanel Grid.Row="1"><TextBlock Text="GOLD" Foreground="#9CB2D2" FontSize="9"/><TextBlock x:Name="GoldText" Text="--" Foreground="#FFD27F" FontSize="15"/></StackPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="1"><TextBlock Text="ADVENTURE COINS" Foreground="#9CB2D2" FontSize="9"/><TextBlock x:Name="CoinsText" Text="--" Foreground="#E1F2FF" FontSize="15"/></StackPanel>
+                                    <StackPanel Grid.Row="2"><TextBlock Text="GUILD" Foreground="#9CB2D2" FontSize="9"/><TextBlock x:Name="GuildText" Text="--" Foreground="#E1F2FF" FontSize="12"/></StackPanel>
+                                    <StackPanel Grid.Row="2" Grid.Column="1"><TextBlock Text="SERVER" Foreground="#9CB2D2" FontSize="9"/><TextBlock x:Name="ServerText" Text="--" Foreground="#E1F2FF" FontSize="12"/></StackPanel>
                                 </Grid>
-                                <Border Height="1" Background="#41556D"/>
-                                <StackPanel Spacing="4"><TextBlock Text="SESSION SNAPSHOT" Foreground="#A0B1C4" FontSize="9"/><TextBlock x:Name="SessionText" Text="Telemetry will populate as the game exposes state." Foreground="#C0D0DE" FontSize="11" TextWrapping="Wrap"/></StackPanel>
+                                <Border Height="1" Background="#32496E"/>
+                                <StackPanel Spacing="4"><TextBlock Text="SESSION SNAPSHOT" Foreground="#9CB2D2" FontSize="9"/><TextBlock x:Name="SessionText" Text="Telemetry will populate as the game exposes state." Foreground="#B5CAE7" FontSize="11" TextWrapping="Wrap"/></StackPanel>
                             </StackPanel>
                         </Border>
                     </Grid>
 
                     <Grid Grid.Column="1" MinWidth="0" RowDefinitions="Auto,*" RowSpacing="8">
-                        <Grid ColumnDefinitions="*,Auto"><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="02" Foreground="#72D8F3" FontSize="10" FontWeight="Bold"/><TextBlock Text="ENTITY INTELLIGENCE" Foreground="#C4E8F4" FontSize="11" FontWeight="Bold"/></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"><TextBlock Text="SELECT TO INSPECT" Foreground="#8095AB" FontSize="9" VerticalAlignment="Center"/><Button x:Name="EntityFollowButton" Content="PAUSE" MinWidth="72" Padding="9,4" FontSize="9" Background="#334960" BorderBrush="#4C6683" BorderThickness="1" Foreground="#83DDF5" Click="EntityFollowButton_Click"/></StackPanel></Grid>
-                        <Border Grid.Row="1" MinWidth="0" ClipToBounds="True" Background="#1B2739" BorderBrush="#41556D" BorderThickness="1" CornerRadius="8" Padding="10">
+                        <Grid ColumnDefinitions="*,Auto"><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="02" Foreground="#42D8F6" FontSize="10" FontWeight="Bold"/><TextBlock Text="ENTITY INTELLIGENCE" Foreground="#BDEEFF" FontSize="11" FontWeight="Bold"/></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"><TextBlock Text="SELECT TO INSPECT" Foreground="#8299BD" FontSize="9" VerticalAlignment="Center"/><Button x:Name="EntityFollowButton" Content="PAUSE" MinWidth="72" Padding="9,4" FontSize="9" Background="#263B65" BorderBrush="#405C8A" BorderThickness="1" Foreground="#79E8FF" Click="EntityFollowButton_Click"/></StackPanel></Grid>
+                        <Border Grid.Row="1" MinWidth="0" ClipToBounds="True" Background="#131D35" BorderBrush="#32496E" BorderThickness="1" CornerRadius="8" Padding="10">
                             <Grid RowDefinitions="Auto,Auto,*,Auto">
-                                <Grid ColumnDefinitions="*,76,66,58" Margin="4,4,8,10"><TextBlock Text="ENTITY / CELL" Foreground="#A0B1C4" FontSize="9"/><TextBlock Grid.Column="1" Text="HP" Foreground="#A0B1C4" FontSize="9" HorizontalAlignment="Right"/><TextBlock Grid.Column="2" Text="STATE" Foreground="#A0B1C4" FontSize="9" HorizontalAlignment="Right"/><TextBlock Grid.Column="3" Text="ID" Foreground="#A0B1C4" FontSize="9" HorizontalAlignment="Right"/></Grid>
-                                <TextBox x:Name="EntitySearchBox" Grid.Row="1" Watermark="Filter entities by name, ID, or cell..." TextChanged="EntitySearchBox_TextChanged" Margin="2,0,2,8" Background="#2A3A50" Foreground="#E2EBF4" BorderBrush="#4B657F" FontSize="11"/><ListBox x:Name="EntityList" Grid.Row="2" Background="Transparent" BorderThickness="0" Foreground="#E2EBF4">
-                                    <ListBox.ItemTemplate><DataTemplate><Grid ColumnDefinitions="*,76,66,58" Margin="3,5"><StackPanel Spacing="2"><TextBlock Text="{Binding Name}" Foreground="#E2EBF4" FontSize="11" TextWrapping="Wrap"/><TextBlock Text="{Binding Cell}" Foreground="#A0B1C4" FontSize="9"/></StackPanel><TextBlock Grid.Column="1" Text="{Binding Health}" Foreground="#9ED8E8" FontSize="10" HorizontalAlignment="Right"/><TextBlock Grid.Column="2" Text="{Binding State}" Foreground="#9ED8E8" FontSize="9" HorizontalAlignment="Right"/><TextBlock Grid.Column="3" Text="{Binding Id}" Foreground="#6F9BAE" FontSize="9" HorizontalAlignment="Right"/></Grid></DataTemplate></ListBox.ItemTemplate>
+                                <Grid ColumnDefinitions="*,76,66,58" Margin="4,4,8,10"><TextBlock Text="ENTITY / CELL" Foreground="#9CB2D2" FontSize="9"/><TextBlock Grid.Column="1" Text="HP" Foreground="#9CB2D2" FontSize="9" HorizontalAlignment="Right"/><TextBlock Grid.Column="2" Text="STATE" Foreground="#9CB2D2" FontSize="9" HorizontalAlignment="Right"/><TextBlock Grid.Column="3" Text="ID" Foreground="#9CB2D2" FontSize="9" HorizontalAlignment="Right"/></Grid>
+                                <TextBox x:Name="EntitySearchBox" Grid.Row="1" Watermark="Filter entities by name, ID, or cell..." TextChanged="EntitySearchBox_TextChanged" Margin="2,0,2,8" Background="#1C2C4C" Foreground="#DFEFFF" BorderBrush="#39527E" FontSize="11"/><ListBox x:Name="EntityList" Grid.Row="2" Background="Transparent" BorderThickness="0" Foreground="#DFEFFF">
+                                    <ListBox.ItemTemplate><DataTemplate><Grid ColumnDefinitions="*,76,66,58" Margin="3,5"><StackPanel Spacing="2"><TextBlock Text="{Binding Name}" Foreground="#DFEFFF" FontSize="11" TextWrapping="Wrap"/><TextBlock Text="{Binding Cell}" Foreground="#9CB2D2" FontSize="9"/></StackPanel><TextBlock Grid.Column="1" Text="{Binding Health}" Foreground="#9AE8F4" FontSize="10" HorizontalAlignment="Right"/><TextBlock Grid.Column="2" Text="{Binding State}" Foreground="#9AE8F4" FontSize="9" HorizontalAlignment="Right"/><TextBlock Grid.Column="3" Text="{Binding Id}" Foreground="#809DBB" FontSize="9" HorizontalAlignment="Right"/></Grid></DataTemplate></ListBox.ItemTemplate>
                                 </ListBox>
-                                <Border Grid.Row="3" Margin="0,8,0,0" Padding="11" Background="#2A3A50" BorderBrush="#4B657F" BorderThickness="1" CornerRadius="6">
-                                    <StackPanel Spacing="4"><TextBlock Text="SELECTED ENTITY" Foreground="#A0B1C4" FontSize="9"/><TextBlock x:Name="SelectedEntityText" Text="Select a monster to inspect its live properties." Foreground="#EEF5FB" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock x:Name="SelectedEntityDetailsText" Text="Read-only entity inspection" Foreground="#B5C7D8" FontSize="10" TextWrapping="Wrap"/></StackPanel>
+                                <Border Grid.Row="3" Margin="0,8,0,0" Padding="11" Background="#1C2C4C" BorderBrush="#39527E" BorderThickness="1" CornerRadius="6">
+                                    <StackPanel Spacing="4"><TextBlock Text="SELECTED ENTITY" Foreground="#9CB2D2" FontSize="9"/><TextBlock x:Name="SelectedEntityText" Text="Select a monster to inspect its live properties." Foreground="#E6F4FF" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock x:Name="SelectedEntityDetailsText" Text="Read-only entity inspection" Foreground="#BED2EF" FontSize="10" TextWrapping="Wrap"/></StackPanel>
                                 </Border>
                             </Grid>
                         </Border>
                     </Grid>
 
                     <Grid Grid.Column="2" MinWidth="0" RowDefinitions="Auto,*" RowSpacing="8">
-                        <Grid ColumnDefinitions="*,Auto"><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="03" Foreground="#72D8F3" FontSize="10" FontWeight="Bold"/><TextBlock Text="EVENT CHRONOLOGY" Foreground="#C4E8F4" FontSize="11" FontWeight="Bold"/></StackPanel><Button x:Name="EventFollowButton" Grid.Column="1" Content="PAUSE" MinWidth="72" Padding="9,4" FontSize="9" Background="#334960" BorderBrush="#4C6683" BorderThickness="1" Foreground="#83DDF5" Click="EventFollowButton_Click"/></Grid>
-                        <Border Grid.Row="1" MinWidth="0" ClipToBounds="True" Background="#1B2739" BorderBrush="#41556D" BorderThickness="1" CornerRadius="8" Padding="12">
+                        <Grid ColumnDefinitions="*,Auto"><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="03" Foreground="#42D8F6" FontSize="10" FontWeight="Bold"/><TextBlock Text="EVENT CHRONOLOGY" Foreground="#BDEEFF" FontSize="11" FontWeight="Bold"/></StackPanel><Button x:Name="EventFollowButton" Grid.Column="1" Content="PAUSE" MinWidth="72" Padding="9,4" FontSize="9" Background="#263B65" BorderBrush="#405C8A" BorderThickness="1" Foreground="#79E8FF" Click="EventFollowButton_Click"/></Grid>
+                        <Border Grid.Row="1" MinWidth="0" ClipToBounds="True" Background="#131D35" BorderBrush="#32496E" BorderThickness="1" CornerRadius="8" Padding="12">
                             <Grid RowDefinitions="Auto,*">
                                 <Grid ColumnDefinitions="*,Auto">
-                                    <TextBlock Text="Observed state transitions / newest first" Foreground="#A0B1C4" FontSize="9"/>
-                                    <TextBlock x:Name="EventCountText" Grid.Column="1" Text="0 EVENTS" Foreground="#72D7F2" FontSize="9"/>
+                                    <TextBlock Text="Observed state transitions / newest first" Foreground="#9CB2D2" FontSize="9"/>
+                                    <TextBlock x:Name="EventCountText" Grid.Column="1" Text="0 EVENTS" Foreground="#4BE1FA" FontSize="9"/>
                                 </Grid>
                                 <ListBox x:Name="EventList" Grid.Row="1" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Background="Transparent" BorderThickness="0" Margin="0,8,0,0">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
                                             <StackPanel Spacing="3" Margin="2,5">
                                                 <Grid ColumnDefinitions="Auto,*">
-                                                    <TextBlock Text="{Binding Time}" Foreground="#72D7F2" FontSize="9" FontFamily="Consolas"/>
-                                                    <TextBlock Grid.Column="1" Text="{Binding DisplayCategory}" Foreground="#E2EBF4" FontSize="10" Margin="10,0,0,0"/>
+                                                    <TextBlock Text="{Binding Time}" Foreground="#4BE1FA" FontSize="9" FontFamily="Consolas"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding DisplayCategory}" Foreground="#DFEFFF" FontSize="10" Margin="10,0,0,0"/>
                                                 </Grid>
-                                                <TextBlock Text="{Binding Detail}" Foreground="#A6B6C9" FontSize="9" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding Detail}" Foreground="#A3B8D6" FontSize="9" TextWrapping="Wrap"/>
                                             </StackPanel>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
@@ -145,26 +203,26 @@
 
                 <Grid Grid.Row="3" MinWidth="0" ClipToBounds="True" ColumnDefinitions="*,*,*,*" ColumnSpacing="14" MinHeight="250">
                     <Grid Grid.Column="0" RowDefinitions="Auto,*" RowSpacing="8">
-                        <Grid ColumnDefinitions="*,Auto"><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="04" Foreground="#72D8F3" FontSize="10" FontWeight="Bold"/><TextBlock Text="WORLD ROSTER" Foreground="#C4E8F4" FontSize="11" FontWeight="Bold"/></StackPanel><Button x:Name="PlayerFollowButton" Grid.Column="1" Content="PAUSE" MinWidth="72" Padding="9,4" FontSize="9" Background="#334960" BorderBrush="#4C6683" BorderThickness="1" Foreground="#83DDF5" Click="PlayerFollowButton_Click"/></Grid>
-                        <Border Grid.Row="1" MinWidth="0" ClipToBounds="True" Background="#1B2739" BorderBrush="#41556D" BorderThickness="1" CornerRadius="8" Padding="12"><Grid RowDefinitions="Auto,*"><TextBlock x:Name="RosterMetric" Text="Players in instance: --" Foreground="#A0B1C4" FontSize="9"/><ListBox x:Name="PlayerList" Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="0,6,0,0"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Foreground="#E2EBF4" FontSize="11" Margin="3,5"/></DataTemplate></ListBox.ItemTemplate></ListBox></Grid></Border>
+                        <Grid ColumnDefinitions="*,Auto"><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="04" Foreground="#42D8F6" FontSize="10" FontWeight="Bold"/><TextBlock Text="WORLD ROSTER" Foreground="#BDEEFF" FontSize="11" FontWeight="Bold"/></StackPanel><Button x:Name="PlayerFollowButton" Grid.Column="1" Content="PAUSE" MinWidth="72" Padding="9,4" FontSize="9" Background="#263B65" BorderBrush="#405C8A" BorderThickness="1" Foreground="#79E8FF" Click="PlayerFollowButton_Click"/></Grid>
+                        <Border Grid.Row="1" MinWidth="0" ClipToBounds="True" Background="#131D35" BorderBrush="#32496E" BorderThickness="1" CornerRadius="8" Padding="12"><Grid RowDefinitions="Auto,*"><TextBlock x:Name="RosterMetric" Text="Players in instance: --" Foreground="#9CB2D2" FontSize="9"/><ListBox x:Name="PlayerList" Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="0,6,0,0"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Foreground="#DFEFFF" FontSize="11" Margin="3,5"/></DataTemplate></ListBox.ItemTemplate></ListBox></Grid></Border>
                     </Grid>
                     <Grid Grid.Column="1" RowDefinitions="Auto,*" RowSpacing="8">
-                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="05" Foreground="#72D8F3" FontSize="10" FontWeight="Bold"/><TextBlock Text="ACTIVE AURAS" Foreground="#C4E8F4" FontSize="11" FontWeight="Bold"/></StackPanel>
-                        <Border Grid.Row="1" Background="#1B2739" BorderBrush="#41556D" BorderThickness="1" CornerRadius="8" Padding="12"><Grid RowDefinitions="Auto,*"><TextBlock x:Name="AuraMetric" Text="Self effects: 0" Foreground="#A0B1C4" FontSize="9"/><ListBox x:Name="AuraList" Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="0,6,0,0"><ListBox.ItemTemplate><DataTemplate><StackPanel Spacing="2" Margin="3,4"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Name}" Foreground="#E2EBF4" FontSize="10" TextWrapping="Wrap"/><TextBlock Grid.Column="1" Text="{Binding Stacks}" Foreground="#83DDF2" FontSize="9"/></Grid><TextBlock Text="{Binding Duration}" Foreground="#A6B6C9" FontSize="9"/></StackPanel></DataTemplate></ListBox.ItemTemplate></ListBox></Grid></Border>
+                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="05" Foreground="#42D8F6" FontSize="10" FontWeight="Bold"/><TextBlock Text="ACTIVE AURAS" Foreground="#BDEEFF" FontSize="11" FontWeight="Bold"/></StackPanel>
+                        <Border Grid.Row="1" Background="#131D35" BorderBrush="#32496E" BorderThickness="1" CornerRadius="8" Padding="12"><Grid RowDefinitions="Auto,*"><TextBlock x:Name="AuraMetric" Text="Self effects: 0" Foreground="#9CB2D2" FontSize="9"/><ListBox x:Name="AuraList" Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="0,6,0,0"><ListBox.ItemTemplate><DataTemplate><StackPanel Spacing="2" Margin="3,4"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Name}" Foreground="#DFEFFF" FontSize="10" TextWrapping="Wrap"/><TextBlock Grid.Column="1" Text="{Binding Stacks}" Foreground="#7BEAFF" FontSize="9"/></Grid><TextBlock Text="{Binding Duration}" Foreground="#A3B8D6" FontSize="9"/></StackPanel></DataTemplate></ListBox.ItemTemplate></ListBox></Grid></Border>
                     </Grid>
                     <Grid Grid.Column="2" RowDefinitions="Auto,*" RowSpacing="8">
-                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="06" Foreground="#72D8F3" FontSize="10" FontWeight="Bold"/><TextBlock Text="SKILL MATRIX" Foreground="#C4E8F4" FontSize="11" FontWeight="Bold"/></StackPanel>
-                        <Border Grid.Row="1" Background="#1B2739" BorderBrush="#41556D" BorderThickness="1" CornerRadius="8" Padding="12"><Grid RowDefinitions="Auto,*"><TextBlock x:Name="SkillMetric" Text="Combat engine: idle" Foreground="#A0B1C4" FontSize="9"/><ListBox x:Name="SkillList" Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="0,6,0,0"><ListBox.ItemTemplate><DataTemplate><StackPanel Spacing="2" Margin="3,4"><Grid ColumnDefinitions="Auto,*,Auto"><TextBlock Text="{Binding Slot}" Foreground="#72D7F2" FontSize="9"/><TextBlock Grid.Column="1" Text="{Binding Name}" Foreground="#E2EBF4" FontSize="10" Margin="8,0,0,0"/><TextBlock Grid.Column="2" Text="{Binding Cooldown}" Foreground="#B5C7D8" FontSize="9"/></Grid><TextBlock Text="{Binding Description}" Foreground="#A6B6C9" FontSize="9" TextTrimming="CharacterEllipsis"/></StackPanel></DataTemplate></ListBox.ItemTemplate></ListBox></Grid></Border>
+                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="06" Foreground="#42D8F6" FontSize="10" FontWeight="Bold"/><TextBlock Text="SKILL MATRIX" Foreground="#BDEEFF" FontSize="11" FontWeight="Bold"/></StackPanel>
+                        <Border Grid.Row="1" Background="#131D35" BorderBrush="#32496E" BorderThickness="1" CornerRadius="8" Padding="12"><Grid RowDefinitions="Auto,*"><TextBlock x:Name="SkillMetric" Text="Combat engine: idle" Foreground="#9CB2D2" FontSize="9"/><ListBox x:Name="SkillList" Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="0,6,0,0"><ListBox.ItemTemplate><DataTemplate><StackPanel Spacing="2" Margin="3,4"><Grid ColumnDefinitions="Auto,*,Auto"><TextBlock Text="{Binding Slot}" Foreground="#4BE1FA" FontSize="9"/><TextBlock Grid.Column="1" Text="{Binding Name}" Foreground="#DFEFFF" FontSize="10" Margin="8,0,0,0"/><TextBlock Grid.Column="2" Text="{Binding Cooldown}" Foreground="#BED2EF" FontSize="9"/></Grid><TextBlock Text="{Binding Description}" Foreground="#A3B8D6" FontSize="9" TextTrimming="CharacterEllipsis"/></StackPanel></DataTemplate></ListBox.ItemTemplate></ListBox></Grid></Border>
                     </Grid>
                     <Grid Grid.Column="3" MinWidth="0" RowDefinitions="Auto,*" RowSpacing="8">
-                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="07" Foreground="#72D8F3" FontSize="10" FontWeight="Bold"/><TextBlock Text="SESSION ANALYTICS" Foreground="#C4E8F4" FontSize="11" FontWeight="Bold"/></StackPanel>
-                        <Border Grid.Row="1" MinWidth="0" ClipToBounds="True" Background="#1B2739" BorderBrush="#41556D" BorderThickness="1" CornerRadius="8" Padding="13"><StackPanel Spacing="10"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="SESSION TIME" Foreground="#A0B1C4" FontSize="9"/><TextBlock x:Name="SessionTimeMetric" Grid.Column="1" Text="--:--:--" Foreground="#EDF4FA" FontSize="12" FontWeight="Bold"/></Grid><Grid ColumnDefinitions="*,Auto"><TextBlock Text="KILLS" Foreground="#A0B1C4" FontSize="9"/><TextBlock x:Name="KillsMetric" Grid.Column="1" Text="0" Foreground="#EDF4FA" FontSize="13"/></Grid><Grid ColumnDefinitions="*,Auto"><TextBlock Text="Observed Drops" Foreground="#A0B1C4" FontSize="9"/><TextBlock x:Name="DropsMetric" Grid.Column="1" Text="0" Foreground="#EDF4FA" FontSize="13"/></Grid><Grid ColumnDefinitions="*,Auto"><TextBlock Text="DEATHS" Foreground="#A0B1C4" FontSize="9"/><TextBlock x:Name="DeathsMetric" Grid.Column="1" Text="0" Foreground="#EDF4FA" FontSize="13"/></Grid><Grid ColumnDefinitions="*,Auto"><TextBlock Text="KILLS / MIN" Foreground="#A0B1C4" FontSize="9"/><TextBlock x:Name="KpmMetric" Grid.Column="1" Text="0.0" Foreground="#75E1C0" FontSize="13"/></Grid><Border Height="1" Background="#41556D"/><Grid ColumnDefinitions="*,Auto"><TextBlock Text="INVENTORY" Foreground="#A0B1C4" FontSize="9"/><TextBlock x:Name="InventoryMetric" Grid.Column="1" Text="-- / --" Foreground="#EDF4FA" FontSize="11"/></Grid><Border Height="6" Background="#39485A" CornerRadius="3"><Border x:Name="InventoryProgressBar" Width="0" HorizontalAlignment="Left" Background="#C1ADFF" CornerRadius="3"/></Border><TextBlock x:Name="QuestMetric" Text="Quests: -- active / -- ready" Foreground="#B5C7D8" FontSize="9"/><ListBox x:Name="QuestList" Height="58" Background="Transparent" BorderThickness="0" Margin="0,2,0,0"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Foreground="#B8D8E8" FontSize="9" Margin="2,3" TextTrimming="CharacterEllipsis"/></DataTemplate></ListBox.ItemTemplate></ListBox><TextBlock Text="INVENTORY SNAPSHOT" Foreground="#A0B1C4" FontSize="9" Margin="0,4,0,0"/><ListBox x:Name="InventoryList" Height="78" Background="Transparent" BorderThickness="0"><ListBox.ItemTemplate><DataTemplate><Grid ColumnDefinitions="*,Auto" Margin="2,3"><TextBlock Text="{Binding Name}" Foreground="#B8D8E8" FontSize="9" TextTrimming="CharacterEllipsis" TextWrapping="Wrap"/><TextBlock Grid.Column="1" Text="{Binding Quantity}" Foreground="#83DDF2" FontSize="9"/></Grid></DataTemplate></ListBox.ItemTemplate></ListBox></StackPanel></Border>
+                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="07" Foreground="#42D8F6" FontSize="10" FontWeight="Bold"/><TextBlock Text="SESSION ANALYTICS" Foreground="#BDEEFF" FontSize="11" FontWeight="Bold"/></StackPanel>
+                        <Border Grid.Row="1" MinWidth="0" ClipToBounds="True" Background="#131D35" BorderBrush="#32496E" BorderThickness="1" CornerRadius="8" Padding="13"><StackPanel Spacing="10"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="SESSION TIME" Foreground="#9CB2D2" FontSize="9"/><TextBlock x:Name="SessionTimeMetric" Grid.Column="1" Text="--:--:--" Foreground="#E1F2FF" FontSize="12" FontWeight="Bold"/></Grid><Grid ColumnDefinitions="*,Auto"><TextBlock Text="KILLS" Foreground="#9CB2D2" FontSize="9"/><TextBlock x:Name="KillsMetric" Grid.Column="1" Text="0" Foreground="#E1F2FF" FontSize="13"/></Grid><Grid ColumnDefinitions="*,Auto"><TextBlock Text="Observed Drops" Foreground="#9CB2D2" FontSize="9"/><TextBlock x:Name="DropsMetric" Grid.Column="1" Text="0" Foreground="#E1F2FF" FontSize="13"/></Grid><Grid ColumnDefinitions="*,Auto"><TextBlock Text="DEATHS" Foreground="#9CB2D2" FontSize="9"/><TextBlock x:Name="DeathsMetric" Grid.Column="1" Text="0" Foreground="#E1F2FF" FontSize="13"/></Grid><Grid ColumnDefinitions="*,Auto"><TextBlock Text="KILLS / MIN" Foreground="#9CB2D2" FontSize="9"/><TextBlock x:Name="KpmMetric" Grid.Column="1" Text="0.0" Foreground="#7CF2C5" FontSize="13"/></Grid><Border Height="1" Background="#32496E"/><Grid ColumnDefinitions="*,Auto"><TextBlock Text="INVENTORY" Foreground="#9CB2D2" FontSize="9"/><TextBlock x:Name="InventoryMetric" Grid.Column="1" Text="-- / --" Foreground="#E1F2FF" FontSize="11"/></Grid><Border Height="6" Background="#273854" CornerRadius="3"><Border x:Name="InventoryProgressBar" Width="0" HorizontalAlignment="Left" Background="#C493FF" CornerRadius="3"/></Border><TextBlock x:Name="QuestMetric" Text="Quests: -- active / -- ready" Foreground="#BED2EF" FontSize="9"/><ListBox x:Name="QuestList" Height="58" Background="Transparent" BorderThickness="0" Margin="0,2,0,0"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Foreground="#C3D9F2" FontSize="9" Margin="2,3" TextTrimming="CharacterEllipsis"/></DataTemplate></ListBox.ItemTemplate></ListBox><TextBlock Text="INVENTORY SNAPSHOT" Foreground="#9CB2D2" FontSize="9" Margin="0,4,0,0"/><ListBox x:Name="InventoryList" Height="78" Background="Transparent" BorderThickness="0"><ListBox.ItemTemplate><DataTemplate><Grid ColumnDefinitions="*,Auto" Margin="2,3"><TextBlock Text="{Binding Name}" Foreground="#C3D9F2" FontSize="9" TextTrimming="CharacterEllipsis" TextWrapping="Wrap"/><TextBlock Grid.Column="1" Text="{Binding Quantity}" Foreground="#7BEAFF" FontSize="9"/></Grid></DataTemplate></ListBox.ItemTemplate></ListBox></StackPanel></Border>
                     </Grid>
                 </Grid>
 
                 <Grid Grid.Row="4" ColumnDefinitions="*,Auto">
-                    <TextBlock Text="OMNISCOPE  /  READ-ONLY TELEMETRY  /  SOURCE: PUBLIC VIBESKUA GAME INTERFACES" Foreground="#74879D" FontSize="9"/>
-                    <TextBlock Grid.Column="1" Text="750 MS POLL  •  BOUNDED EVENT HISTORY" Foreground="#74879D" FontSize="9"/>
+                    <TextBlock Text="OMNISCOPE  /  READ-ONLY TELEMETRY  /  SOURCE: PUBLIC VIBESKUA GAME INTERFACES" Foreground="#7F96B8" FontSize="9"/>
+                    <TextBlock Grid.Column="1" Text="750 MS POLL  •  BOUNDED EVENT HISTORY" Foreground="#7F96B8" FontSize="9"/>
                 </Grid>
                 </Grid>
             </ScrollViewer>
@@ -174,13 +232,13 @@
                     <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="16">
                         <StackPanel Spacing="4">
                             <StackPanel Orientation="Horizontal" Spacing="10">
-                                <Border Width="4" Height="30" Background="#85E0F4" CornerRadius="2"/>
+                                <Border Width="4" Height="30" Background="#68E8FF" CornerRadius="2"/>
                                 <StackPanel Spacing="0">
-                                    <TextBlock Text="DATA INTELLIGENCE" FontSize="21" FontWeight="Bold" Foreground="#F4F7FC"/>
-                                    <TextBlock Text="SEARCH THE GAME CLIENT AND MAP INDEX" FontSize="9" FontWeight="SemiBold" Foreground="#82CEF2"/>
+                                    <TextBlock Text="DATA INTELLIGENCE" FontSize="21" FontWeight="Bold" Foreground="#ECF7FF"/>
+                                    <TextBlock Text="SEARCH THE GAME CLIENT AND MAP INDEX" FontSize="9" FontWeight="SemiBold" Foreground="#65C8FF"/>
                                 </StackPanel>
                             </StackPanel>
-                            <TextBlock Text="Choose a workspace, search, then select a result. Available actions appear beside the details." FontSize="11" Foreground="#B1C4D6" TextWrapping="Wrap" Margin="14,2,0,0"/>
+                            <TextBlock Text="Choose a workspace, search, then select a result. Available actions appear beside the details." FontSize="11" Foreground="#B5CBE9" TextWrapping="Wrap" Margin="14,2,0,0"/>
                         </StackPanel>
                         <WrapPanel Grid.Column="1" VerticalAlignment="Center">
                             <Button Content="REFRESH GAME DATA" Click="RefreshDataCatalog_Click" Margin="0,0,8,0"/>
@@ -188,34 +246,34 @@
                         </WrapPanel>
                     </Grid>
 
-                    <TabControl Grid.Row="1" Background="#172235" BorderBrush="#425B76" BorderThickness="1">
+                    <TabControl Grid.Row="1" Background="#0D162D" BorderBrush="#35507B" BorderThickness="1">
                         <TabItem Header="GAME SWF  /  GAME DATA">
                             <Grid Margin="12" RowDefinitions="Auto,Auto,Auto,*" RowSpacing="10">
                                 <Grid Grid.Row="0" ColumnDefinitions="*,*,*" ColumnSpacing="10">
-                                    <Border Background="#28384E" BorderBrush="#4B657F" BorderThickness="1" CornerRadius="7" Padding="11">
+                                    <Border Background="#182643" BorderBrush="#39527E" BorderThickness="1" CornerRadius="7" Padding="11">
                                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                            <Border Width="34" Height="34" CornerRadius="7" Background="#3A526B"><TextBlock Text="Q" Foreground="#62E4FA" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-                                            <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="SOURCE FILES" Foreground="#7EB5C8" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="SourceFileCountText" Text="0" Foreground="#F1F5FA" FontSize="21" FontWeight="Bold"/><TextBlock Text=" Decompiled ActionScript files" Foreground="#A8B8CB" FontSize="9"/></StackPanel>
+                                            <Border Width="34" Height="34" CornerRadius="7" Background="#2B4267"><TextBlock Text="Q" Foreground="#46EDFF" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                                            <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="SOURCE FILES" Foreground="#9DC5DB" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="SourceFileCountText" Text="0" Foreground="#E5F3FF" FontSize="21" FontWeight="Bold"/><TextBlock Text=" Decompiled ActionScript files" Foreground="#A6BCD9" FontSize="9"/></StackPanel>
                                         </Grid>
                                     </Border>
-                                    <Border Grid.Column="1" Background="#28384E" BorderBrush="#4B657F" BorderThickness="1" CornerRadius="7" Padding="11">
+                                    <Border Grid.Column="1" Background="#182643" BorderBrush="#39527E" BorderThickness="1" CornerRadius="7" Padding="11">
                                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                            <Border Width="34" Height="34" CornerRadius="7" Background="#4A4266"><TextBlock Text="S" Foreground="#C1ADFF" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-                                            <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="CLIENT SYSTEMS" Foreground="#C1ADFF" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="ClientSystemCountText" Text="0" Foreground="#F1F5FA" FontSize="21" FontWeight="Bold"/><TextBlock Text="Distinct client code categories" Foreground="#A8B8CB" FontSize="9"/></StackPanel>
+                                            <Border Width="34" Height="34" CornerRadius="7" Background="#57366F"><TextBlock Text="S" Foreground="#C493FF" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                                            <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="CLIENT SYSTEMS" Foreground="#C493FF" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="ClientSystemCountText" Text="0" Foreground="#E5F3FF" FontSize="21" FontWeight="Bold"/><TextBlock Text="Distinct client code categories" Foreground="#A6BCD9" FontSize="9"/></StackPanel>
                                         </Grid>
                                     </Border>
-                                    <Border Grid.Column="2" Background="#28384E" BorderBrush="#4B657F" BorderThickness="1" CornerRadius="7" Padding="11">
+                                    <Border Grid.Column="2" Background="#182643" BorderBrush="#39527E" BorderThickness="1" CornerRadius="7" Padding="11">
                                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                            <Border Width="34" Height="34" CornerRadius="7" Background="#315A50"><TextBlock Text="{}" Foreground="#77DFB8" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-                                            <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="FUNCTIONS INDEXED" Foreground="#70DDB7" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="ClientFunctionCountText" Text="0" Foreground="#F1F5FA" FontSize="21" FontWeight="Bold"/><TextBlock Text="Functions across client source" Foreground="#A8B8CB" FontSize="9"/></StackPanel>
+                                            <Border Width="34" Height="34" CornerRadius="7" Background="#1E6258"><TextBlock Text="{}" Foreground="#7CF2C5" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                                            <StackPanel Grid.Column="1" Spacing="2"><TextBlock Text="FUNCTIONS INDEXED" Foreground="#79F2C3" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="ClientFunctionCountText" Text="0" Foreground="#E5F3FF" FontSize="21" FontWeight="Bold"/><TextBlock Text="Functions across client source" Foreground="#A6BCD9" FontSize="9"/></StackPanel>
                                         </Grid>
                                     </Border>
                                 </Grid>
 
                                 <Grid Grid.Row="1" RowDefinitions="Auto,Auto" RowSpacing="8">
-                                    <TextBox x:Name="DataSearchBox" Grid.Row="0" MinHeight="46" Watermark="Search classes, functions, packets, UI, maps, client systems, or IDs..." TextChanged="DataSearchBox_TextChanged" Background="#243248" Foreground="#EEF5FB" BorderBrush="#5B9FC4" FontSize="14" Padding="13,10"/>
+                                    <TextBox x:Name="DataSearchBox" Grid.Row="0" MinHeight="46" Watermark="Search classes, functions, packets, UI, maps, client systems, or IDs..." TextChanged="DataSearchBox_TextChanged" Background="#111D37" Foreground="#E6F4FF" BorderBrush="#45D6F0" FontSize="14" Padding="13,10"/>
                                     <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,190" ColumnSpacing="10">
-                                        <TextBlock Text="SHOW" Foreground="#A8C8DB" FontSize="9" FontWeight="Bold" VerticalAlignment="Center"/>
+                                        <TextBlock Text="SHOW" Foreground="#B5D0E8" FontSize="9" FontWeight="Bold" VerticalAlignment="Center"/>
                                         <ComboBox x:Name="DataCategoryBox" Grid.Column="1" MinHeight="36" SelectedIndex="0" SelectionChanged="DataCategoryBox_SelectionChanged">
                                             <ComboBoxItem Content="All Client Code"/>
                                             <ComboBoxItem Content="Client Core"/>
@@ -228,7 +286,7 @@
                                             <ComboBoxItem Content="Game Systems"/>
                                             <ComboBoxItem Content="Other Client Code"/>
                                         </ComboBox>
-                                        <TextBlock Grid.Column="2" Text="SORT" Foreground="#A8C8DB" FontSize="9" FontWeight="Bold" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="2" Text="SORT" Foreground="#B5D0E8" FontSize="9" FontWeight="Bold" VerticalAlignment="Center"/>
                                         <ComboBox x:Name="DataSortBox" Grid.Column="3" MinHeight="36" SelectedIndex="0" SelectionChanged="DataSortBox_SelectionChanged">
                                             <ComboBoxItem Content="Name (A-Z)"/>
                                             <ComboBoxItem Content="Name (Z-A)"/>
@@ -242,28 +300,28 @@
                                 <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="10">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <Button x:Name="DecompileSwfButton" Content="INDEX GAME SWF" Click="DecompileSwf_Click"/>
-                                        <TextBlock Text="Downloads and decompiles the latest AQW client, then indexes its ActionScript source." Foreground="#A9BACD" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                        <TextBlock Text="Downloads and decompiles the latest AQW client, then indexes its ActionScript source." Foreground="#AABFDC" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                     </StackPanel>
-                                    <TextBlock x:Name="SwfSourceStatusText" Grid.Column="1" Text="GAME CLIENT NOT INDEXED" Foreground="#70B8CB" FontSize="9" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="SwfSourceStatusText" Grid.Column="1" Text="GAME CLIENT NOT INDEXED" Foreground="#5FDDF1" FontSize="9" VerticalAlignment="Center"/>
                                 </Grid>
 
                                 <Grid Grid.Row="3" ColumnDefinitions="0.92*,1.08*" ColumnSpacing="10" MinHeight="0">
-                                    <Border Background="#1C2A3D" BorderBrush="#4B657F" BorderThickness="1" CornerRadius="7" ClipToBounds="True" Padding="10">
+                                    <Border Background="#121D35" BorderBrush="#39527E" BorderThickness="1" CornerRadius="7" ClipToBounds="True" Padding="10">
                                         <Grid RowDefinitions="Auto,*">
                                             <Grid ColumnDefinitions="*,Auto" Margin="2,0,2,8">
-                                                <TextBlock Text="GAME RESULTS" Foreground="#C4E8F4" FontSize="11" FontWeight="Bold"/>
-                                                <TextBlock x:Name="DataResultMetric" Grid.Column="1" Text="0 MATCHES" Foreground="#7DDCF7" FontSize="9"/>
+                                                <TextBlock Text="GAME RESULTS" Foreground="#BDEEFF" FontSize="11" FontWeight="Bold"/>
+                                                <TextBlock x:Name="DataResultMetric" Grid.Column="1" Text="0 MATCHES" Foreground="#6CEAFF" FontSize="9"/>
                                             </Grid>
                                             <ListBox x:Name="DataRecordList" Grid.Row="1" Background="Transparent" BorderThickness="0" SelectionChanged="DataRecordList_SelectionChanged" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                                 <ListBox.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Border Background="#28384E" BorderBrush="#4B6178" BorderThickness="0,0,0,1" CornerRadius="4" Padding="10" Margin="1,3">
+                                                        <Border Background="#182643" BorderBrush="#2B4267" BorderThickness="0,0,0,1" CornerRadius="4" Padding="10" Margin="1,3">
                                                             <StackPanel Spacing="4">
                                                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                                                    <TextBlock Text="{Binding Name}" Foreground="#EDF4F9" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                                                                    <TextBlock Grid.Column="1" Text="{Binding DisplayCategory}" Foreground="#83DDF2" FontSize="9" VerticalAlignment="Top" TextWrapping="Wrap" MaxWidth="104" TextAlignment="Right"/>
+                                                                    <TextBlock Text="{Binding Name}" Foreground="#DFF1FF" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                                    <TextBlock Grid.Column="1" Text="{Binding DisplayCategory}" Foreground="#7BEAFF" FontSize="9" VerticalAlignment="Top" TextWrapping="Wrap" MaxWidth="104" TextAlignment="Right"/>
                                                                 </Grid>
-                                                                <TextBlock Text="{Binding Summary}" Foreground="#B8C9D8" FontSize="10" TextWrapping="Wrap"/>
+                                                                <TextBlock Text="{Binding Summary}" Foreground="#BBD0EA" FontSize="10" TextWrapping="Wrap"/>
                                                             </StackPanel>
                                                         </Border>
                                                     </DataTemplate>
@@ -272,18 +330,18 @@
                                         </Grid>
                                     </Border>
 
-                                    <Border Grid.Column="1" Background="#1C2A3D" BorderBrush="#4B657F" BorderThickness="1" CornerRadius="7" ClipToBounds="True" Padding="12">
+                                    <Border Grid.Column="1" Background="#121D35" BorderBrush="#39527E" BorderThickness="1" CornerRadius="7" ClipToBounds="True" Padding="12">
                                         <Grid RowDefinitions="Auto,Auto,Auto,*">
                                             <StackPanel Spacing="4">
-                                                <TextBlock Text="SELECTED RESULT" Foreground="#7DDCF7" FontSize="9" FontWeight="Bold"/>
-                                                <TextBlock x:Name="DataDetailTitle" Text="Choose a result on the left" Foreground="#F4F7FC" FontSize="17" FontWeight="Bold" TextWrapping="Wrap"/>
-                                                <TextBlock x:Name="DataDetailMeta" Text="Details and source information will appear here." Foreground="#B5C7D8" FontSize="10" TextWrapping="Wrap"/>
+                                                <TextBlock Text="SELECTED RESULT" Foreground="#6CEAFF" FontSize="9" FontWeight="Bold"/>
+                                                <TextBlock x:Name="DataDetailTitle" Text="Choose a result on the left" Foreground="#ECF7FF" FontSize="17" FontWeight="Bold" TextWrapping="Wrap"/>
+                                                <TextBlock x:Name="DataDetailMeta" Text="Details and source information will appear here." Foreground="#BED2EF" FontSize="10" TextWrapping="Wrap"/>
                                             </StackPanel>
-                                            <Border Grid.Row="1" Height="1" Background="#455C73" Margin="0,9,0,9"/>
-                                            <TextBlock Grid.Row="2" Text="DECOMPILED ACTIONSCRIPT" Foreground="#8EB7C6" FontSize="9" FontWeight="Bold"/>
-                                            <Border Grid.Row="3" Background="#172235" BorderBrush="#526780" BorderThickness="1" CornerRadius="5">
+                                            <Border Grid.Row="1" Height="1" Background="#334A73" Margin="0,9,0,9"/>
+                                            <TextBlock Grid.Row="2" Text="DECOMPILED ACTIONSCRIPT" Foreground="#A5C7DB" FontSize="9" FontWeight="Bold"/>
+                                            <Border Grid.Row="3" Background="#0D162D" BorderBrush="#46608A" BorderThickness="1" CornerRadius="5">
                                                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                                                    <TextBlock x:Name="DataDetailText" Margin="11" Foreground="#E3EBF4" FontFamily="Cascadia Code" FontSize="11" TextWrapping="NoWrap" Text="Select a source file to inspect its classes, functions, and decompiled ActionScript."/>
+                                                    <TextBlock x:Name="DataDetailText" Margin="11" Foreground="#DFF0FF" FontFamily="Cascadia Code" FontSize="11" TextWrapping="NoWrap" Text="Select a source file to inspect its classes, functions, and decompiled ActionScript."/>
                                                 </ScrollViewer>
                                             </Border>
                                         </Grid>
@@ -296,35 +354,35 @@
                             <Grid Margin="12" RowDefinitions="Auto,Auto,Auto,*" RowSpacing="10">
                                 <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="12">
                                     <StackPanel Spacing="3">
-                                        <TextBlock Text="MAP SWF LOOKUP" Foreground="#F4F7FC" FontSize="19" FontWeight="Bold"/>
-                                        <TextBlock Text="Browse saved map-item links, scan map SWFs for shop IDs, and generate map-specific scripts." Foreground="#B1C4D6" FontSize="10" TextWrapping="Wrap"/>
+                                        <TextBlock Text="MAP SWF LOOKUP" Foreground="#ECF7FF" FontSize="19" FontWeight="Bold"/>
+                                        <TextBlock Text="Browse saved map-item links, scan map SWFs for shop IDs, and generate map-specific scripts." Foreground="#B5CBE9" FontSize="10" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <WrapPanel Grid.Column="1" VerticalAlignment="Center"><Button x:Name="AnalyzeMapButton" Content="LOAD SAVED MAP INDEX" Click="AnalyzeMap_Click" Margin="0,0,6,0"/><Button x:Name="ScanMapShopsButton" Content="SCAN CURRENT MAP SHOPS" Click="ScanCurrentMapShops_Click" Margin="0,0,6,0"/><Button x:Name="GenerateCurrentMapQuestsButton" Content="GENERATE CURRENT MAP QUESTS" Click="GenerateCurrentMapQuests_Click"/></WrapPanel>
                                 </Grid>
 
                                 <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="10">
-                                    <Border Background="#28384E" BorderBrush="#4B657F" BorderThickness="1" CornerRadius="7" Padding="10">
-                                        <StackPanel Spacing="2"><TextBlock Text="SAVED MAPS" Foreground="#70B8CB" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="MapSwfMapCountText" Text="0" Foreground="#F1F5FA" FontSize="21" FontWeight="Bold"/><TextBlock Text="Maps in local cache" Foreground="#A8B8CB" FontSize="9"/></StackPanel>
+                                    <Border Background="#182643" BorderBrush="#39527E" BorderThickness="1" CornerRadius="7" Padding="10">
+                                        <StackPanel Spacing="2"><TextBlock Text="SAVED MAPS" Foreground="#5FDDF1" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="MapSwfMapCountText" Text="0" Foreground="#E5F3FF" FontSize="21" FontWeight="Bold"/><TextBlock Text="Maps in local cache" Foreground="#A6BCD9" FontSize="9"/></StackPanel>
                                     </Border>
-                                    <Border Grid.Column="1" Background="#28384E" BorderBrush="#4B657F" BorderThickness="1" CornerRadius="7" Padding="10">
-                                        <StackPanel Spacing="2"><TextBlock Text="MAP SHOPS" Foreground="#C1ADFF" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="MapShopRecordCountText" Text="0" Foreground="#F1F5FA" FontSize="21" FontWeight="Bold"/><TextBlock Text="IDs extracted from map SWFs" Foreground="#A8B8CB" FontSize="9"/></StackPanel>
+                                    <Border Grid.Column="1" Background="#182643" BorderBrush="#39527E" BorderThickness="1" CornerRadius="7" Padding="10">
+                                        <StackPanel Spacing="2"><TextBlock Text="MAP SHOPS" Foreground="#C493FF" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="MapShopRecordCountText" Text="0" Foreground="#E5F3FF" FontSize="21" FontWeight="Bold"/><TextBlock Text="IDs extracted from map SWFs" Foreground="#A6BCD9" FontSize="9"/></StackPanel>
                                     </Border>
-                                    <Border Grid.Column="2" Background="#28384E" BorderBrush="#4B657F" BorderThickness="1" CornerRadius="7" Padding="10">
-                                        <StackPanel Spacing="2"><TextBlock Text="MAP ITEMS" Foreground="#70B8CB" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="MapItemRecordCountText" Text="0" Foreground="#F1F5FA" FontSize="21" FontWeight="Bold"/><TextBlock Text="Quest-linked map item references" Foreground="#A8B8CB" FontSize="9"/></StackPanel>
+                                    <Border Grid.Column="2" Background="#182643" BorderBrush="#39527E" BorderThickness="1" CornerRadius="7" Padding="10">
+                                        <StackPanel Spacing="2"><TextBlock Text="MAP ITEMS" Foreground="#5FDDF1" FontSize="9" FontWeight="Bold"/><TextBlock x:Name="MapItemRecordCountText" Text="0" Foreground="#E5F3FF" FontSize="21" FontWeight="Bold"/><TextBlock Text="Quest-linked map item references" Foreground="#A6BCD9" FontSize="9"/></StackPanel>
                                     </Border>
                                 </Grid>
 
                                 <Grid Grid.Row="2" RowDefinitions="Auto,Auto" RowSpacing="8">
-                                    <TextBox x:Name="MapSearchBox" Grid.Row="0" MinHeight="46" Watermark="Search maps, shop IDs, map items, quest IDs, or files..." TextChanged="MapSearchBox_TextChanged" Background="#243248" Foreground="#EEF5FB" BorderBrush="#5B9FC4" FontSize="14" Padding="13,10"/>
+                                    <TextBox x:Name="MapSearchBox" Grid.Row="0" MinHeight="46" Watermark="Search maps, shop IDs, map items, quest IDs, or files..." TextChanged="MapSearchBox_TextChanged" Background="#111D37" Foreground="#E6F4FF" BorderBrush="#45D6F0" FontSize="14" Padding="13,10"/>
                                     <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,190" ColumnSpacing="10">
-                                        <TextBlock Text="MAPS" Foreground="#A8C8DB" FontSize="9" FontWeight="Bold" VerticalAlignment="Center"/>
+                                        <TextBlock Text="MAPS" Foreground="#B5D0E8" FontSize="9" FontWeight="Bold" VerticalAlignment="Center"/>
                                         <ComboBox x:Name="MapCategoryBox" Grid.Column="1" MinHeight="36" SelectedIndex="0" SelectionChanged="MapCategoryBox_SelectionChanged">
                                             <ComboBoxItem Content="All maps"/>
                                             <ComboBoxItem Content="Current map"/>
                                             <ComboBoxItem Content="Map shops"/>
                                             <ComboBoxItem Content="Map items"/>
                                         </ComboBox>
-                                        <TextBlock Grid.Column="2" Text="SORT" Foreground="#A8C8DB" FontSize="9" FontWeight="Bold" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="2" Text="SORT" Foreground="#B5D0E8" FontSize="9" FontWeight="Bold" VerticalAlignment="Center"/>
                                         <ComboBox x:Name="MapSortBox" Grid.Column="3" MinHeight="36" SelectedIndex="0" SelectionChanged="MapSortBox_SelectionChanged">
                                             <ComboBoxItem Content="Map (A-Z)"/>
                                             <ComboBoxItem Content="Quest ID (low-high)"/>
@@ -337,23 +395,23 @@
                                 </Grid>
 
                                 <Grid Grid.Row="3" ColumnDefinitions="0.92*,1.08*" ColumnSpacing="10" MinHeight="0">
-                                    <Border Background="#1C2A3D" BorderBrush="#4B657F" BorderThickness="1" CornerRadius="7" ClipToBounds="True" Padding="10">
+                                    <Border Background="#121D35" BorderBrush="#39527E" BorderThickness="1" CornerRadius="7" ClipToBounds="True" Padding="10">
                                         <Grid RowDefinitions="Auto,*">
                                             <Grid ColumnDefinitions="*,Auto" Margin="2,0,2,8">
-                                                <TextBlock Text="MAP RESULTS" Foreground="#C4E8F4" FontSize="11" FontWeight="Bold"/>
-                                                <TextBlock x:Name="MapResultMetric" Grid.Column="1" Text="0 MAP RECORDS" Foreground="#7DDCF7" FontSize="9"/>
+                                                <TextBlock Text="MAP RESULTS" Foreground="#BDEEFF" FontSize="11" FontWeight="Bold"/>
+                                                <TextBlock x:Name="MapResultMetric" Grid.Column="1" Text="0 MAP RECORDS" Foreground="#6CEAFF" FontSize="9"/>
                                             </Grid>
                                             <ListBox x:Name="MapRecordList" Grid.Row="1" Background="Transparent" BorderThickness="0" SelectionChanged="MapRecordList_SelectionChanged" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                                 <ListBox.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Border Background="#28384E" BorderBrush="#4B6178" BorderThickness="0,0,0,1" CornerRadius="4" Padding="10" Margin="1,3">
+                                                        <Border Background="#182643" BorderBrush="#2B4267" BorderThickness="0,0,0,1" CornerRadius="4" Padding="10" Margin="1,3">
                                                             <StackPanel Spacing="4">
                                                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                                                    <TextBlock Text="{Binding Name}" Foreground="#EDF4F9" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                                                                    <TextBlock Grid.Column="1" Text="{Binding DisplayCategory}" Foreground="#83DDF2" FontSize="9" VerticalAlignment="Top"/>
+                                                                    <TextBlock Text="{Binding Name}" Foreground="#DFF1FF" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                                    <TextBlock Grid.Column="1" Text="{Binding DisplayCategory}" Foreground="#7BEAFF" FontSize="9" VerticalAlignment="Top"/>
                                                                 </Grid>
-                                                                <TextBlock Text="{Binding Summary}" Foreground="#B8C9D8" FontSize="10" TextWrapping="Wrap"/>
-                                                                <TextBlock Text="{Binding Metadata}" Foreground="#6A99AB" FontSize="9" TextWrapping="Wrap"/>
+                                                                <TextBlock Text="{Binding Summary}" Foreground="#BBD0EA" FontSize="10" TextWrapping="Wrap"/>
+                                                                <TextBlock Text="{Binding Metadata}" Foreground="#7D9FC0" FontSize="9" TextWrapping="Wrap"/>
                                                             </StackPanel>
                                                         </Border>
                                                     </DataTemplate>
@@ -362,16 +420,16 @@
                                         </Grid>
                                     </Border>
 
-                                    <Border Grid.Column="1" Background="#1C2A3D" BorderBrush="#4B657F" BorderThickness="1" CornerRadius="7" ClipToBounds="True" Padding="12">
+                                    <Border Grid.Column="1" Background="#121D35" BorderBrush="#39527E" BorderThickness="1" CornerRadius="7" ClipToBounds="True" Padding="12">
                                         <Grid RowDefinitions="Auto,Auto,Auto,*">
                                             <StackPanel Spacing="4">
-                                                <TextBlock Text="MAP / SHOP DETAILS" Foreground="#7DDCF7" FontSize="9" FontWeight="Bold"/>
-                                                <TextBlock x:Name="MapDetailTitle" Text="Choose a map link on the left" Foreground="#F4F7FC" FontSize="17" FontWeight="Bold" TextWrapping="Wrap"/>
-                                                <TextBlock x:Name="MapDetailMeta" Text="Map file and linked quest information will appear here." Foreground="#B5C7D8" FontSize="10" TextWrapping="Wrap"/>
+                                                <TextBlock Text="MAP / SHOP DETAILS" Foreground="#6CEAFF" FontSize="9" FontWeight="Bold"/>
+                                                <TextBlock x:Name="MapDetailTitle" Text="Choose a map link on the left" Foreground="#ECF7FF" FontSize="17" FontWeight="Bold" TextWrapping="Wrap"/>
+                                                <TextBlock x:Name="MapDetailMeta" Text="Map file and linked quest information will appear here." Foreground="#BED2EF" FontSize="10" TextWrapping="Wrap"/>
                                             </StackPanel>
-                                            <Border Grid.Row="1" Height="1" Background="#455C73" Margin="0,9,0,9"/>
+                                            <Border Grid.Row="1" Height="1" Background="#334A73" Margin="0,9,0,9"/>
                                             <WrapPanel Grid.Row="2"><Button x:Name="LoadMapShopButton" Content="LOAD SHOP" Click="LoadMapShop_Click" IsEnabled="False" Margin="0,0,6,5"/><Button x:Name="GenerateMergeShopButton" Content="GENERATE MERGE SHOP" Click="GenerateMergeShop_Click" IsEnabled="False" Margin="0,0,6,5"/><Button x:Name="GenerateMapQuestsButton" Content="GENERATE MAP QUESTS" Click="GenerateMapQuests_Click" IsEnabled="False" Margin="0,0,6,5"/></WrapPanel>
-                                            <TextBox x:Name="MapDetailText" Grid.Row="3" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Background="#172235" Foreground="#E3EBF4" BorderBrush="#526780" FontSize="11" Padding="11" Text="Load the saved map index for map items, or scan the currently joined map SWF to find its shop IDs."/>
+                                            <TextBox x:Name="MapDetailText" Grid.Row="3" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Background="#0D162D" Foreground="#DFF0FF" BorderBrush="#46608A" FontSize="11" Padding="11" Text="Load the saved map index for map items, or scan the currently joined map SWF to find its shop IDs."/>
                                         </Grid>
                                     </Border>
                                 </Grid>
@@ -380,8 +438,8 @@
                     </TabControl>
 
                     <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="2,0,2,0">
-                        <TextBlock x:Name="DataStatusText" Text="Ready. Refresh game data or load the saved map index to begin." Foreground="#A9BACD" FontSize="9" TextWrapping="Wrap"/>
-                        <TextBlock Grid.Column="1" Text="LOCAL DATA  /  READ-ONLY UNTIL YOU CHOOSE AN ACTION" Foreground="#8299AE" FontSize="9" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="DataStatusText" Text="Ready. Refresh game data or load the saved map index to begin." Foreground="#AABFDC" FontSize="9" TextWrapping="Wrap"/>
+                        <TextBlock Grid.Column="1" Text="LOCAL DATA  /  READ-ONLY UNTIL YOU CHOOSE AN ACTION" Foreground="#829ABD" FontSize="9" VerticalAlignment="Center"/>
                     </Grid>
                 </Grid>
             </TabItem>
