@@ -2,6 +2,8 @@ using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Avalonia.Controls;
+using Avalonia.Controls.Documents;
+using Avalonia.Media;
 using Avalonia.Interactivity;
 using Avalonia.Input;
 using Avalonia.Threading;
@@ -22,6 +24,18 @@ namespace Skua.Plugin.Omniscope;
 public partial class OmniscopeWindow : Window
 {
     private readonly IScriptInterface _bot;
+    private static readonly Regex ActionScriptTokenRegex = new(
+        @"(?<comment>//.*|/\*.*?(?:\*/|$))|(?<string>""(?:\\.|[^""\\])*""|'(?:\\.|[^'\\])*')|(?<keyword>\b(?:package|import|class|interface|extends|implements|public|private|protected|internal|static|final|override|function|var|const|return|new|this|super|if|else|for|while|do|switch|case|break|continue|try|catch|throw|with|as|is|in|instanceof|typeof|void|delete|true|false|null|undefined|namespace)\b)|(?<number>\b(?:0[xX][0-9A-Fa-f]+|\d+(?:\.\d+)?)\b)|(?<function>\b[A-Za-z_$][A-Za-z0-9_$]*(?=\s*\())|(?<type>\b[A-Z][A-Za-z0-9_]*\b)",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly SolidColorBrush CodeDefaultBrush = new(Color.Parse("#E3EBF4"));
+    private static readonly SolidColorBrush CodeLineNumberBrush = new(Color.Parse("#71869F"));
+    private static readonly SolidColorBrush CodeCommentBrush = new(Color.Parse("#83B99B"));
+    private static readonly SolidColorBrush CodeStringBrush = new(Color.Parse("#E6C58C"));
+    private static readonly SolidColorBrush CodeKeywordBrush = new(Color.Parse("#C2A7FF"));
+    private static readonly SolidColorBrush CodeNumberBrush = new(Color.Parse("#F0A8B2"));
+    private static readonly SolidColorBrush CodeFunctionBrush = new(Color.Parse("#83C9F4"));
+    private static readonly SolidColorBrush CodeTypeBrush = new(Color.Parse("#79DCC7"));
+    private const int MaximumVisibleCodeCharacters = 200_000;
     private readonly DispatcherTimer _refreshTimer = new() { Interval = TimeSpan.FromMilliseconds(750) };
     private readonly ObservableCollection<EntityRow> _entities = [];
     private EntityRow[] _entitySnapshot = [];
@@ -403,7 +417,92 @@ public partial class OmniscopeWindow : Window
 
         DataDetailTitle.Text = record.Name;
         DataDetailMeta.Text = $"{record.DisplayCategory}  /  {record.Metadata}";
-        DataDetailText.Text = $"{record.Details}{Environment.NewLine}{Environment.NewLine}SOURCE INSPECTION:{Environment.NewLine}This is decompiled AQW client code. It describes client-side implementation and does not establish server-side validation.";
+        SetSyntaxHighlightedDetails(
+            $"{record.Details}{Environment.NewLine}{Environment.NewLine}SOURCE INSPECTION:{Environment.NewLine}This is decompiled AQW client code. It describes client-side implementation and does not establish server-side validation.");
+    }
+
+    /// <summary>
+    /// Renders the selected ActionScript record with a compact syntax palette and line numbers.
+    /// </summary>
+    /// <param name="source">The source text and metadata to display.</param>
+    private void SetSyntaxHighlightedDetails(string source)
+    {
+        DataDetailText.Inlines.Clear();
+        if (string.IsNullOrEmpty(source))
+            return;
+
+        bool truncated = source.Length > MaximumVisibleCodeCharacters;
+        string displaySource = truncated ? source[..MaximumVisibleCodeCharacters] : source;
+        string[] lines = displaySource.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        bool insideBlockComment = false;
+
+        for (int index = 0; index < lines.Length; index++)
+        {
+            DataDetailText.Inlines.Add(new Run($"{index + 1,4}  ") { Foreground = CodeLineNumberBrush });
+            AppendHighlightedCodeLine(lines[index], ref insideBlockComment);
+            if (index < lines.Length - 1)
+                DataDetailText.Inlines.Add(new LineBreak());
+        }
+
+        if (truncated)
+        {
+            DataDetailText.Inlines.Add(new LineBreak());
+            DataDetailText.Inlines.Add(new Run("[DISPLAY TRUNCATED: SOURCE EXCEEDS 200,000 CHARACTERS]") { Foreground = CodeCommentBrush });
+        }
+    }
+
+    /// <summary>
+    /// Tokenizes one source line while carrying block-comment state between lines.
+    /// </summary>
+    /// <param name="line">The source line to tokenize.</param>
+    /// <param name="insideBlockComment">Whether a block comment started on an earlier line.</param>
+    private void AppendHighlightedCodeLine(string line, ref bool insideBlockComment)
+    {
+        int position = 0;
+        while (position < line.Length)
+        {
+            if (insideBlockComment)
+            {
+                int commentEnd = line.IndexOf("*/", position, StringComparison.Ordinal);
+                if (commentEnd < 0)
+                {
+                    DataDetailText.Inlines.Add(new Run(line[position..]) { Foreground = CodeCommentBrush });
+                    return;
+                }
+
+                int endPosition = commentEnd + 2;
+                DataDetailText.Inlines.Add(new Run(line[position..endPosition]) { Foreground = CodeCommentBrush });
+                position = endPosition;
+                insideBlockComment = false;
+                continue;
+            }
+
+            Match match = ActionScriptTokenRegex.Match(line, position);
+            if (!match.Success)
+            {
+                DataDetailText.Inlines.Add(new Run(line[position..]) { Foreground = CodeDefaultBrush });
+                return;
+            }
+
+            if (match.Index > position)
+                DataDetailText.Inlines.Add(new Run(line[position..match.Index]) { Foreground = CodeDefaultBrush });
+
+            SolidColorBrush brush = match.Groups["comment"].Success ? CodeCommentBrush
+                : match.Groups["string"].Success ? CodeStringBrush
+                : match.Groups["keyword"].Success ? CodeKeywordBrush
+                : match.Groups["number"].Success ? CodeNumberBrush
+                : match.Groups["function"].Success ? CodeFunctionBrush
+                : match.Groups["type"].Success ? CodeTypeBrush
+                : CodeDefaultBrush;
+            DataDetailText.Inlines.Add(new Run(match.Value) { Foreground = brush });
+
+            if (match.Groups["comment"].Success &&
+                match.Value.StartsWith("/*", StringComparison.Ordinal) &&
+                !match.Value.EndsWith("*/", StringComparison.Ordinal))
+                insideBlockComment = true;
+
+            position = match.Index + match.Length;
+        }
     }
 
     private void RefreshDataCatalog()
@@ -477,7 +576,7 @@ public partial class OmniscopeWindow : Window
             DataDetailMeta.Text = _dataSnapshot.Count == 0
                 ? "Use INDEX GAME SWF to download and decompile the current AQW client."
                 : "Try another client category or search term.";
-            DataDetailText.Text = string.Empty;
+            DataDetailText.Inlines.Clear();
         }
         else if (DataRecordList.SelectedItem is not GameDataRecord selected || !matches.Contains(selected))
         {
@@ -716,20 +815,22 @@ public partial class OmniscopeWindow : Window
 
         string mapFilePath = _bot.Map.FilePath?.Split('?')[0] ?? string.Empty;
         string mapName = GetMapScriptName(_bot.Map.Name);
-        if (string.IsNullOrWhiteSpace(mapFilePath) || !File.Exists(mapFilePath))
+        if (string.IsNullOrWhiteSpace(mapFilePath) || string.IsNullOrWhiteSpace(mapName))
         {
-            DataStatusText.Text = "MAP SHOP SCAN FAILED  /  CURRENT MAP SWF IS NOT AVAILABLE LOCALLY";
+            DataStatusText.Text = "MAP SHOP SCAN FAILED  /  THE CURRENT MAP DID NOT EXPOSE A VALID SWF PATH";
             return;
         }
 
         _mapShopIndexRunning = true;
         ScanMapShopsButton.IsEnabled = false;
-        ScanMapShopsButton.Content = "SCANNING MAP SWF...";
-        DataStatusText.Text = $"DECOMPILING /{mapName} TO EXTRACT SHOP IDS";
+        ScanMapShopsButton.Content = "FETCHING + SCANNING...";
+        DataStatusText.Text = $"FETCHING THE MAP SWF FOR /{mapName}";
         try
         {
+            string localMapSwfPath = await AqwMapSwfDownloader.DownloadAsync(mapFilePath);
+            DataStatusText.Text = $"MAP SWF READY  /  DECOMPILING {Path.GetFileName(localMapSwfPath)}";
             string ffdecDirectory = SwfSourceIndexer.ResolveFfdecDirectory();
-            SwfSourceIndexResult result = await SwfSourceIndexer.DecompileAsync(mapFilePath, ffdecDirectory);
+            SwfSourceIndexResult result = await SwfSourceIndexer.DecompileAsync(localMapSwfPath, ffdecDirectory);
             int[] shopIds = LocationSwfShopIndexer.ReadShopIds(result.ExportDirectory);
             List<GameDataRecord> mapShopRecords = shopIds
                 .Select(shopId => CreateMapShopRecord(shopId, mapName, mapFilePath))
