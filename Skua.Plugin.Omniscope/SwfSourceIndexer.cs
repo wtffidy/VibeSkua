@@ -36,6 +36,191 @@ internal sealed class GameDataRecord
     public object? SourceObject { get; init; }
 }
 
+/// <summary>
+/// Exports and indexes ActionScript source from the packaged AQW client SWF using the bundled FFDec tool.
+/// </summary>
+internal static class SwfSourceIndexer
+{
+    private const int MaximumSourceFiles = 5000;
+    private const long MaximumSourceBytes = 64L * 1024 * 1024;
+    private const long MaximumFileBytes = 512L * 1024;
+    private static readonly Regex ClassNameRegex = new(@"(?:public|internal|protected)?\s*(?:final\s+)?class\s+([A-Za-z0-9_]+)", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex FunctionRegex = new(@"\bfunction\s+([A-Za-z0-9_]+)\s*\(", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// Locates the bundled FFDec JAR relative to either the application or plugin directory.
+    /// </summary>
+    /// <returns>The directory containing ffdec.jar.</returns>
+    public static string ResolveFfdecDirectory()
+    {
+        string assemblyDirectory = Path.GetDirectoryName(typeof(SwfSourceIndexer).Assembly.Location) ?? AppContext.BaseDirectory;
+        string[] candidates = new[]
+        {
+            Path.Combine(AppContext.BaseDirectory, "FFDec"),
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "FFDec")),
+            Path.Combine(assemblyDirectory, "FFDec"),
+            Path.GetFullPath(Path.Combine(assemblyDirectory, "..", "FFDec"))
+        };
+
+        string? ffdecDirectory = candidates
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(static path => File.Exists(Path.Combine(path, "ffdec.jar")));
+
+        return ffdecDirectory ?? throw new DirectoryNotFoundException(
+            $"The bundled FFDec runtime was not found. Checked: {string.Join("; ", candidates)}");
+    }
+
+    /// <summary>
+    /// Resolves the private Java runtime packaged beside FFDec, with system Java as a development fallback.
+    /// </summary>
+    /// <param name="ffdecDirectory">Directory containing ffdec.jar and the optional Runtime folder.</param>
+    /// <returns>The Java executable path.</returns>
+    private static string ResolveJavaExecutable(string ffdecDirectory)
+    {
+        string bundledJava = Path.Combine(ffdecDirectory, "Runtime", "bin", "java.exe");
+        if (File.Exists(bundledJava))
+            return bundledJava;
+
+        string? javaHome = Environment.GetEnvironmentVariable("JAVA_HOME");
+        if (!string.IsNullOrWhiteSpace(javaHome))
+        {
+            string javaHomeExecutable = Path.Combine(javaHome, "bin", "java.exe");
+            if (File.Exists(javaHomeExecutable))
+                return javaHomeExecutable;
+        }
+
+        string? pathEnvironment = Environment.GetEnvironmentVariable("PATH");
+        if (!string.IsNullOrWhiteSpace(pathEnvironment))
+        {
+            foreach (string path in pathEnvironment.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                string pathJava = Path.Combine(path, "java.exe");
+                if (File.Exists(pathJava))
+                    return pathJava;
+            }
+        }
+
+        throw new FileNotFoundException(
+            $"VibeSkua's bundled Java 21 runtime is missing. Expected: {bundledJava}. Run package-build.ps1 to restore the portable runtime.",
+            bundledJava);
+    }
+
+    /// <summary>
+    /// Decompiles the supplied SWF when no matching export exists, then builds a bounded searchable source index.
+    /// </summary>
+    /// <param name="swfPath">Path to the packaged AQW client SWF.</param>
+    /// <param name="ffdecDirectory">Directory containing the bundled FFDec JAR.</param>
+    /// <param name="cancellationToken">Token used to cancel the export operation.</param>
+    /// <returns>The export directory and indexed ActionScript source records.</returns>
+    public static async Task<SwfSourceIndexResult> DecompileAsync(string swfPath, string ffdecDirectory, CancellationToken cancellationToken = default)
+    {
+        if (!File.Exists(swfPath))
+            throw new FileNotFoundException("The packaged AQW client SWF could not be found.", swfPath);
+
+        string ffdecJarPath = Path.GetFullPath(Path.Combine(ffdecDirectory, "ffdec.jar"));
+        if (!File.Exists(ffdecJarPath))
+            throw new FileNotFoundException("The bundled FFDec JAR could not be found.", ffdecJarPath);
+
+        FileInfo swfInfo = new(swfPath);
+        string versionKey = $"{swfInfo.Length}_{swfInfo.LastWriteTimeUtc.Ticks}";
+        string exportDirectory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "VibeSkua",
+            "Omniscope",
+            "DecompiledClient",
+            versionKey);
+        string markerPath = Path.Combine(exportDirectory, ".omniscope-export-complete");
+        Directory.CreateDirectory(exportDirectory);
+
+        bool hasExportedScripts = Directory.EnumerateFiles(exportDirectory, "*.as", SearchOption.AllDirectories).Any();
+        if (!File.Exists(markerPath) || !hasExportedScripts)
+        {
+            ProcessStartInfo startInfo = new(ResolveJavaExecutable(ffdecDirectory))
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                WorkingDirectory = Environment.SystemDirectory
+            };
+            startInfo.Environment["VLC_VERBOSE"] = "-1";
+            startInfo.ArgumentList.Add("-Xmx1536m");
+            startInfo.ArgumentList.Add("--enable-native-access=ALL-UNNAMED");
+            startInfo.ArgumentList.Add("--add-opens=java.base/java.lang=ALL-UNNAMED");
+            startInfo.ArgumentList.Add("--add-opens=java.base/java.io=ALL-UNNAMED");
+            startInfo.ArgumentList.Add("--add-opens=java.base/java.util=ALL-UNNAMED");
+            startInfo.ArgumentList.Add("--add-opens=java.base/sun.nio.fs=ALL-UNNAMED");
+            startInfo.ArgumentList.Add("--add-opens=java.desktop/sun.awt=ALL-UNNAMED");
+            startInfo.ArgumentList.Add("--add-opens=java.desktop/sun.java2d=ALL-UNNAMED");
+            startInfo.ArgumentList.Add("-Djava.net.preferIPv4Stack=true");
+            startInfo.ArgumentList.Add("-Djna.nosys=true");
+            startInfo.ArgumentList.Add("-Djava.util.Arrays.useLegacyMergeSort=true");
+            startInfo.ArgumentList.Add("-jar");
+            startInfo.ArgumentList.Add(ffdecJarPath);
+            startInfo.ArgumentList.Add("-export");
+            startInfo.ArgumentList.Add("script");
+            startInfo.ArgumentList.Add(exportDirectory);
+            startInfo.ArgumentList.Add(swfPath);
+
+            using Process process = new() { StartInfo = startInfo };
+            try
+            {
+                if (!process.Start())
+                    throw new InvalidOperationException("FFDec could not be started.");
+            }
+            catch (System.ComponentModel.Win32Exception ex)
+            {
+                throw new InvalidOperationException(
+                    $"The bundled Java runtime could not be started ({ex.NativeErrorCode}). Executable: {startInfo.FileName}",
+                    ex);
+            }
+
+            try
+            {
+                process.PriorityClass = ProcessPriorityClass.BelowNormal;
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                // Priority adjustment is optional; decompilation can continue with the default priority.
+            }
+
+            Task<string> standardOutputTask = process.StandardOutput.ReadToEndAsync();
+            Task<string> standardErrorTask = process.StandardError.ReadToEndAsync();
+            try
+            {
+                await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                if (!process.HasExited)
+                    process.Kill(entireProcessTree: true);
+
+                throw;
+            }
+
+            await Task.WhenAll(standardOutputTask, standardErrorTask).ConfigureAwait(false);
+
+            string standardOutput = await standardOutputTask.ConfigureAwait(false);
+            string standardError = await standardErrorTask.ConfigureAwait(false);
+            if (process.ExitCode != 0)
+            {
+                string diagnostic = string.Join(Environment.NewLine, new[] { standardError, standardOutput }.Where(static value => !string.IsNullOrWhiteSpace(value)));
+                if (diagnostic.Length > 5000)
+                    diagnostic = diagnostic[^5000..];
+
+                throw new InvalidOperationException($"FFDec exited with code {process.ExitCode}.{Environment.NewLine}{diagnostic}");
+            }
+
+            await File.WriteAllTextAsync(markerPath, DateTimeOffset.UtcNow.ToString("O"), cancellationToken).ConfigureAwait(false);
+        }
+
+        List<GameDataRecord> records = await ReadSourceRecordsAsync(exportDirectory, cancellationToken).ConfigureAwait(false);
+        if (records.Count == 0)
+            throw new InvalidDataException("FFDec completed but did not export any ActionScript source files.");
+
+        return new SwfSourceIndexResult(exportDirectory, records);
+    }
+
     private static async Task<List<GameDataRecord>> ReadSourceRecordsAsync(string exportDirectory, CancellationToken cancellationToken)
     {
         List<GameDataRecord> records = new();
@@ -134,11 +319,7 @@ internal sealed class GameDataRecord
     private static bool ContainsAny(string source, params string[] terms) =>
         terms.Any(term => source.Contains(term, StringComparison.OrdinalIgnoreCase));
 }
-
 }
-
-/// <summary>
-/// Describes the result of exporting and indexing the client SWF.}
 
 /// <summary>
 /// Describes the result of exporting and indexing the client SWF.
