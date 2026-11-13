@@ -70,6 +70,12 @@ public partial class MainWindow : Window
 
     private const int WM_NCACTIVATE = 0x0086;
     private const int WM_NCHITTEST = 0x0084;
+    private const int HTLEFT = 10;
+    private const int HTRIGHT = 11;
+    private const int HTTOP = 12;
+    private const int HTTOPLEFT = 13;
+    private const int HTTOPRIGHT = 14;
+    private const int HTBOTTOM = 15;
     private const int HTBOTTOMLEFT = 16;
     private const int HTBOTTOMRIGHT = 17;
     private const int WM_WINDOWPOSCHANGED = 0x0047;
@@ -493,13 +499,13 @@ public partial class MainWindow : Window
 
 #if IS_WINDOWS
     /// <summary>
-    /// Returns the Windows non-client resize code when the pointer is in either bottom corner.
+    /// Returns the Windows non-client resize code for all eight edges and corners of the top-level window.
     /// </summary>
     /// <param name="hWnd">The VibeSkua top-level window handle.</param>
     /// <param name="lParam">The screen-space pointer coordinates from WM_NCHITTEST.</param>
-    /// <param name="hitTest">The resize hit-test code when the pointer is in a bottom corner.</param>
-    /// <returns><see langword="true"/> when the point should start a bottom-corner resize.</returns>
-    private static bool TryGetBottomCornerHitTest(IntPtr hWnd, IntPtr lParam, out IntPtr hitTest)
+    /// <param name="hitTest">The native resize hit-test code for the pointer location.</param>
+    /// <returns><see langword="true"/> when the point should start a window resize.</returns>
+    private static bool TryGetResizeHitTest(IntPtr hWnd, IntPtr lParam, out IntPtr hitTest)
     {
         hitTest = IntPtr.Zero;
         if (!GetWindowRect(hWnd, out RECT bounds))
@@ -510,24 +516,36 @@ public partial class MainWindow : Window
         int y = unchecked((short)((packedPoint >> 16) & 0xFFFF));
         uint dpi = GetDpiForWindow(hWnd);
         double scale = dpi > 0 ? dpi / 96.0 : 1.0;
-        int resizeBand = Math.Max(8, (int)Math.Ceiling(14 * scale));
+        int resizeBand = Math.Max(8, (int)Math.Ceiling(12 * scale));
 
-        if (y < bounds.Bottom - resizeBand || y > bounds.Bottom + resizeBand)
+        if (x < bounds.Left || x >= bounds.Right || y < bounds.Top || y >= bounds.Bottom)
             return false;
 
-        if (x >= bounds.Left - resizeBand && x <= bounds.Left + resizeBand)
-        {
+        bool left = x < bounds.Left + resizeBand;
+        bool right = x >= bounds.Right - resizeBand;
+        bool top = y < bounds.Top + resizeBand;
+        bool bottom = y >= bounds.Bottom - resizeBand;
+
+        if (top && left)
+            hitTest = (IntPtr)HTTOPLEFT;
+        else if (top && right)
+            hitTest = (IntPtr)HTTOPRIGHT;
+        else if (bottom && left)
             hitTest = (IntPtr)HTBOTTOMLEFT;
-            return true;
-        }
-
-        if (x >= bounds.Right - resizeBand && x <= bounds.Right + resizeBand)
-        {
+        else if (bottom && right)
             hitTest = (IntPtr)HTBOTTOMRIGHT;
-            return true;
-        }
+        else if (left)
+            hitTest = (IntPtr)HTLEFT;
+        else if (right)
+            hitTest = (IntPtr)HTRIGHT;
+        else if (top)
+            hitTest = (IntPtr)HTTOP;
+        else if (bottom)
+            hitTest = (IntPtr)HTBOTTOM;
+        else
+            return false;
 
-        return false;
+        return true;
     }
 
     private IntPtr WindowSubclassProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam, nuint uIdSubclass, IntPtr dwRefData)
@@ -548,13 +566,13 @@ public partial class MainWindow : Window
             }
         }
 
-        // The native Flash host can occupy the client pixels used by Windows' two lower resize corners.
-        // Its child HWNDs pass these points through; return the top-level resize hit here.
+        // The native Flash host can occupy the top-level resize border with its child HWNDs.
+        // Pass those edge points through and return the correct native resize hit here.
         if (uMsg == WM_NCHITTEST &&
             CanResize &&
             WindowState == WindowState.Normal &&
             HotKeys.HostHwnd == IntPtr.Zero &&
-            TryGetBottomCornerHitTest(hWnd, lParam, out IntPtr resizeHit))
+            TryGetResizeHitTest(hWnd, lParam, out IntPtr resizeHit))
         {
             return resizeHit;
         }

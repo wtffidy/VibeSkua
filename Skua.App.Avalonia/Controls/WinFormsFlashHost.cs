@@ -92,15 +92,15 @@ public class WinFormsFlashHost : NativeControlHost
     }
 
     /// <summary>
-    /// Passes only the two bottom-corner resize hit tests through native Flash child HWNDs to the top-level client.
-    /// This prevents the embedded ActiveX viewport from consuming the pointer before Windows can resize VibeSkua.
+    /// Passes resize-border hit tests through native Flash child HWNDs to the top-level client.
+    /// This prevents the embedded ActiveX viewport from consuming edge and corner pointers before Windows can resize VibeSkua.
     /// </summary>
     private sealed class ResizeHitTestPassthrough : IDisposable
     {
         private const uint WmNcHitTest = 0x0084;
         private const uint GaRoot = 2;
         private const int HtTransparent = -1;
-        private const int ResizeCornerDip = 14;
+        private const int ResizeBorderDip = 12;
         private static readonly nuint SubclassId = 1;
 
         private delegate IntPtr SubclassProc(IntPtr hWnd, uint message, IntPtr wParam, IntPtr lParam, nuint subclassId, IntPtr referenceData);
@@ -174,13 +174,13 @@ public class WinFormsFlashHost : NativeControlHost
 
         private IntPtr WindowSubclassProc(IntPtr hWnd, uint message, IntPtr wParam, IntPtr lParam, nuint subclassId, IntPtr referenceData)
         {
-            if (message == WmNcHitTest && IsBottomCorner(hWnd, lParam))
+            if (message == WmNcHitTest && IsResizeBorder(hWnd, lParam))
                 return (IntPtr)HtTransparent;
 
             return DefSubclassProc(hWnd, message, wParam, lParam);
         }
 
-        private static bool IsBottomCorner(IntPtr hWnd, IntPtr lParam)
+        private static bool IsResizeBorder(IntPtr hWnd, IntPtr lParam)
         {
             IntPtr rootHandle = GetAncestor(hWnd, GaRoot);
             if (rootHandle == IntPtr.Zero || !GetWindowRect(rootHandle, out NativeRect bounds))
@@ -191,14 +191,16 @@ public class WinFormsFlashHost : NativeControlHost
             int y = unchecked((short)((packedPoint >> 16) & 0xFFFF));
             uint dpi = GetDpiForWindow(rootHandle);
             double scale = dpi > 0 ? dpi / 96.0 : 1.0;
-            int resizeBand = Math.Max(8, (int)Math.Ceiling(ResizeCornerDip * scale));
+            int resizeBand = Math.Max(8, (int)Math.Ceiling(ResizeBorderDip * scale));
 
-            if (y < bounds.Bottom - resizeBand || y > bounds.Bottom + resizeBand)
+            if (x < bounds.Left || x >= bounds.Right || y < bounds.Top || y >= bounds.Bottom)
                 return false;
 
-            bool leftCorner = x >= bounds.Left - resizeBand && x <= bounds.Left + resizeBand;
-            bool rightCorner = x >= bounds.Right - resizeBand && x <= bounds.Right + resizeBand;
-            return leftCorner || rightCorner;
+            bool leftEdge = x < bounds.Left + resizeBand;
+            bool rightEdge = x >= bounds.Right - resizeBand;
+            bool topEdge = y < bounds.Top + resizeBand;
+            bool bottomEdge = y >= bounds.Bottom - resizeBand;
+            return leftEdge || rightEdge || topEdge || bottomEdge;
         }
 
         public void Dispose()
