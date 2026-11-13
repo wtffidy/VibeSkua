@@ -576,14 +576,18 @@ public partial class OmniscopeWindow : Window
         DataStatusText.Text = "LOADING SAVED MAP SWF REFERENCES";
         try
         {
+            await LoadMapShopIndexCacheAsync();
+            MapShopRecordCountText.Text = _mapShopRecords.Count.ToString("N0");
             if (!File.Exists(cachePath))
             {
-                _mapSnapshot.Clear();
+                _mapSnapshot = _mapShopRecords.ToList();
                 _mapRecords.Clear();
                 MapSwfMapCountText.Text = "0";
                 MapItemRecordCountText.Text = "0";
                 ApplyMapFilter();
-                DataStatusText.Text = "NO SAVED MAP INDEX FOUND  /  LOAD MAPS IN-GAME FIRST";
+                DataStatusText.Text = _mapShopRecords.Count > 0
+                    ? $"NO SAVED MAP ITEM INDEX  /  {_mapShopRecords.Count:N0} SHOP IDS RESTORED FROM PREVIOUS MAP SCANS"
+                    : "NO SAVED MAP INDEX FOUND  /  LOAD MAPS IN-GAME FIRST";
                 return;
             }
 
@@ -634,6 +638,71 @@ public partial class OmniscopeWindow : Window
         }
     }
 
+    private static string MapShopIndexCachePath =>
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "VibeSkua",
+            "cache",
+            "0SavedMapShops.json");
+
+    private async Task LoadMapShopIndexCacheAsync()
+    {
+        _mapShopRecords.Clear();
+        string cachePath = MapShopIndexCachePath;
+        if (!File.Exists(cachePath))
+            return;
+
+        try
+        {
+            string json = await File.ReadAllTextAsync(cachePath);
+            List<SavedMapShopIndexEntry>? entries = JsonSerializer.Deserialize<List<SavedMapShopIndexEntry>>(
+                json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            foreach (SavedMapShopIndexEntry entry in entries ?? [])
+            {
+                string mapName = GetMapScriptName(entry.MapName);
+                if (string.IsNullOrWhiteSpace(mapName) || entry.ShopIds is null)
+                    continue;
+
+                foreach (int shopId in entry.ShopIds.Where(static id => id > 1).Distinct())
+                    _mapShopRecords.Add(CreateMapShopRecord(shopId, mapName, entry.MapFilePath));
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        {
+            System.Diagnostics.Trace.WriteLine($"OMNISCOPE saved map shop index could not be read: {ex.Message}");
+        }
+    }
+
+    private async Task SaveMapShopIndexCacheAsync()
+    {
+        string cachePath = MapShopIndexCachePath;
+        try
+        {
+            List<SavedMapShopIndexEntry> entries = _mapShopRecords
+                .Where(static record => !string.IsNullOrWhiteSpace(record.SourceMapName) && record.SourceShopId is > 1)
+                .GroupBy(static record => record.SourceMapName!, StringComparer.OrdinalIgnoreCase)
+                .Select(static group => new SavedMapShopIndexEntry
+                {
+                    MapName = group.Key,
+                    MapFilePath = group.Select(static record => record.Metadata).FirstOrDefault(static path => !string.IsNullOrWhiteSpace(path)) ?? string.Empty,
+                    ShopIds = group.Select(static record => record.SourceShopId!.Value).Distinct().Order().ToArray()
+                })
+                .OrderBy(static entry => entry.MapName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
+            string json = JsonSerializer.Serialize(entries, new JsonSerializerOptions { WriteIndented = true });
+            await File.WriteAllTextAsync(cachePath, json);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            System.Diagnostics.Trace.WriteLine($"OMNISCOPE saved map shop index could not be written: {ex.Message}");
+            DataStatusText.Text = $"MAP SHOPS SCANNED, BUT THE LOCAL INDEX COULD NOT BE SAVED  /  {ex.Message}";
+        }
+    }
+
     private async void ScanCurrentMapShops_Click(object? sender, RoutedEventArgs e)
     {
         if (_mapShopIndexRunning)
@@ -675,6 +744,8 @@ public partial class OmniscopeWindow : Window
                 .ToList();
 
             MapShopRecordCountText.Text = _mapShopRecords.Count.ToString("N0");
+            await SaveMapShopIndexCacheAsync();
+            MapCategoryBox.SelectedIndex = 2;
             ApplyMapFilter();
             DataStatusText.Text = shopIds.Length > 0
                 ? $"FOUND {shopIds.Length:N0} SHOP ID(S) IN /{mapName}  /  SELECT A SHOP TO LOAD OR GENERATE ITS MERGE SCRIPT"
@@ -1514,6 +1585,13 @@ public partial class OmniscopeWindow : Window
         double? SecondsAfterKill);
 
     private sealed record MonsterKillObservation(DateTimeOffset Timestamp, int MapId);
+
+    private sealed class SavedMapShopIndexEntry
+    {
+        public string MapName { get; set; } = string.Empty;
+        public string MapFilePath { get; set; } = string.Empty;
+        public int[] ShopIds { get; set; } = [];
+    }
 
     private sealed class EventRow
     {
