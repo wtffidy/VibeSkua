@@ -173,30 +173,30 @@ public partial class OmniscopeWindow : Window
             int maxHealth = loggedIn ? _bot.Player.MaxHealth : 0;
             int mana = loggedIn ? _bot.Player.Mana : 0;
             int maxMana = loggedIn ? _bot.Player.MaxMana : 0;
-            if (_avatarLiveFollow)
-            {
-            PlayerNameText.Text = loggedIn ? _bot.Player.Username : "No active player session";
-            PlayerClassText.Text = $"Class: {_bot.Player.CurrentClass?.Name ?? "Unavailable"}  /  Rank {_bot.Player.CurrentClassRank}";
-            LevelText.Text = loggedIn ? _bot.Player.Level.ToString("N0") : "--";
-            XpText.Text = loggedIn ? _bot.Stats.ExperienceProgressText : "XP unavailable";
-            SetProgress(XpProgressBar, _bot.Stats.ExperienceProgress, 100);
-            StateText.Text = loggedIn ? GetPlayerState(_bot.Player.State) : "OFFLINE";
-            GoldText.Text = loggedIn ? _bot.Player.Gold.ToString("N0") : "--";
-            CoinsText.Text = loggedIn ? _bot.Player.Coins.ToString("N0") : "--";
-            GuildText.Text = loggedIn ? NullLabel(_bot.Player.Guild) : "--";
-            ServerText.Text = loggedIn ? NullLabel(_bot.Player.ServerIP) : "--";
-
-            VitalsMetric.Text = loggedIn ? $"{health:N0} / {maxHealth:N0} HP" : "-- / -- HP";
-            HealthText.Text = loggedIn ? $"{health:N0} / {maxHealth:N0}" : "-- / --";
-            ManaText.Text = loggedIn ? $"{mana:N0} / {maxMana:N0}" : "-- / --";
+                VitalsMetric.Text = loggedIn ? $"{health:N0} / {maxHealth:N0} HP" : "-- / -- HP";
             SetProgress(HealthProgressBar, health, maxHealth);
-            SetProgress(HealthDetailBar, health, maxHealth);
-            SetProgress(ManaProgressBar, mana, maxMana);
-
             PositionMetric.Text = loggedIn ? $"X {_bot.Player.X:N0}  /  Y {_bot.Player.Y:N0}" : "X --  /  Y --";
             CellMetric.Text = loggedIn ? $"Cell {NullLabel(_bot.Player.Cell)}  /  Pad {NullLabel(_bot.Player.Pad)}" : "Cell --  /  Pad --";
 
-            SessionText.Text = loggedIn
+            if (_avatarLiveFollow)
+            {
+                    PlayerNameText.Text = loggedIn ? _bot.Player.Username : "No active player session";
+                PlayerClassText.Text = $"Class: {_bot.Player.CurrentClass?.Name ?? "Unavailable"}  /  Rank {_bot.Player.CurrentClassRank}";
+                LevelText.Text = loggedIn ? _bot.Player.Level.ToString("N0") : "--";
+                XpText.Text = loggedIn ? _bot.Stats.ExperienceProgressText : "XP unavailable";
+                SetProgress(XpProgressBar, _bot.Stats.ExperienceProgress, 100);
+                StateText.Text = loggedIn ? GetPlayerState(_bot.Player.State) : "OFFLINE";
+                GoldText.Text = loggedIn ? _bot.Player.Gold.ToString("N0") : "--";
+                CoinsText.Text = loggedIn ? _bot.Player.Coins.ToString("N0") : "--";
+                GuildText.Text = loggedIn ? NullLabel(_bot.Player.Guild) : "--";
+                ServerText.Text = loggedIn ? NullLabel(_bot.Player.ServerIP) : "--";
+
+                HealthText.Text = loggedIn ? $"{health:N0} / {maxHealth:N0}" : "-- / --";
+                ManaText.Text = loggedIn ? $"{mana:N0} / {maxMana:N0}" : "-- / --";
+                SetProgress(HealthDetailBar, health, maxHealth);
+                SetProgress(ManaProgressBar, mana, maxMana);
+
+                SessionText.Text = loggedIn
                 ? $"Avatar loaded: {_bot.Player.Loaded}\nTarget: {(_bot.Player.Target?.Name ?? "None")}\nCombat: {(_bot.Player.InCombat ? "Engaged" : "Idle")}  /  AFK: {(_bot.Player.AFK ? "Yes" : "No")}"
                 : "Waiting for the game client to expose a logged-in avatar.";
 
