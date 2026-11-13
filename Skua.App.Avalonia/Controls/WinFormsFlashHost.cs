@@ -9,7 +9,7 @@ namespace Skua.App.Avalonia.Controls;
 using WinForms = System.Windows.Forms;
 public class WinFormsFlashHost : NativeControlHost
 {
-    private const int NativeCornerRadiusDip = 16;
+    private const int NativeCornerRadiusDip = 8;
     private const int RegionCombineOr = 2;
 
     [StructLayout(LayoutKind.Sequential)]
