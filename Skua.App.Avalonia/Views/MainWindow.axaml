@@ -129,9 +129,13 @@
         </DockPanel>
       </Border>
 
-      <Grid Grid.Row="1"
-            Background="{DynamicResource SkuaPageBrush}">
-        <!-- Rounded backing frame remains visible around the inset native game surface. -->
+      <Grid Grid.Row="1">
+        <!-- Clip the complete game viewport, including its background, to the rounded bottom edge. -->
+        <Border Background="{DynamicResource SkuaPageBrush}"
+                CornerRadius="0,0,12,12"
+                ClipToBounds="True">
+          <Grid>
+            <!-- Rounded backing frame remains visible around the inset native game surface. -->
         <Border Margin="4,0,4,4"
                 CornerRadius="0,0,12,12"
                 Background="#141414"
@@ -151,9 +155,10 @@
                 <TextBlock Foreground="{DynamicResource SkuaTextBrush}" HorizontalAlignment="Center" FontSize="18" FontWeight="SemiBold" Text="Headless Mode Active" />
                 <TextBlock Foreground="{DynamicResource SkuaMutedTextBrush}" HorizontalAlignment="Center" FontSize="12" Text="Viewport suspended to minimize CPU and GPU usage" />
             </StackPanel>
-        </Grid>
+          </Grid>
+        </Border>
 
-        <!-- These transparent Avalonia grips sit in the gutters around the native Flash HWND. -->
+        <!-- Keep resize grips outside the rounded clip so corner and edge resizing remain fully interactive. -->
         <Border Width="16"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Stretch"
