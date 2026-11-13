@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Input;
 using Avalonia.Threading;
 using Skua.Core.Interfaces;
 using Skua.Core.Models.Auras;
@@ -29,6 +30,11 @@ public partial class OmniscopeWindow : Window
     private readonly ObservableCollection<string> _quests = [];
     private readonly ObservableCollection<InventoryRow> _inventory = [];
     private readonly ObservableCollection<EventRow> _events = [];
+    private readonly List<EventRow> _eventHistory = [];
+    private string[] _playerSnapshot = [];
+    private bool _entityLiveFollow = true;
+    private bool _playerLiveFollow = true;
+    private bool _eventLiveFollow = true;
     private readonly ObservableCollection<GameDataRecord> _dataRecords = [];
     private readonly ObservableCollection<GameDataRecord> _mapRecords = [];
     private readonly List<GameDataRecord> _swfSourceRecords = [];
@@ -85,6 +91,12 @@ public partial class OmniscopeWindow : Window
         MapRecordList.ItemsSource = _mapRecords;
 
         EntityList.SelectionChanged += EntityList_SelectionChanged;
+        EntityList.PointerWheelChanged += EntityList_PointerWheelChanged;
+        EntityList.PointerPressed += EntityList_PointerPressed;
+        PlayerList.PointerWheelChanged += PlayerList_PointerWheelChanged;
+        PlayerList.PointerPressed += PlayerList_PointerPressed;
+        EventList.PointerWheelChanged += EventList_PointerWheelChanged;
+        EventList.PointerPressed += EventList_PointerPressed;
         _refreshTimer.Tick += RefreshTimer_Tick;
         Loaded += OnLoaded;
         Closed += OnClosed;
@@ -924,7 +936,7 @@ public partial class OmniscopeWindow : Window
 
         _swfIndexRunning = true;
         DecompileSwfButtonState(true);
-        DataStatusText.Text = "RESOLVING AQW GAME VERSION  /  DOWNLOADING THE LIVE GAME CLIENT SWF";
+        DataStatusText.Text = "RESOLVING LATEST AQW GAME CLIENT  /  MANIFEST + CDN FALLBACK";
         try
         {
             string ffdecDirectory = SwfSourceIndexer.ResolveFfdecDirectory();
@@ -936,14 +948,15 @@ public partial class OmniscopeWindow : Window
             {
                 Category = "SWF SOURCE",
                 Name = $"AQW game client / {clientFile.FileName}",
-                Summary = $"Live game-version manifest  /  {_swfSourceRecords.Count:N0} source files indexed",
+                Summary = $"{clientFile.ResolutionMethod}  /  {result.Records.Count:N0} source files indexed",
                 Metadata = clientFile.SourceUri.ToString(),
-                Details = $"SOURCE FILE: {clientFile.FileName}{Environment.NewLine}" +
+                Details = $"RESOLUTION: {clientFile.ResolutionMethod}{Environment.NewLine}" +
+                    $"SOURCE FILE: {clientFile.FileName}{Environment.NewLine}" +
                     $"LOCAL COPY: {clientFile.LocalPath}{Environment.NewLine}" +
                     $"DOWNLOAD SOURCE: {clientFile.SourceUri}{Environment.NewLine}" +
                     $"EXPORTED SOURCE: {result.ExportDirectory}{Environment.NewLine}" +
                     $"INDEXED ACTIONSCRIPT FILES: {result.Records.Count:N0}{Environment.NewLine}{Environment.NewLine}" +
-                    "The SWF is the live AQW game client resolved from the game's own gameversion endpoint. Client-side logic is not proof of server-side rules.",
+                    "The SWF is the latest AQW game client resolved from the game-version manifest or CDN version-probing fallback. Client-side logic is not proof of server-side rules.",
                 SearchText = $"AQW game client {clientFile.FileName} {clientFile.SourceUri} {clientFile.LocalPath}"
             });
             _swfSourceRecords.AddRange(result.Records);
@@ -1244,6 +1257,51 @@ public partial class OmniscopeWindow : Window
 
     private void EntitySearchBox_TextChanged(object? sender, TextChangedEventArgs e) => ApplyEntityFilter();
 
+    private void EntityFollowButton_Click(object? sender, RoutedEventArgs e) => SetEntityLiveFollow(!_entityLiveFollow);
+    private void PlayerFollowButton_Click(object? sender, RoutedEventArgs e) => SetPlayerLiveFollow(!_playerLiveFollow);
+    private void EventFollowButton_Click(object? sender, RoutedEventArgs e) => SetEventLiveFollow(!_eventLiveFollow);
+
+    private void EntityList_PointerWheelChanged(object? sender, PointerWheelEventArgs e) => SetEntityLiveFollow(false);
+    private void EntityList_PointerPressed(object? sender, PointerPressedEventArgs e) => SetEntityLiveFollow(false);
+    private void PlayerList_PointerWheelChanged(object? sender, PointerWheelEventArgs e) => SetPlayerLiveFollow(false);
+    private void PlayerList_PointerPressed(object? sender, PointerPressedEventArgs e) => SetPlayerLiveFollow(false);
+    private void EventList_PointerWheelChanged(object? sender, PointerWheelEventArgs e) => SetEventLiveFollow(false);
+    private void EventList_PointerPressed(object? sender, PointerPressedEventArgs e) => SetEventLiveFollow(false);
+
+    private void SetEntityLiveFollow(bool enabled)
+    {
+        _entityLiveFollow = enabled;
+        EntityFollowButton.Content = enabled ? "PAUSE" : "RESUME";
+        if (enabled)
+            ApplyEntityFilter();
+    }
+
+    private void SetPlayerLiveFollow(bool enabled)
+    {
+        _playerLiveFollow = enabled;
+        PlayerFollowButton.Content = enabled ? "PAUSE" : "RESUME";
+        if (!enabled)
+            return;
+
+        _players.Clear();
+        foreach (string name in _playerSnapshot)
+            _players.Add(name);
+    }
+
+    private void SetEventLiveFollow(bool enabled)
+    {
+        _eventLiveFollow = enabled;
+        EventFollowButton.Content = enabled ? "PAUSE" : "RESUME";
+        if (enabled)
+        {
+            _events.Clear();
+            foreach (EventRow eventRow in _eventHistory)
+                _events.Add(eventRow);
+        }
+
+        EventCountText.Text = $"{_eventHistory.Count:N0} EVENTS{(enabled ? string.Empty : "  /  PAUSED")}";
+    }
+
     private void ApplyEntityFilter()
     {
         string filter = EntitySearchBox?.Text?.Trim() ?? string.Empty;
@@ -1253,6 +1311,9 @@ public partial class OmniscopeWindow : Window
                 row.Name.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
                 row.Id.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
                 row.Cell.Contains(filter, StringComparison.OrdinalIgnoreCase)).ToArray();
+
+        if (!_entityLiveFollow)
+            return;
 
         bool changed = _entities.Count != rows.Length;
         if (!changed)
@@ -1281,6 +1342,7 @@ public partial class OmniscopeWindow : Window
     private void UpdatePlayers(bool mapLoaded)
     {
         string[] names = mapLoaded ? _bot.Map.PlayerNames?.Where(static name => !string.IsNullOrWhiteSpace(name)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(static name => name).ToArray() ?? [] : [];
+        _playerSnapshot = names;
         RosterMetric.Text = $"Players in instance: {names.Length:N0}";
         if (_lastPlayerCount != names.Length)
         {
@@ -1289,7 +1351,7 @@ public partial class OmniscopeWindow : Window
             _lastPlayerCount = names.Length;
         }
 
-        if (_players.SequenceEqual(names))
+        if (!_playerLiveFollow || _players.SequenceEqual(names))
             return;
 
         _players.Clear();
@@ -1423,17 +1485,25 @@ public partial class OmniscopeWindow : Window
 
     private void AddEvent(string category, string detail)
     {
-        _events.Insert(0, new EventRow
+        EventRow eventRow = new()
         {
             Time = DateTime.Now.ToString("HH:mm:ss.fff"),
             Category = category,
             Detail = detail
-        });
+        };
 
-        while (_events.Count > 250)
-            _events.RemoveAt(_events.Count - 1);
+        _eventHistory.Insert(0, eventRow);
+        while (_eventHistory.Count > 250)
+            _eventHistory.RemoveAt(_eventHistory.Count - 1);
 
-        EventCountText.Text = $"{_events.Count:N0} EVENTS";
+        if (_eventLiveFollow)
+        {
+            _events.Insert(0, eventRow);
+            while (_events.Count > 250)
+                _events.RemoveAt(_events.Count - 1);
+        }
+
+        EventCountText.Text = $"{_eventHistory.Count:N0} EVENTS{(_eventLiveFollow ? string.Empty : "  /  PAUSED")}";
     }
 
     private static void SetProgress(Border bar, double current, double maximum)
