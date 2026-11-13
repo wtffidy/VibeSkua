@@ -130,8 +130,14 @@
       </Border>
 
       <Grid Grid.Row="1"
-            Background="#141414">
-        <!-- Keep a native resize gutter clear of the Flash child HWND on the left, right, and bottom edges. -->
+            Background="{DynamicResource SkuaPageBrush}">
+        <!-- Rounded backing frame remains visible around the inset native game surface. -->
+        <Border Margin="4,0,4,4"
+                CornerRadius="12"
+                Background="#141414"
+                BorderBrush="{DynamicResource SkuaBorderBrush}"
+                BorderThickness="1" />
+        <!-- Keep the native resize gutters clear while preserving the rounded frame beneath them. -->
         <controls:WinFormsFlashHost x:Name="FlashHost" Margin="14,0,14,14" IsVisible="False" />
         <ProgressBar x:Name="LoadingBar"
                      Width="150"
