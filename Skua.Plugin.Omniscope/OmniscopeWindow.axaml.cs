@@ -181,11 +181,11 @@ public partial class OmniscopeWindow : Window
         try
         {
             DateTime now = DateTime.Now;
-            ClockText.Text = now.ToString("HH:mm:ss");
+            ClockText.Text = now.ToString("Hh:mm:ss");
 
             bool loggedIn = _bot.Player.LoggedIn;
             bool playing = _bot.Player.Playing;
-            ConnectionText.Text = loggedIn ? playing ? "LIVE / AVATAR ACTIVE" : "CONNECTED / LOADING AVATAR" : "WAITING FOR GAME SESSION";
+            ConnectionText.Text = loggedIn ? playing ? "Live / Avatar Active" : "Connected / Loading Avatar" : "Waiting For Game Session";
             ConnectionIndicator.Fill = playing ? Avalonia.Media.Brushes.MediumSpringGreen : loggedIn ? Avalonia.Media.Brushes.Goldenrod : Avalonia.Media.Brushes.IndianRed;
 
             int health = loggedIn ? _bot.Player.Health : 0;
@@ -204,7 +204,7 @@ public partial class OmniscopeWindow : Window
                 LevelText.Text = loggedIn ? _bot.Player.Level.ToString("N0") : "--";
                 XpText.Text = loggedIn ? _bot.Stats.ExperienceProgressText : "XP unavailable";
                 SetProgress(XpProgressBar, _bot.Stats.ExperienceProgress, 100);
-                StateText.Text = loggedIn ? GetPlayerState(_bot.Player.State) : "OFFLINE";
+                StateText.Text = loggedIn ? GetPlayerState(_bot.Player.State) : "Offline";
                 GoldText.Text = loggedIn ? _bot.Player.Gold.ToString("N0") : "--";
                 CoinsText.Text = loggedIn ? _bot.Player.Coins.ToString("N0") : "--";
                 GuildText.Text = loggedIn ? NullLabel(_bot.Player.Guild) : "--";
@@ -225,20 +225,20 @@ public partial class OmniscopeWindow : Window
             string mapName = mapLoaded ? _bot.Map.FullName : "Map unavailable";
             MapMetric.Text = mapName;
             RoomMetric.Text = mapLoaded ? $"Room {_bot.Map.RoomNumber}  /  ID {_bot.Map.RoomID}  /  {_bot.Map.PlayerCount} players" : "Waiting for map data";
-            TrackChange(ref _lastMap, mapName, "WORLD TRANSITION");
-            string playerState = loggedIn ? GetPlayerState(_bot.Player.State) : "OFFLINE";
-            TrackChange(ref _lastPlayerState, playerState, "PLAYER STATE");
+            TrackChange(ref _lastMap, mapName, "World Transition");
+            string playerState = loggedIn ? GetPlayerState(_bot.Player.State) : "Offline";
+            TrackChange(ref _lastPlayerState, playerState, "Player State");
 
             string className = loggedIn ? _bot.Player.CurrentClass?.Name ?? "Unknown class" : "Offline";
-            TrackChange(ref _lastClass, className, "CLASS CHANGE");
+            TrackChange(ref _lastClass, className, "Class Change");
 
-            string vitals = loggedIn ? $"{health}/{maxHealth} HP · {mana}/{maxMana} MP" : "Offline";
+            string vitals = loggedIn ? $"{health}/{maxHealth} HP · {mana}/{maxMana} Mp" : "Offline";
             if (_lastVitals.Length > 0 && _lastVitals != vitals)
-                AddEvent("VITALS UPDATE", vitals);
+                AddEvent("Vitals Update", vitals);
             _lastVitals = vitals;
 
             string target = _bot.Player.Target is Monster currentTarget ? $"{currentTarget.Name} [{currentTarget.ID}]" : "No target";
-            TrackChange(ref _lastTarget, target, "TARGET CHANGE");
+            TrackChange(ref _lastTarget, target, "Target Change");
 
             Monster[] monsters = mapLoaded ? _bot.Monsters.MapMonsters.ToArray() : [];
             int aliveCount = monsters.Count(static monster => monster.Alive);
@@ -247,7 +247,7 @@ public partial class OmniscopeWindow : Window
             if (_lastMonsterCount != monsters.Length)
             {
                 if (_lastMonsterCount >= 0)
-                    AddEvent("ENTITY FIELD", $"{monsters.Length} monsters observed in the current map");
+                    AddEvent("Entity Field", $"{monsters.Length} monsters observed in the current map");
                 _lastMonsterCount = monsters.Length;
             }
 
@@ -262,11 +262,11 @@ public partial class OmniscopeWindow : Window
             string questSignature = $"{activeQuests.Length}:{readyQuests.Length}";
             QuestMetric.Text = $"Quests: {activeQuests.Length:N0} active  /  {readyQuests.Length:N0} ready";
             if (_lastQuestSignature.Length > 0 && _lastQuestSignature != questSignature)
-                AddEvent("QUEST TRACKER", QuestMetric.Text);
+                AddEvent("Quest Tracker", QuestMetric.Text);
             _lastQuestSignature = questSignature;
 
-            string[] questRows = readyQuests.Take(4).Select(static quest => $"READY  /  {quest.Name} [{quest.ID}]")
-                .Concat(activeQuests.Take(4).Select(static quest => $"ACTIVE  /  {quest.Name} [{quest.ID}]"))
+            string[] questRows = readyQuests.Take(4).Select(static quest => $"Ready  /  {quest.Name} [{quest.ID}]")
+                .Concat(activeQuests.Take(4).Select(static quest => $"Active  /  {quest.Name} [{quest.ID}]"))
                 .ToArray();
             if (!_quests.SequenceEqual(questRows))
             {
@@ -277,7 +277,7 @@ public partial class OmniscopeWindow : Window
         }
         catch (Exception ex)
         {
-            ConnectionText.Text = "TELEMETRY DEGRADED";
+            ConnectionText.Text = "Telemetry Degraded";
             ConnectionIndicator.Fill = Avalonia.Media.Brushes.OrangeRed;
             System.Diagnostics.Trace.WriteLine($"OMNISCOPE telemetry refresh failed: {ex}");
         }
@@ -302,7 +302,7 @@ public partial class OmniscopeWindow : Window
         Dispatcher.UIThread.Post(() =>
         {
             if (IsVisible)
-                AddEvent("MONSTER KILLED", $"Monster MapID {mapId}");
+                AddEvent("Monster Killed", $"Monster MapID {mapId}");
         });
     }
 
@@ -347,7 +347,7 @@ public partial class OmniscopeWindow : Window
         Dispatcher.UIThread.Post(() =>
         {
             if (IsVisible)
-                AddEvent("ITEM DROP", $"{itemName} [{itemId}] ×{itemQuantity}  /  Added to inventory: {addedToInventory}  /  quantity now: {quantityNow}{context}");
+                AddEvent("Item Drop", $"{itemName} [{itemId}] ×{itemQuantity}  /  Added to inventory: {addedToInventory}  /  quantity now: {quantityNow}{context}");
         });
     }
 
@@ -356,7 +356,7 @@ public partial class OmniscopeWindow : Window
         Dispatcher.UIThread.Post(() =>
         {
             if (IsVisible)
-                AddEvent("QUEST ACCEPTED", $"Quest ID {questId}");
+                AddEvent("Quest Accepted", $"Quest ID {questId}");
         });
     }
 
@@ -365,7 +365,7 @@ public partial class OmniscopeWindow : Window
         Dispatcher.UIThread.Post(() =>
         {
             if (IsVisible)
-                AddEvent("QUEST TURNED IN", $"Quest ID {questId}");
+                AddEvent("Quest Turned In", $"Quest ID {questId}");
         });
     }
 
@@ -374,7 +374,7 @@ public partial class OmniscopeWindow : Window
         Dispatcher.UIThread.Post(() =>
         {
             if (IsVisible)
-                AddEvent("SHOP PURCHASE ATTEMPT", $"Shop {shopId}  /  Item {itemId}  /  ShopItemID {shopItemId}");
+                AddEvent("Shop Purchase Attempt", $"Shop {shopId}  /  Item {itemId}  /  ShopItemID {shopItemId}");
         });
     }
 
@@ -436,7 +436,7 @@ public partial class OmniscopeWindow : Window
         DataDetailTitle.Text = record.Name;
         DataDetailMeta.Text = $"{record.DisplayCategory}  /  {record.Metadata}";
         SetSyntaxHighlightedDetails(
-            $"{record.Details}{Environment.NewLine}{Environment.NewLine}SOURCE INSPECTION:{Environment.NewLine}This is decompiled AQW client code. It describes client-side implementation and does not establish server-side validation.");
+            $"{record.Details}{Environment.NewLine}{Environment.NewLine}Source Inspection:{Environment.NewLine}This is decompiled AQW client code. It describes client-side implementation and does not establish server-side validation.");
     }
 
     /// <summary>
@@ -465,7 +465,7 @@ public partial class OmniscopeWindow : Window
         if (truncated)
         {
             DataDetailText.Inlines.Add(new LineBreak());
-            DataDetailText.Inlines.Add(new Run("[DISPLAY TRUNCATED: SOURCE EXCEEDS 200,000 CHARACTERS]") { Foreground = CodeCommentBrush });
+            DataDetailText.Inlines.Add(new Run("[Display Truncated: Source Exceeds 200,000 Characters]") { Foreground = CodeCommentBrush });
         }
     }
 
@@ -535,11 +535,11 @@ public partial class OmniscopeWindow : Window
         ClientFunctionCountText.Text = _swfSourceRecords.Sum(static record => record.SourceFunctionCount).ToString("N0");
 
         SwfSourceStatusText.Text = _swfSourceRecords.Count > 0
-            ? $"CLIENT SWF INDEXED  /  {_swfSourceRecords.Count:N0} SOURCE FILES"
-            : "CLIENT SWF SOURCE NOT INDEXED";
+            ? $"Client SWF Indexed  /  {_swfSourceRecords.Count:N0} Source Files"
+            : "Client SWF Source Not Indexed";
         DataStatusText.Text = _swfSourceRecords.Count > 0
-            ? $"CLIENT SOURCE READY  /  {_swfSourceRecords.Count:N0} FILES  /  {ClientFunctionCountText.Text} FUNCTIONS"
-            : "CLIENT SOURCE NOT INDEXED  /  USE INDEX GAME SWF TO DECOMPILE THE CURRENT AQW CLIENT";
+            ? $"Client Source Ready  /  {_swfSourceRecords.Count:N0} Files  /  {ClientFunctionCountText.Text} Functions"
+            : "Client Source Not Indexed  /  Use Index Game SWF To Decompile The Current AQW Client";
 
         ApplyDataFilter();
     }
@@ -560,7 +560,7 @@ public partial class OmniscopeWindow : Window
         {
             "Client Core" => query.Where(static record => record.Category == "CLIENT CORE"),
             "Network / API" => query.Where(static record => record.Category == "NETWORK / API"),
-            "Game UI" => query.Where(static record => record.Category == "GAME UI"),
+            "Game Ui" => query.Where(static record => record.Category == "GAME UI"),
             "World / Map" => query.Where(static record => record.Category == "WORLD / MAP"),
             "Player / Avatar" => query.Where(static record => record.Category == "PLAYER / AVATAR"),
             "Inventory / Items" => query.Where(static record => record.Category == "INVENTORY / ITEMS"),
@@ -587,12 +587,12 @@ public partial class OmniscopeWindow : Window
         foreach (GameDataRecord record in matches)
             _dataRecords.Add(record);
 
-        DataResultMetric.Text = $"{matches.Length:N0} MATCHES";
+        DataResultMetric.Text = $"{matches.Length:N0} Matches";
         if (matches.Length == 0)
         {
             DataDetailTitle.Text = _dataSnapshot.Count == 0 ? "Client source not indexed" : "No matching source files";
             DataDetailMeta.Text = _dataSnapshot.Count == 0
-                ? "Use INDEX GAME SWF to download and decompile the current AQW client."
+                ? "Use Index Game SWF to download and decompile the current AQW client."
                 : "Try another client category or search term.";
             DataDetailText.Inlines.Clear();
         }
@@ -641,12 +641,12 @@ public partial class OmniscopeWindow : Window
         foreach (GameDataRecord record in matches)
             _mapRecords.Add(record);
 
-        MapResultMetric.Text = $"{matches.Length:N0} MAP RECORDS";
+        MapResultMetric.Text = $"{matches.Length:N0} Map Records";
         if (matches.Length == 0)
         {
             MapDetailTitle.Text = _mapSnapshot.Count == 0 ? "Map index not loaded" : "No matching map records";
             MapDetailMeta.Text = _mapSnapshot.Count == 0
-                ? "Load the saved map index for map items, then join a map and use SCAN CURRENT MAP SHOPS."
+                ? "Load the saved map index for map items, then join a map and use Scan Current Map Shops."
                 : "Try another map category or search term. Shop scanning indexes the currently joined map.";
             MapDetailText.Text = string.Empty;
             LoadMapShopButton.IsEnabled = false;
@@ -690,7 +690,7 @@ public partial class OmniscopeWindow : Window
 
         _mapAnalysisRunning = true;
         AnalyzeMapButtonState(true);
-        DataStatusText.Text = "LOADING SAVED MAP SWF REFERENCES";
+        DataStatusText.Text = "Loading Saved Map SWF References";
         try
         {
             await LoadMapShopIndexCacheAsync();
@@ -703,8 +703,8 @@ public partial class OmniscopeWindow : Window
                 MapItemRecordCountText.Text = "0";
                 ApplyMapFilter();
                 DataStatusText.Text = _mapShopRecords.Count > 0
-                    ? $"NO SAVED MAP ITEM INDEX  /  {_mapShopRecords.Count:N0} SHOP IDS RESTORED FROM PREVIOUS MAP SCANS"
-                    : "NO SAVED MAP INDEX FOUND  /  LOAD MAPS IN-GAME FIRST";
+                    ? $"No Saved Map Item Index  /  {_mapShopRecords.Count:N0} Shop Ids Restored From Previous Map Scans"
+                    : "No Saved Map Index Found  /  Load Maps In-Game First";
                 return;
             }
 
@@ -741,11 +741,11 @@ public partial class OmniscopeWindow : Window
             MapItemRecordCountText.Text = _mapSnapshot.Count(static record => record.Category == "MAP ITEM").ToString("N0");
             MapShopRecordCountText.Text = _mapShopRecords.Count.ToString("N0");
             ApplyMapFilter();
-            DataStatusText.Text = $"LOADED {_mapSnapshot.Count:N0} MAP REFERENCES FROM {mapEntries.Length:N0} SAVED MAPS";
+            DataStatusText.Text = $"Loaded {_mapSnapshot.Count:N0} Map References From {mapEntries.Length:N0} Saved Maps";
         }
         catch (Exception ex)
         {
-            DataStatusText.Text = $"SAVED MAP INDEX READ FAILED  /  {ex.Message}";
+            DataStatusText.Text = $"Saved Map Index Read Failed  /  {ex.Message}";
             System.Diagnostics.Trace.WriteLine($"OMNISCOPE saved map index read failed: {ex}");
         }
         finally
@@ -816,7 +816,7 @@ public partial class OmniscopeWindow : Window
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             System.Diagnostics.Trace.WriteLine($"OMNISCOPE saved map shop index could not be written: {ex.Message}");
-            DataStatusText.Text = $"MAP SHOPS SCANNED, BUT THE LOCAL INDEX COULD NOT BE SAVED  /  {ex.Message}";
+            DataStatusText.Text = $"Map Shops Scanned, But The Local Index Could Not Be Saved  /  {ex.Message}";
         }
     }
 
@@ -827,7 +827,7 @@ public partial class OmniscopeWindow : Window
 
         if (!_bot.Map.Loaded)
         {
-            DataStatusText.Text = "MAP SHOP SCAN UNAVAILABLE  /  JOIN THE MAP YOU WANT TO INDEX FIRST";
+            DataStatusText.Text = "Map Shop Scan Unavailable  /  Join The Map You Want To Index First";
             return;
         }
 
@@ -835,18 +835,18 @@ public partial class OmniscopeWindow : Window
         string mapName = GetMapScriptName(_bot.Map.Name);
         if (string.IsNullOrWhiteSpace(mapFilePath) || string.IsNullOrWhiteSpace(mapName))
         {
-            DataStatusText.Text = "MAP SHOP SCAN FAILED  /  THE CURRENT MAP DID NOT EXPOSE A VALID SWF PATH";
+            DataStatusText.Text = "Map Shop Scan Failed  /  The Current Map Did Not Expose A Valid SWF Path";
             return;
         }
 
         _mapShopIndexRunning = true;
         ScanMapShopsButton.IsEnabled = false;
-        ScanMapShopsButton.Content = "FETCHING + SCANNING...";
-        DataStatusText.Text = $"FETCHING THE MAP SWF FOR /{mapName}";
+        ScanMapShopsButton.Content = "Fetching + Scanning...";
+        DataStatusText.Text = $"Fetching The Map SWF For /{mapName}";
         try
         {
             string localMapSwfPath = await AqwMapSwfDownloader.DownloadAsync(mapFilePath);
-            DataStatusText.Text = $"MAP SWF READY  /  DECOMPILING {Path.GetFileName(localMapSwfPath)}";
+            DataStatusText.Text = $"Map SWF Ready  /  Decompiling {Path.GetFileName(localMapSwfPath)}";
             string ffdecDirectory = SwfSourceIndexer.ResolveFfdecDirectory();
             SwfSourceIndexResult result = await SwfSourceIndexer.DecompileAsync(localMapSwfPath, ffdecDirectory);
             int[] shopIds = LocationSwfShopIndexer.ReadShopIds(result.ExportDirectory);
@@ -867,19 +867,19 @@ public partial class OmniscopeWindow : Window
             MapCategoryBox.SelectedIndex = 2;
             ApplyMapFilter();
             DataStatusText.Text = shopIds.Length > 0
-                ? $"FOUND {shopIds.Length:N0} SHOP ID(S) IN /{mapName}  /  SELECT A SHOP TO LOAD OR GENERATE ITS MERGE SCRIPT"
-                : $"NO SHOP IDS FOUND IN /{mapName}  /  MAP SWF SCAN COMPLETED";
+                ? $"Found {shopIds.Length:N0} Shop ID(S) In /{mapName}  /  Select A Shop To Load Or Generate Its Merge Script"
+                : $"No Shop Ids Found In /{mapName}  /  Map SWF Scan Completed";
         }
         catch (Exception ex)
         {
-            DataStatusText.Text = $"MAP SHOP SCAN FAILED  /  {ex.Message}";
+            DataStatusText.Text = $"Map Shop Scan Failed  /  {ex.Message}";
             System.Diagnostics.Trace.WriteLine($"OMNISCOPE map shop scan failed: {ex}");
         }
         finally
         {
             _mapShopIndexRunning = false;
             ScanMapShopsButton.IsEnabled = true;
-            ScanMapShopsButton.Content = "SCAN CURRENT MAP SHOPS";
+            ScanMapShopsButton.Content = "Scan Current Map Shops";
         }
     }
 
@@ -892,8 +892,8 @@ public partial class OmniscopeWindow : Window
 
         _mapShopLoadRunning = true;
         LoadMapShopButton.IsEnabled = false;
-        LoadMapShopButton.Content = "WAITING FOR AQW...";
-        DataStatusText.Text = $"REQUESTING SHOP {shopId}  /  WAITING FOR THE GAME CLIENT";
+        LoadMapShopButton.Content = "Waiting For AQW...";
+        DataStatusText.Text = $"Requesting Shop {shopId}  /  Waiting For The Game Client";
         try
         {
             // ScriptShop.Load waits synchronously for the server response (up to 20 seconds).
@@ -914,7 +914,7 @@ public partial class OmniscopeWindow : Window
 
             if (!result.Loaded)
             {
-                DataStatusText.Text = $"SHOP {shopId} DID NOT LOAD  /  AQW DID NOT CONFIRM THE REQUEST";
+                DataStatusText.Text = $"Shop {shopId} Did Not Load  /  AQW Did Not Confirm The Request";
                 return;
             }
 
@@ -922,20 +922,20 @@ public partial class OmniscopeWindow : Window
                 ? "The shop loaded, but no items were exposed by the client."
                 : string.Join(Environment.NewLine, result.ItemLines);
             MapDetailText.Text = $"{record.Details}{Environment.NewLine}{Environment.NewLine}" +
-                $"LOADED SHOP: {result.ShopName} [{result.ShopId}]{Environment.NewLine}" +
-                $"ITEMS: {result.ItemLines.Length:N0}{Environment.NewLine}{items}{Environment.NewLine}{Environment.NewLine}" +
+                $"Loaded Shop: {result.ShopName} [{result.ShopId}]{Environment.NewLine}" +
+                $"Items: {result.ItemLines.Length:N0}{Environment.NewLine}{items}{Environment.NewLine}{Environment.NewLine}" +
                 "No purchase request was sent.";
-            DataStatusText.Text = $"SHOP LOADED  /  {result.ShopName} [{result.ShopId}]  /  NO PURCHASE MADE";
+            DataStatusText.Text = $"Shop Loaded  /  {result.ShopName} [{result.ShopId}]  /  No Purchase Made";
         }
         catch (Exception ex)
         {
-            DataStatusText.Text = $"SHOP LOAD FAILED  /  {ex.Message}";
+            DataStatusText.Text = $"Shop Load Failed  /  {ex.Message}";
             System.Diagnostics.Trace.WriteLine($"OMNISCOPE map shop load failed: {ex}");
         }
         finally
         {
             _mapShopLoadRunning = false;
-            LoadMapShopButton.Content = "LOAD SHOP";
+            LoadMapShopButton.Content = "Load Shop";
             UpdateDeveloperHelperButtons();
         }
     }
@@ -959,7 +959,7 @@ public partial class OmniscopeWindow : Window
         string mapName = GetMapScriptName(_bot.Map.Name);
         if (!_bot.Map.Loaded || string.IsNullOrWhiteSpace(mapName))
         {
-            DataStatusText.Text = "JOIN THE MAP YOU WANT TO GENERATE BEFORE STARTING THE WEEKLY RELEASE GENERATOR";
+            DataStatusText.Text = "Join The Map You Want To Generate Before Starting The Weekly Release Generator";
             return;
         }
 
@@ -987,26 +987,26 @@ public partial class OmniscopeWindow : Window
 
         if (_bot.Manager is not IScriptManager manager)
         {
-            DataStatusText.Text = "SCRIPT GENERATION UNAVAILABLE  /  SCRIPT MANAGER INTERFACE NOT FOUND";
+            DataStatusText.Text = "Script Generation Unavailable  /  Script Manager Interface Not Found";
             return;
         }
 
         if (manager.ScriptRunning)
         {
-            DataStatusText.Text = "STOP THE CURRENT SCRIPT BEFORE STARTING A DEVELOPER GENERATOR";
+            DataStatusText.Text = "Stop The Current Script Before Starting A Developer Generator";
             return;
         }
 
         string scriptPath = Path.Combine(ClientFileSources.SkuaScriptsDIR, "Tools", "ForDevelopers", fileName);
         if (!File.Exists(scriptPath))
         {
-            DataStatusText.Text = $"GENERATOR SCRIPT NOT FOUND  /  {scriptPath}  /  UPDATE YOUR SCRIPTS REPOSITORY";
+            DataStatusText.Text = $"Generator Script Not Found  /  {scriptPath}  /  Update Your Scripts Repository";
             return;
         }
 
         _developerHelperRunning = true;
         UpdateDeveloperHelperButtons();
-        DataStatusText.Text = $"PREPARING {Path.GetFileNameWithoutExtension(fileName)}  /  COMPILING + APPLYING MAP OPTIONS";
+        DataStatusText.Text = $"Preparing {Path.GetFileNameWithoutExtension(fileName)}  /  Compiling + Applying Map Options";
         try
         {
             // Compilation, reflected option discovery, config reads, and config writes can all touch disk.
@@ -1029,7 +1029,7 @@ public partial class OmniscopeWindow : Window
                 config.Save();
             });
 
-            DataStatusText.Text = $"STARTING {Path.GetFileNameWithoutExtension(fileName)}  /  HANDING OFF TO SCRIPT MANAGER";
+            DataStatusText.Text = $"Starting {Path.GetFileNameWithoutExtension(fileName)}  /  Handing Off To Script Manager";
             // StartScript performs synchronous setup after its awaits. Run the whole start flow off-thread too;
             // the actual script still executes on Skua's dedicated Script Thread.
             Exception? startFailure = await Task.Run(async () =>
@@ -1037,11 +1037,11 @@ public partial class OmniscopeWindow : Window
             if (startFailure is not null)
                 throw startFailure;
 
-            DataStatusText.Text = $"STARTED {Path.GetFileNameWithoutExtension(fileName)}  /  MAP OPTIONS PREFILLED";
+            DataStatusText.Text = $"Started {Path.GetFileNameWithoutExtension(fileName)}  /  Map Options Prefilled";
         }
         catch (Exception ex)
         {
-            DataStatusText.Text = $"SCRIPT GENERATION FAILED  /  {ex.Message}";
+            DataStatusText.Text = $"Script Generation Failed  /  {ex.Message}";
             System.Diagnostics.Trace.WriteLine($"OMNISCOPE developer script launch failed: {ex}");
         }
         finally
@@ -1056,7 +1056,7 @@ public partial class OmniscopeWindow : Window
         if (AnalyzeMapButton is not null)
         {
             AnalyzeMapButton.IsEnabled = !running;
-            AnalyzeMapButton.Content = running ? "READING MAP INDEX..." : "LOAD SAVED MAP INDEX";
+            AnalyzeMapButton.Content = running ? "Reading Map Index..." : "Load Saved Map Index";
         }
     }
 
@@ -1067,12 +1067,12 @@ public partial class OmniscopeWindow : Window
 
         _swfIndexRunning = true;
         DecompileSwfButtonState(true);
-        DataStatusText.Text = "RESOLVING LATEST AQW GAME CLIENT  /  MANIFEST + CDN FALLBACK";
+        DataStatusText.Text = "Resolving Latest AQW Game Client  /  Manifest + CDN Fallback";
         try
         {
             string ffdecDirectory = SwfSourceIndexer.ResolveFfdecDirectory();
             AqwGameClientFile clientFile = await AqwGameClientResolver.DownloadLatestAsync();
-            DataStatusText.Text = $"AQW CLIENT {clientFile.FileName} DOWNLOADED  /  STARTING FFDEC";
+            DataStatusText.Text = $"AQW Client {clientFile.FileName} Downloaded  /  Starting FFDec";
             SwfSourceIndexResult result = await SwfSourceIndexer.DecompileAsync(clientFile.LocalPath, ffdecDirectory);
             _swfSourceRecords.Clear();
             _swfSourceRecords.Add(new GameDataRecord
@@ -1081,24 +1081,24 @@ public partial class OmniscopeWindow : Window
                 Name = $"AQW game client / {clientFile.FileName}",
                 Summary = $"{clientFile.ResolutionMethod}  /  {result.Records.Count:N0} source files indexed",
                 Metadata = clientFile.SourceUri.ToString(),
-                Details = $"RESOLUTION: {clientFile.ResolutionMethod}{Environment.NewLine}" +
-                    $"SOURCE FILE: {clientFile.FileName}{Environment.NewLine}" +
-                    $"LOCAL COPY: {clientFile.LocalPath}{Environment.NewLine}" +
-                    $"DOWNLOAD SOURCE: {clientFile.SourceUri}{Environment.NewLine}" +
-                    $"EXPORTED SOURCE: {result.ExportDirectory}{Environment.NewLine}" +
-                    $"INDEXED ACTIONSCRIPT FILES: {result.Records.Count:N0}{Environment.NewLine}{Environment.NewLine}" +
+                Details = $"Resolution: {clientFile.ResolutionMethod}{Environment.NewLine}" +
+                    $"Source File: {clientFile.FileName}{Environment.NewLine}" +
+                    $"Local Copy: {clientFile.LocalPath}{Environment.NewLine}" +
+                    $"Download Source: {clientFile.SourceUri}{Environment.NewLine}" +
+                    $"Exported Source: {result.ExportDirectory}{Environment.NewLine}" +
+                    $"Indexed ActionScript Files: {result.Records.Count:N0}{Environment.NewLine}{Environment.NewLine}" +
                     "The SWF is the latest AQW game client resolved from the game-version manifest or CDN version-probing fallback. Client-side logic is not proof of server-side rules.",
                 SearchText = $"AQW game client {clientFile.FileName} {clientFile.SourceUri} {clientFile.LocalPath}"
             });
             _swfSourceRecords.AddRange(result.Records);
             RefreshDataCatalog();
-            SwfSourceStatusText.Text = $"AQW CLIENT INDEXED  /  {clientFile.FileName}  /  {_swfSourceRecords.Count:N0} RECORDS";
-            DataStatusText.Text = $"AQW GAME CLIENT DECOMPILED  /  {result.Records.Count:N0} ACTIONSCRIPT FILES INDEXED";
+            SwfSourceStatusText.Text = $"AQW Client Indexed  /  {clientFile.FileName}  /  {_swfSourceRecords.Count:N0} Records";
+            DataStatusText.Text = $"AQW Game Client Decompiled  /  {result.Records.Count:N0} ActionScript Files Indexed";
         }
         catch (Exception ex)
         {
-            DataStatusText.Text = $"AQW CLIENT DECOMPILATION FAILED  /  {ex.Message}";
-            SwfSourceStatusText.Text = "AQW CLIENT SOURCE INDEX FAILED";
+            DataStatusText.Text = $"AQW Client Decompilation Failed  /  {ex.Message}";
+            SwfSourceStatusText.Text = "AQW Client Source Index Failed";
             System.Diagnostics.Trace.WriteLine($"OMNISCOPE AQW client SWF indexing failed: {ex}");
         }
         finally
@@ -1113,7 +1113,7 @@ public partial class OmniscopeWindow : Window
         if (DecompileSwfButton is not null)
         {
             DecompileSwfButton.IsEnabled = !running;
-            DecompileSwfButton.Content = running ? "DOWNLOADING / INDEXING..." : "INDEX GAME SWF";
+            DecompileSwfButton.Content = running ? "Downloading / Indexing..." : "Index Game SWF";
         }
     }
 
@@ -1136,11 +1136,11 @@ public partial class OmniscopeWindow : Window
             };
             string json = JsonSerializer.Serialize(export, new JsonSerializerOptions { WriteIndented = true });
             await File.WriteAllTextAsync(exportPath, json);
-            DataStatusText.Text = $"EXPORTED {_dataSnapshot.Count:N0} GAME RECORDS + {_mapSnapshot.Count:N0} MAP REFERENCES  /  {exportPath}";
+            DataStatusText.Text = $"Exported {_dataSnapshot.Count:N0} Game Records + {_mapSnapshot.Count:N0} Map References  /  {exportPath}";
         }
         catch (Exception ex)
         {
-            DataStatusText.Text = $"CATALOG EXPORT FAILED  /  {ex.Message}";
+            DataStatusText.Text = $"Catalog Export Failed  /  {ex.Message}";
         }
     }
 
@@ -1157,19 +1157,19 @@ public partial class OmniscopeWindow : Window
             ? "No simple reward-rate entries."
             : string.Join(Environment.NewLine, simpleRewards.Select(static item => $"{NullLabel(item.Name)} [ID {item.ID}] ×{item.Quantity} / {item.Rate:0.###}% / type {item.Type}"));
         string details =
-            $"QUEST: {quest.Name}{Environment.NewLine}" +
-            $"QUEST ID: {quest.ID}{Environment.NewLine}" +
-            $"LEVEL GATE: {quest.Level}{Environment.NewLine}" +
-            $"MEMBERSHIP: {(quest.Upgrade ? "Member" : "Free")}{Environment.NewLine}" +
-            $"CLASS GATE: {quest.RequiredClassID} / {quest.RequiredClassPoints:N0} class points{Environment.NewLine}" +
-            $"FACTION GATE: {quest.RequiredFactionId} / {quest.RequiredFactionRep:N0} reputation{Environment.NewLine}" +
-            $"REPEATABLE: {!quest.Once}{Environment.NewLine}" +
-            $"GOLD REWARD: {quest.Gold:N0}{Environment.NewLine}" +
-            $"XP REWARD: {quest.XP:N0}{Environment.NewLine}{Environment.NewLine}" +
-            $"ACCEPT REQUIREMENTS:{Environment.NewLine}{acceptRequirements}{Environment.NewLine}{Environment.NewLine}" +
-            $"TURN-IN REQUIREMENTS:{Environment.NewLine}{turnInRequirements}{Environment.NewLine}{Environment.NewLine}" +
-            $"REWARDS:{Environment.NewLine}{rewards}{Environment.NewLine}{Environment.NewLine}" +
-            $"SIMPLE REWARD RATES:{Environment.NewLine}{rewardRates}";
+            $"Quest: {quest.Name}{Environment.NewLine}" +
+            $"Quest ID: {quest.ID}{Environment.NewLine}" +
+            $"Level Gate: {quest.Level}{Environment.NewLine}" +
+            $"Membership: {(quest.Upgrade ? "Member" : "Free")}{Environment.NewLine}" +
+            $"Class Gate: {quest.RequiredClassID} / {quest.RequiredClassPoints:N0} class points{Environment.NewLine}" +
+            $"Faction Gate: {quest.RequiredFactionId} / {quest.RequiredFactionRep:N0} reputation{Environment.NewLine}" +
+            $"Repeatable: {!quest.Once}{Environment.NewLine}" +
+            $"Gold Reward: {quest.Gold:N0}{Environment.NewLine}" +
+            $"XP Reward: {quest.XP:N0}{Environment.NewLine}{Environment.NewLine}" +
+            $"Accept Requirements:{Environment.NewLine}{acceptRequirements}{Environment.NewLine}{Environment.NewLine}" +
+            $"Turn-In Requirements:{Environment.NewLine}{turnInRequirements}{Environment.NewLine}{Environment.NewLine}" +
+            $"Rewards:{Environment.NewLine}{rewards}{Environment.NewLine}{Environment.NewLine}" +
+            $"Simple Reward Rates:{Environment.NewLine}{rewardRates}";
 
         return new GameDataRecord
         {
@@ -1192,15 +1192,15 @@ public partial class OmniscopeWindow : Window
             ? $"{item.TokenName} [ID {item.TokenID}] ×{item.TokenQuantity:0.###}"
             : "None";
         string details =
-            $"SHOP: {shopName} [{shopId}]{Environment.NewLine}" +
-            $"ITEM: {item.Name}{Environment.NewLine}" +
-            $"ITEM ID: {item.ID}  /  SHOP ITEM ID: {item.ShopItemID}{Environment.NewLine}" +
-            $"COST: {item.Cost:N0} {currency}{Environment.NewLine}" +
-            $"REQUIRED LEVEL: {item.Level}{Environment.NewLine}" +
-            $"FACTION: {NullLabel(item.Faction)}{Environment.NewLine}" +
-            $"REQUIRED REPUTATION: {item.RequiredReputation:N0}{Environment.NewLine}" +
-            $"TOKEN: {token}{Environment.NewLine}" +
-            $"MERGE / TURN-IN MATERIALS:{Environment.NewLine}{requirements}";
+            $"Shop: {shopName} [{shopId}]{Environment.NewLine}" +
+            $"Item: {item.Name}{Environment.NewLine}" +
+            $"Item ID: {item.ID}  /  Shop Item ID: {item.ShopItemID}{Environment.NewLine}" +
+            $"Cost: {item.Cost:N0} {currency}{Environment.NewLine}" +
+            $"Required Level: {item.Level}{Environment.NewLine}" +
+            $"Faction: {NullLabel(item.Faction)}{Environment.NewLine}" +
+            $"Required Reputation: {item.RequiredReputation:N0}{Environment.NewLine}" +
+            $"Token: {token}{Environment.NewLine}" +
+            $"Merge / Turn-In Materials:{Environment.NewLine}{requirements}";
 
         return new GameDataRecord
         {
@@ -1218,11 +1218,11 @@ public partial class OmniscopeWindow : Window
     private static GameDataRecord CreateMapShopRecord(int shopId, string mapName, string mapFilePath)
     {
         string details =
-            $"MAP: /{mapName}{Environment.NewLine}" +
-            $"MAP SWF: {mapFilePath}{Environment.NewLine}" +
-            $"SHOP ID: {shopId}{Environment.NewLine}{Environment.NewLine}" +
-            "This shop ID was extracted from ActionScript in the map SWF. LOAD SHOP opens it without buying anything. " +
-            "GENERATE MERGE SHOP runs MergeTemplateHelperV3 with this map and shop ID prefilled.";
+            $"Map: /{mapName}{Environment.NewLine}" +
+            $"Map SWF: {mapFilePath}{Environment.NewLine}" +
+            $"Shop ID: {shopId}{Environment.NewLine}{Environment.NewLine}" +
+            "This shop ID was extracted from ActionScript in the map SWF. Load Shop opens it without buying anything. " +
+            "Generate Merge Shop runs MergeTemplateHelperV3 with this map and shop ID prefilled.";
         return new GameDataRecord
         {
             Category = "MAP SHOP",
@@ -1255,11 +1255,11 @@ public partial class OmniscopeWindow : Window
         string mapName = string.IsNullOrWhiteSpace(mapItem.MapName) ? mapKey : mapItem.MapName;
         string mapFilePath = string.IsNullOrWhiteSpace(mapItem.MapFilePath) ? mapKey : mapItem.MapFilePath;
         string details =
-            $"MAP ITEM ID: {mapItem.ID}{Environment.NewLine}" +
-            $"QUEST ID: {mapItem.QuestID}{Environment.NewLine}" +
-            $"QUEST NAME: {questName}{Environment.NewLine}" +
-            $"MAP: {mapName}{Environment.NewLine}" +
-            $"MAP FILE: {mapFilePath}{Environment.NewLine}" +
+            $"Map Item ID: {mapItem.ID}{Environment.NewLine}" +
+            $"Quest ID: {mapItem.QuestID}{Environment.NewLine}" +
+            $"Quest Name: {questName}{Environment.NewLine}" +
+            $"Map: {mapName}{Environment.NewLine}" +
+            $"Map File: {mapFilePath}{Environment.NewLine}" +
             $"{Environment.NewLine}This association was extracted from VibeSkua's saved map-SWF index.";
         return new GameDataRecord
         {
@@ -1277,12 +1277,12 @@ public partial class OmniscopeWindow : Window
     private static GameDataRecord CreateDropRecord(ItemBase item)
     {
         string details =
-            $"CURRENT DROP: {NullLabel(item.Name)}{Environment.NewLine}" +
-            $"ITEM ID: {item.ID}{Environment.NewLine}" +
-            $"QUANTITY: {item.Quantity:N0}{Environment.NewLine}" +
-            $"CATEGORY: {item.CategoryString}{Environment.NewLine}" +
-            $"TEMPORARY: {item.Temp}{Environment.NewLine}" +
-            $"AC ITEM: {item.Coins}{Environment.NewLine}" +
+            $"Current Drop: {NullLabel(item.Name)}{Environment.NewLine}" +
+            $"Item ID: {item.ID}{Environment.NewLine}" +
+            $"Quantity: {item.Quantity:N0}{Environment.NewLine}" +
+            $"Category: {item.CategoryString}{Environment.NewLine}" +
+            $"Temporary: {item.Temp}{Environment.NewLine}" +
+            $"AC Item: {item.Coins}{Environment.NewLine}" +
             $"{Environment.NewLine}This is an observed runtime drop queue entry, not a complete monster drop table.";
         return new GameDataRecord
         {
@@ -1301,19 +1301,19 @@ public partial class OmniscopeWindow : Window
             ? $"Preceding kill MapID: {observation.PrecedingMonsterMapId.Value} / {observation.SecondsAfterKill:0.0}s earlier (temporal correlation only)"
             : "No recent monster-kill event was observed within the 12-second context window.";
         string details =
-            $"OBSERVED DROP: {observation.Name}{Environment.NewLine}" +
-            $"ITEM ID: {observation.ItemId}{Environment.NewLine}" +
-            $"ITEM QUANTITY: {observation.ItemQuantity:N0}{Environment.NewLine}" +
-            $"ADDED TO INVENTORY: {observation.AddedToInventory}{Environment.NewLine}" +
-            $"INVENTORY QUANTITY AFTER EVENT: {observation.QuantityNow:N0}{Environment.NewLine}" +
-            $"TIMESTAMP: {observation.Timestamp:O}{Environment.NewLine}" +
+            $"Observed Drop: {observation.Name}{Environment.NewLine}" +
+            $"Item ID: {observation.ItemId}{Environment.NewLine}" +
+            $"Item Quantity: {observation.ItemQuantity:N0}{Environment.NewLine}" +
+            $"Added To Inventory: {observation.AddedToInventory}{Environment.NewLine}" +
+            $"Inventory Quantity After Event: {observation.QuantityNow:N0}{Environment.NewLine}" +
+            $"Timestamp: {observation.Timestamp:O}{Environment.NewLine}" +
             $"{killContext}{Environment.NewLine}{Environment.NewLine}" +
             "A nearby kill is only temporal context. The game event does not identify the exact monster responsible for this item.";
         return new GameDataRecord
         {
             Category = "DROP",
             Name = NullLabel(observation.Name),
-            Summary = $"{observation.Timestamp:HH:mm:ss}  /  ×{observation.ItemQuantity:N0}  /  Added: {observation.AddedToInventory}",
+            Summary = $"{observation.Timestamp:Hh:mm:ss}  /  ×{observation.ItemQuantity:N0}  /  Added: {observation.AddedToInventory}",
             Metadata = "Runtime ItemDropped event history",
             Details = details,
             SearchText = details
@@ -1323,14 +1323,14 @@ public partial class OmniscopeWindow : Window
     private static GameDataRecord CreateMonsterRecord(Monster monster)
     {
         string details =
-            $"MONSTER: {monster.Name}{Environment.NewLine}" +
-            $"ENTITY ID: {monster.ID}{Environment.NewLine}" +
-            $"MAP ID: {monster.MapID}{Environment.NewLine}" +
-            $"RACE: {NullLabel(monster.Race)}{Environment.NewLine}" +
-            $"CELL: {NullLabel(monster.Cell)}{Environment.NewLine}" +
-            $"STATE: {monster.State}  /  ALIVE: {monster.Alive}{Environment.NewLine}" +
-            $"HEALTH: {monster.HP:N0} / {monster.MaxHP:N0}{Environment.NewLine}" +
-            $"CLIENT ASSET: {NullLabel(monster.FileName)}{Environment.NewLine}{Environment.NewLine}" +
+            $"Monster: {monster.Name}{Environment.NewLine}" +
+            $"Entity ID: {monster.ID}{Environment.NewLine}" +
+            $"Map ID: {monster.MapID}{Environment.NewLine}" +
+            $"Race: {NullLabel(monster.Race)}{Environment.NewLine}" +
+            $"Cell: {NullLabel(monster.Cell)}{Environment.NewLine}" +
+            $"State: {monster.State}  /  Alive: {monster.Alive}{Environment.NewLine}" +
+            $"Health: {monster.HP:N0} / {monster.MaxHP:N0}{Environment.NewLine}" +
+            $"Client Asset: {NullLabel(monster.FileName)}{Environment.NewLine}{Environment.NewLine}" +
             "A complete mob loot table is not supplied by the public monster snapshot.";
         return new GameDataRecord
         {
@@ -1403,9 +1403,9 @@ public partial class OmniscopeWindow : Window
             .Select(monster => new EntityRow
             {
                 Name = monster.Name,
-                Cell = $"CELL {NullLabel(monster.Cell)}",
+                Cell = $"Cell {NullLabel(monster.Cell)}",
                 Health = $"{monster.HP:N0}/{monster.MaxHP:N0}",
-                State = monster.Alive ? "ALIVE" : "DOWN",
+                State = monster.Alive ? "Alive" : "Down",
                 Id = monster.ID.ToString(),
                 Source = monster
             })
@@ -1431,8 +1431,8 @@ public partial class OmniscopeWindow : Window
     private void SetAvatarLiveFollow(bool enabled)
     {
         _avatarLiveFollow = enabled;
-        AvatarFollowButton.Content = enabled ? "PAUSE" : "RESUME";
-        AvatarFollowStatus.Text = enabled ? "LIVE" : "PAUSED";
+        AvatarFollowButton.Content = enabled ? "Pause" : "Resume";
+        AvatarFollowStatus.Text = enabled ? "Live" : "Paused";
         AvatarFollowStatus.Foreground = enabled ? Avalonia.Media.Brushes.MediumSpringGreen : Avalonia.Media.Brushes.Goldenrod;
         if (enabled)
             RefreshTelemetry();
@@ -1441,7 +1441,7 @@ public partial class OmniscopeWindow : Window
     private void SetEntityLiveFollow(bool enabled)
     {
         _entityLiveFollow = enabled;
-        EntityFollowButton.Content = enabled ? "PAUSE" : "RESUME";
+        EntityFollowButton.Content = enabled ? "Pause" : "Resume";
         if (enabled)
             ApplyEntityFilter();
     }
@@ -1449,7 +1449,7 @@ public partial class OmniscopeWindow : Window
     private void SetPlayerLiveFollow(bool enabled)
     {
         _playerLiveFollow = enabled;
-        PlayerFollowButton.Content = enabled ? "PAUSE" : "RESUME";
+        PlayerFollowButton.Content = enabled ? "Pause" : "Resume";
         if (!enabled)
             return;
 
@@ -1461,7 +1461,7 @@ public partial class OmniscopeWindow : Window
     private void SetEventLiveFollow(bool enabled)
     {
         _eventLiveFollow = enabled;
-        EventFollowButton.Content = enabled ? "PAUSE" : "RESUME";
+        EventFollowButton.Content = enabled ? "Pause" : "Resume";
         if (enabled)
         {
             _events.Clear();
@@ -1469,7 +1469,7 @@ public partial class OmniscopeWindow : Window
                 _events.Add(eventRow);
         }
 
-        EventCountText.Text = $"{_eventHistory.Count:N0} EVENTS{(enabled ? string.Empty : "  /  PAUSED")}";
+        EventCountText.Text = $"{_eventHistory.Count:N0} Events{(enabled ? string.Empty : "  /  PAUSED")}";
     }
 
     private void ApplyEntityFilter()
@@ -1517,7 +1517,7 @@ public partial class OmniscopeWindow : Window
         if (_lastPlayerCount != names.Length)
         {
             if (_lastPlayerCount >= 0)
-                AddEvent("WORLD ROSTER", $"{names.Length} players in the current instance");
+                AddEvent("World Roster", $"{names.Length} players in the current instance");
             _lastPlayerCount = names.Length;
         }
 
@@ -1537,7 +1537,7 @@ public partial class OmniscopeWindow : Window
             .Select(aura => new AuraRow
             {
                 Name = aura.Name,
-                Stacks = aura.Stacks > 1 ? $"×{aura.Stacks}" : aura.Persistent ? "PASSIVE" : "ACTIVE",
+                Stacks = aura.Stacks > 1 ? $"×{aura.Stacks}" : aura.Persistent ? "Passive" : "Active",
                 Duration = aura.Persistent || aura.Duration <= 0 ? "Persistent effect" : $"{Math.Max(0, aura.RemainingTime):0}s remaining"
             })
             .ToArray();
@@ -1545,7 +1545,7 @@ public partial class OmniscopeWindow : Window
         AuraMetric.Text = $"Self effects: {rows.Length:N0}  /  Target: {_bot.Target.Snapshots.Count:N0}";
         string signature = string.Join("|", rows.Select(static row => $"{row.Name}:{row.Stacks}:{row.Duration}"));
         if (_lastAuraSignature.Length > 0 && _lastAuraSignature != signature)
-            AddEvent("AURA FIELD", $"{rows.Length} self effects currently visible");
+            AddEvent("Aura Field", $"{rows.Length} self effects currently visible");
         _lastAuraSignature = signature;
 
         if (_auras.Count == rows.Length && _auras.Zip(rows).All(static pair => pair.First.HasSameDisplay(pair.Second)))
@@ -1561,10 +1561,10 @@ public partial class OmniscopeWindow : Window
         SkillInfo[] skills = loggedIn ? _bot.Player.Skills?.ToArray() ?? [] : [];
         SkillRow[] rows = skills.Take(5).Select((skill, index) => new SkillRow
         {
-            Slot = index == 0 ? "AA" : (index + 1).ToString(),
+            Slot = index == 0 ? "Aa" : (index + 1).ToString(),
             Name = string.IsNullOrWhiteSpace(skill.Name) ? $"Skill {index + 1}" : skill.Name,
-            Cooldown = $"CD {(skill.Cooldown / 1000d):0.#}s",
-            Description = $"MP {skill.MP:N0}  /  Range {skill.Range:N0}  /  {skill.Type}"
+            Cooldown = $"Cd {(skill.Cooldown / 1000d):0.#}s",
+            Description = $"Mp {skill.Mp:N0}  /  Range {skill.Range:N0}  /  {skill.Type}"
         }).ToArray();
 
         SkillMetric.Text = loggedIn
@@ -1615,7 +1615,7 @@ public partial class OmniscopeWindow : Window
         if (loggedIn && _lastKillCount != _bot.Stats.Kills)
         {
             if (_lastKillCount >= 0)
-                AddEvent("COMBAT METRICS", $"{_bot.Stats.Kills - _lastKillCount:+#;-#;0} kills · {_bot.Stats.KillsPerMinute:N1}/min");
+                AddEvent("Combat Metrics", $"{_bot.Stats.Kills - _lastKillCount:+#;-#;0} kills · {_bot.Stats.KillsPerMinute:N1}/min");
             _lastKillCount = _bot.Stats.Kills;
         }
     }
@@ -1657,7 +1657,7 @@ public partial class OmniscopeWindow : Window
     {
         EventRow eventRow = new()
         {
-            Time = DateTime.Now.ToString("HH:mm:ss.fff"),
+            Time = DateTime.Now.ToString("Hh:mm:ss.fff"),
             Category = category,
             Detail = detail
         };
@@ -1673,7 +1673,7 @@ public partial class OmniscopeWindow : Window
                 _events.RemoveAt(_events.Count - 1);
         }
 
-        EventCountText.Text = $"{_eventHistory.Count:N0} EVENTS{(_eventLiveFollow ? string.Empty : "  /  PAUSED")}";
+        EventCountText.Text = $"{_eventHistory.Count:N0} Events{(_eventLiveFollow ? string.Empty : "  /  PAUSED")}";
     }
 
     private static void SetProgress(Border bar, double current, double maximum)
@@ -1685,8 +1685,8 @@ public partial class OmniscopeWindow : Window
 
     private static string GetRecordActionHint(GameDataRecord record) => record.Category switch
     {
-        "QUEST" => "This is a saved quest definition. Use CHECK QUEST to inspect the live character state, ACCEPT QUEST when available, or TURN IN QUEST when all requirements are met.",
-        "SHOP" => "This item belongs to the shop shown above. LOAD SHOP opens that shop in the game. CHECK REQUIREMENTS inspects the live client-side purchase gates. Loading a shop does not buy the item.",
+        "QUEST" => "This is a saved quest definition. Use Check Quest to inspect the live character state, Accept Quest when available, or Turn In Quest when all requirements are met.",
+        "SHOP" => "This item belongs to the shop shown above. Load Shop opens that shop in the game. Check Requirements inspects the live client-side purchase gates. Loading a shop does not buy the item.",
         "MAP ITEM" => "This is a map-item to quest association read from saved map data. It is a reference, not an action button. Use the quest ID to find its quest record.",
         "ITEM REFERENCE" => "This item ID is referenced by quests, rewards, shops, or runtime events. Select the related quest or shop result to use its available actions.",
         "DROP" => "This is a drop observation or drop-related record, not a guaranteed loot table. It does not identify a verified source unless the details explicitly say so.",
@@ -1698,10 +1698,10 @@ public partial class OmniscopeWindow : Window
 
     private static string GetPlayerState(int state) => state switch
     {
-        0 => "DEAD",
-        1 => "IDLE",
-        2 => "IN COMBAT",
-        _ => $"STATE {state}"
+        0 => "Dead",
+        1 => "Idle",
+        2 => "In Combat",
+        _ => $"State {state}"
     };
 
     private static string NullLabel(string? value) => string.IsNullOrWhiteSpace(value) ? "Unknown" : value;
