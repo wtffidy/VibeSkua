@@ -23,11 +23,21 @@ jobs:
   build:
     name: Build solution (.NET 10 / Windows)
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up Java 8 for Apache Flex
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+
+      - name: Install Apache Flex SDK
+        shell: pwsh
+        run: ./Skua.AS3/Setup-Flex.ps1
 
       - name: Install .NET 10 SDK
         uses: actions/setup-dotnet@v4
@@ -50,7 +60,9 @@ jobs:
           $appPath = Join-Path $PWD "Build/VibeSkua.exe"
           $managerPath = Join-Path $PWD "Build/VibeSkua.Manager.exe"
           $swfPath = Join-Path $PWD "Build/skua.swf"
-          foreach ($requiredPath in @($appPath, $managerPath, $swfPath)) {
+          $sourceSwfPath = Join-Path $PWD "Skua.AS3/skua/bin/skua.swf"
+          $appSwfPath = Join-Path $PWD "Skua.App.Avalonia/bin/Release/net10.0-windows/skua.swf"
+          foreach ($requiredPath in @($appPath, $managerPath, $swfPath, $sourceSwfPath, $appSwfPath)) {
             if (-not (Test-Path $requiredPath)) {
               throw "A required client package file is missing: $requiredPath"
             }
@@ -71,7 +83,14 @@ jobs:
             throw "The packaged FFDec Java runtime failed its startup check (exit code $($javaProcess.ExitCode)): $javaVersion"
           }
           Write-Host $javaVersion
-          Get-Item $appPath, $managerPath, $swfPath, $pluginPath, $javaPath | Format-List FullName, Length, LastWriteTimeUtc
+          $sourceHash = (Get-FileHash $sourceSwfPath -Algorithm SHA256).Hash
+          foreach ($packagedSwf in @($appSwfPath, $swfPath)) {
+            $packagedHash = (Get-FileHash $packagedSwf -Algorithm SHA256).Hash
+            if ($packagedHash -ne $sourceHash) {
+              throw "Packaged SWF does not match the freshly compiled source: $packagedSwf"
+            }
+          }
+          Get-Item $appPath, $managerPath, $sourceSwfPath, $appSwfPath, $swfPath, $pluginPath, $javaPath | Format-List FullName, Length, LastWriteTimeUtc
 
       - name: Upload Windows test build
         uses: actions/upload-artifact@v4
