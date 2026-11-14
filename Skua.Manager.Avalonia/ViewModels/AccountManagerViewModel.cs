@@ -252,7 +252,7 @@ public sealed partial class AccountManagerViewModel : BotControlViewModelBase
 
     private async Task StartAccountBatch(List<IAccountItemViewModel> accounts, string batchName, bool runScript, bool newWindow = false)
     {
-        if (_isLaunching || accounts.Count == 0)
+        if (_isLaunching || accounts.Count == 0 || !_ConfirmSelectedServerLatency())
             return;
 
         try
@@ -409,6 +409,9 @@ public sealed partial class AccountManagerViewModel : BotControlViewModelBase
 
     private void _StartAccount(IAccountItemViewModel account, bool withScript)
     {
+        if (!_ConfirmSelectedServerLatency())
+            return;
+
         _syncThemes = _settingsService.Get("syncTheme", false);
 
         if (withScript && string.IsNullOrEmpty(ScriptPath))
@@ -434,6 +437,27 @@ public sealed partial class AccountManagerViewModel : BotControlViewModelBase
 
         bool runScript = withScript || StartWithScript;
         await StartAccountBatch(group.Accounts.ToList(), $"group '{group.Name}'", runScript, newWindow);
+    }
+
+    private bool _ConfirmSelectedServerLatency()
+    {
+        Server? server = SelectedServer;
+        if (server is null)
+            return true;
+
+        int thresholdMs = Math.Clamp(_settingsService.Get("ServerLatencyThresholdMs", ServerLatencyClassifier.DefaultThresholdMs), 50, 2000);
+        int nearThresholdPercent = Math.Clamp(_settingsService.Get("ServerLatencyNearThresholdPercent", ServerLatencyClassifier.DefaultNearThresholdPercent), 50, 95);
+        ServerLatencyStatus status = ServerLatencyClassifier.Classify(server.Ping, thresholdMs, nearThresholdPercent);
+
+        if (status is not (ServerLatencyStatus.High or ServerLatencyStatus.Unavailable)
+            || _settingsService.Get("ServerLatencyWarningDismissed", false))
+            return true;
+
+        ServerLatencyWarningResult result = _dialogService.ShowServerLatencyWarning(server.Name, server.Ping, thresholdMs);
+        if (result.DontShowAgain)
+            _settingsService.Set("ServerLatencyWarningDismissed", true);
+
+        return result.Accepted;
     }
 
     private void _LaunchAcc(string username, string password, string? displayName = null, bool? withScript = null, string? hostInstanceId = null)
@@ -1017,7 +1041,15 @@ public sealed partial class AccountManagerViewModel : BotControlViewModelBase
     {
         const int TimeoutMs = 2500;
         const int SampleCount = 3;
-        const long FailedPing = 9999;
+        const long FailedPing = ServerLatencyClassifier.FailedPing;
+        int thresholdMs = Math.Clamp(_settingsService.Get("ServerLatencyThresholdMs", ServerLatencyClassifier.DefaultThresholdMs), 50, 2000);
+        int nearThresholdPercent = Math.Clamp(_settingsService.Get("ServerLatencyNearThresholdPercent", ServerLatencyClassifier.DefaultNearThresholdPercent), 50, 95);
+
+        void UpdateIndicator(Server server)
+        {
+            ServerLatencyStatus status = ServerLatencyClassifier.Classify(server.Ping, thresholdMs, nearThresholdPercent);
+            server.PingIndicator = ServerLatencyClassifier.GetIndicator(status);
+        }
         byte[] versionCheck = System.Text.Encoding.UTF8.GetBytes("<msg t='sys'><body action='verChk' r='0'><ver v='165' /></body></msg>\0");
 
         List<Task> pingTasks = servers.Select(server => Task.Run(async () =>
@@ -1025,6 +1057,7 @@ public sealed partial class AccountManagerViewModel : BotControlViewModelBase
             if (!server.Online || string.IsNullOrWhiteSpace(server.IP) || server.Port <= 0 || server.Port > 65535)
             {
                 server.Ping = FailedPing;
+                UpdateIndicator(server);
                 return;
             }
 
@@ -1084,12 +1117,14 @@ public sealed partial class AccountManagerViewModel : BotControlViewModelBase
             if (samples.Count == 0)
             {
                 server.Ping = FailedPing;
+                UpdateIndicator(server);
                 return;
             }
 
             samples.Sort();
             double median = samples[samples.Count / 2];
             server.Ping = (long)Math.Round(median, MidpointRounding.AwayFromZero);
+            UpdateIndicator(server);
         })).ToList();
 
         await Task.WhenAll(pingTasks);
