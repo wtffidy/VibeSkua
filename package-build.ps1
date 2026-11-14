@@ -10,6 +10,24 @@ $CoreDir = Join-Path $RootDir "Skua.Core"
 $SkillsDir = Join-Path $CoreDir "Skills"
 $FFDecDir = Join-Path $RootDir "FFDec"
 $SwfSource = Join-Path $RootDir "Skua.AS3\skua\bin\skua.swf"
+$As3BuildScript = Join-Path $RootDir "Skua.AS3\compile-as3.ps1"
+
+if (-not (Test-Path -LiteralPath $As3BuildScript -PathType Leaf)) {
+    throw "The AS3 compiler script is missing: $As3BuildScript"
+}
+
+Write-Host "Compiling the ActionScript client before packaging..." -ForegroundColor Cyan
+& $As3BuildScript -OutputPath $SwfSource
+
+if (-not (Test-Path -LiteralPath $SwfSource -PathType Leaf)) {
+    throw "The AS3 build completed without producing the required SWF: $SwfSource"
+}
+
+if (-not (Test-Path -LiteralPath $AppBin -PathType Container)) {
+    throw "The application build output is missing. Build Skua.sln before packaging: $AppBin"
+}
+
+Copy-Item -LiteralPath $SwfSource -Destination (Join-Path $AppBin "skua.swf") -Force
 
 $LegacyAnyCPU = Join-Path $RootDir "Build\AnyCPU"
 if (Test-Path $LegacyAnyCPU) {
@@ -89,12 +107,8 @@ foreach ($Target in $Targets) {
         }
     }
 
-    # 3. Copy skua.swf
-    if (Test-Path $SwfSource) {
-        Copy-Item $SwfSource (Join-Path $Target "skua.swf") -Force
-    } elseif (Test-Path (Join-Path $AppBin "skua.swf")) {
-        Copy-Item (Join-Path $AppBin "skua.swf") (Join-Path $Target "skua.swf") -Force
-    }
+    # 3. Copy the freshly compiled ActionScript client.
+    Copy-Item -LiteralPath $SwfSource -Destination (Join-Path $Target "skua.swf") -Force
 
     # 4. Copy all DLLs and XMLs into Assemblies (excluding root DLLs)
     $ExcludedDlls = @("VibeSkua.dll", "VibeSkua.Manager.dll", "Skua.dll", "Skua.Manager.dll")
