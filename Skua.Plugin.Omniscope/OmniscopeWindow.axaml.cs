@@ -232,7 +232,7 @@ public partial class OmniscopeWindow : Window
             string className = loggedIn ? _bot.Player.CurrentClass?.Name ?? "Unknown class" : "Offline";
             TrackChange(ref _lastClass, className, "Class Change");
 
-            string vitals = loggedIn ? $"{health}/{maxHealth} HP · {mana}/{maxMana} Mp" : "Offline";
+            string vitals = loggedIn ? $"{health}/{maxHealth} HP · {mana}/{maxMana} MP" : "Offline";
             if (_lastVitals.Length > 0 && _lastVitals != vitals)
                 AddEvent("Vitals Update", vitals);
             _lastVitals = vitals;
@@ -703,7 +703,7 @@ public partial class OmniscopeWindow : Window
                 MapItemRecordCountText.Text = "0";
                 ApplyMapFilter();
                 DataStatusText.Text = _mapShopRecords.Count > 0
-                    ? $"No Saved Map Item Index  /  {_mapShopRecords.Count:N0} Shop Ids Restored From Previous Map Scans"
+                    ? $"No Saved Map Item Index  /  {_mapShopRecords.Count:N0} Shop IDs Restored From Previous Map Scans"
                     : "No Saved Map Index Found  /  Load Maps In-Game First";
                 return;
             }
@@ -868,7 +868,7 @@ public partial class OmniscopeWindow : Window
             ApplyMapFilter();
             DataStatusText.Text = shopIds.Length > 0
                 ? $"Found {shopIds.Length:N0} Shop ID(S) In /{mapName}  /  Select A Shop To Load Or Generate Its Merge Script"
-                : $"No Shop Ids Found In /{mapName}  /  Map SWF Scan Completed";
+                : $"No Shop IDs Found In /{mapName}  /  Map SWF Scan Completed";
         }
         catch (Exception ex)
         {
@@ -1313,7 +1313,7 @@ public partial class OmniscopeWindow : Window
         {
             Category = "DROP",
             Name = NullLabel(observation.Name),
-            Summary = $"{observation.Timestamp:Hh:mm:ss}  /  ×{observation.ItemQuantity:N0}  /  Added: {observation.AddedToInventory}",
+            Summary = $"{observation.Timestamp:HH:mm:ss}  /  ×{observation.ItemQuantity:N0}  /  Added: {observation.AddedToInventory}",
             Metadata = "Runtime ItemDropped event history",
             Details = details,
             SearchText = details
@@ -1564,7 +1564,7 @@ public partial class OmniscopeWindow : Window
             Slot = index == 0 ? "Aa" : (index + 1).ToString(),
             Name = string.IsNullOrWhiteSpace(skill.Name) ? $"Skill {index + 1}" : skill.Name,
             Cooldown = $"Cd {(skill.Cooldown / 1000d):0.#}s",
-            Description = $"Mp {skill.Mp:N0}  /  Range {skill.Range:N0}  /  {skill.Type}"
+            Description = $"MP {skill.Mp:N0}  /  Range {skill.Range:N0}  /  {skill.Type}"
         }).ToArray();
 
         SkillMetric.Text = loggedIn
