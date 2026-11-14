@@ -134,6 +134,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        ResizeGripOverlay.IsVisible = HotKeys.HostHwnd == IntPtr.Zero;
         _mainViewModel = Ioc.Default.GetRequiredService<MainViewModel>();
         _mainMenuVm = Ioc.Default.GetRequiredService<MainMenuViewModel>();
         _flash = Ioc.Default.GetRequiredService<IFlashUtil>();
@@ -505,7 +506,8 @@ public partial class MainWindow : Window
     /// <param name="e">The pointer event that initiated the resize.</param>
     private void BeginGripResize(WindowEdge edge, PointerPressedEventArgs e)
     {
-        if (!CanResize || WindowState != WindowState.Normal || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        if (HotKeys.HostHwnd != IntPtr.Zero || !CanResize || WindowState != WindowState.Normal ||
+            !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
             return;
 
         e.Handled = true;
