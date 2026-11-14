@@ -12,6 +12,8 @@ import skua.module.ModalMC;
 public class Server {
 
     private static var _connectionServerTimer:Timer = null;
+    private static var _serverListHooked:Boolean = false;
+    private static var _allowServerClick:Boolean = false;
 
     public function Server() {
         super();
@@ -40,6 +42,10 @@ public class Server {
             // 2. Check mcLogin.sl.iList children
             if (Main.instance.game.mcLogin != null && Main.instance.game.mcLogin.sl != null && Main.instance.game.mcLogin.sl.iList != null) {
                 var source:* = Main.instance.game.mcLogin.sl.iList;
+                if (!_serverListHooked) {
+                    source.addEventListener(MouseEvent.CLICK, onServerListClick, true);
+                    _serverListHooked = true;
+                }
                 for (var j:int = 0; j < source.numChildren; j++) {
                     var child:* = source.getChildAt(j);
                     if (child != null) {
@@ -92,6 +98,31 @@ public class Server {
         }
     }
 
+    private static function onServerListClick(event:MouseEvent):void {
+        if (_allowServerClick) {
+            _allowServerClick = false;
+            return;
+        }
+
+        try {
+            var source:* = Main.instance.game.mcLogin.sl.iList;
+            var child:* = event.target;
+            while (child != null && child.parent != source) {
+                child = child.parent;
+            }
+
+            if (child == null) return;
+            var server:Object = child.server || child.objServer;
+            if (server == null || server.sName == null) return;
+
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            Main.instance.external.call("requestServerLatencyWarning", String(server.sName));
+        } catch (e:Error) {
+            Main.instance.external.debug("Server latency click interception failed: " + e);
+        }
+    }
+
     public static function clickServer(serverName:String):String {
         killLoginModals();
         loadPolicyFiles();
@@ -106,7 +137,7 @@ public class Server {
                         Security.loadPolicyFile("xmlsocket://" + String(cServer.sIP) + ":" + int(cServer.iPort));
                     }
                 } catch (e:Error) {}
-                Main.instance.external.call("requestServerLatencyWarning", serverName);
+                child.dispatchEvent(new MouseEvent(MouseEvent.CLICK, true, true));
                 return true.toString();
             }
         }
@@ -123,7 +154,8 @@ public class Server {
             var child:* = source.getChildAt(i);
             if (child != null && child.tName != null && child.tName.ti != null
                 && child.tName.ti.text.toLowerCase().indexOf(serverName.toLowerCase()) > -1) {
-                child.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
+                _allowServerClick = true;
+                child.dispatchEvent(new MouseEvent(MouseEvent.CLICK, true, true));
                 return true.toString();
             }
         }
