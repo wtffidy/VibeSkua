@@ -106,10 +106,28 @@ public class Server {
                         Security.loadPolicyFile("xmlsocket://" + String(cServer.sIP) + ":" + int(cServer.iPort));
                     }
                 } catch (e:Error) {}
+                Main.instance.external.call("requestServerLatencyWarning", serverName);
+                return true.toString();
+            }
+        }
+        return false.toString();
+    }
+
+    public static function confirmServerSelection(serverName:String, accepted:Boolean):String {
+        if (!accepted) {
+            return false.toString();
+        }
+
+        var source:* = Main.instance.game.mcLogin.sl.iList;
+        for (var i:int = 0; i < source.numChildren; i++) {
+            var child:* = source.getChildAt(i);
+            if (child != null && child.tName != null && child.tName.ti != null
+                && child.tName.ti.text.toLowerCase().indexOf(serverName.toLowerCase()) > -1) {
                 child.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
                 return true.toString();
             }
         }
+
         return false.toString();
     }
 
