@@ -1039,95 +1039,9 @@ public sealed partial class AccountManagerViewModel : BotControlViewModelBase
 
     private async Task _MeasureServerPings(List<Server> servers)
     {
-        const int TimeoutMs = 2500;
-        const int SampleCount = 3;
-        const long FailedPing = ServerLatencyClassifier.FailedPing;
-        int thresholdMs = Math.Clamp(_settingsService.Get("ServerLatencyThresholdMs", ServerLatencyClassifier.DefaultThresholdMs), 50, 2000);
-        int nearThresholdPercent = Math.Clamp(_settingsService.Get("ServerLatencyNearThresholdPercent", ServerLatencyClassifier.DefaultNearThresholdPercent), 50, 95);
-
-        void UpdateIndicator(Server server)
-        {
-            ServerLatencyStatus status = ServerLatencyClassifier.Classify(server.Ping, thresholdMs, nearThresholdPercent);
-            server.PingIndicator = ServerLatencyClassifier.GetIndicator(status);
-        }
-        byte[] versionCheck = System.Text.Encoding.UTF8.GetBytes("<msg t='sys'><body action='verChk' r='0'><ver v='165' /></body></msg>\0");
-
-        List<Task> pingTasks = servers.Select(server => Task.Run(async () =>
-        {
-            if (!server.Online || string.IsNullOrWhiteSpace(server.IP) || server.Port <= 0 || server.Port > 65535)
-            {
-                server.Ping = FailedPing;
-                UpdateIndicator(server);
-                return;
-            }
-
-            List<double> samples = new(SampleCount);
-
-            for (int sample = 0; sample < SampleCount; sample++)
-            {
-                try
-                {
-                    using System.Net.Sockets.TcpClient client = new();
-                    await client.ConnectAsync(server.IP, server.Port).WaitAsync(TimeSpan.FromMilliseconds(TimeoutMs));
-
-                    using System.Net.Sockets.NetworkStream stream = client.GetStream();
-                    await stream.WriteAsync(versionCheck.AsMemory());
-                    await stream.FlushAsync();
-
-                    // Start timing after the version check is sent; TCP connect time alone can be misleading.
-                    Stopwatch stopwatch = Stopwatch.StartNew();
-                    using CancellationTokenSource timeout = new(TimeoutMs);
-                    byte[] buffer = new byte[1];
-                    System.Text.StringBuilder response = new();
-
-                    while (!timeout.IsCancellationRequested)
-                    {
-                        int bytesRead = await stream.ReadAsync(buffer.AsMemory(), timeout.Token);
-                        if (bytesRead == 0)
-                            break;
-
-                        if (buffer[0] != 0)
-                        {
-                            response.Append((char)buffer[0]);
-                            continue;
-                        }
-
-                        string message = response.ToString();
-                        response.Clear();
-
-                        if (message.Contains("action='apiOK'", StringComparison.OrdinalIgnoreCase)
-                            || message.Contains("action=\"apiOK\"", StringComparison.OrdinalIgnoreCase))
-                        {
-                            stopwatch.Stop();
-                            samples.Add(stopwatch.Elapsed.TotalMilliseconds);
-                            break;
-                        }
-
-                        if (message.Contains("action='apiKO'", StringComparison.OrdinalIgnoreCase)
-                            || message.Contains("action=\"apiKO\"", StringComparison.OrdinalIgnoreCase))
-                            break;
-                    }
-                }
-                catch
-                {
-                    // A failed connection or missing protocol response is not a valid latency sample.
-                }
-            }
-
-            if (samples.Count == 0)
-            {
-                server.Ping = FailedPing;
-                UpdateIndicator(server);
-                return;
-            }
-
-            samples.Sort();
-            double median = samples[samples.Count / 2];
-            server.Ping = (long)Math.Round(median, MidpointRounding.AwayFromZero);
-            UpdateIndicator(server);
-        })).ToList();
-
-        await Task.WhenAll(pingTasks);
+        int thresholdMs = _settingsService.Get("ServerLatencyThresholdMs", ServerLatencyClassifier.DefaultThresholdMs);
+        int nearThresholdPercent = _settingsService.Get("ServerLatencyNearThresholdPercent", ServerLatencyClassifier.DefaultNearThresholdPercent);
+        await ServerLatencyTester.MeasureAsync(servers, thresholdMs, nearThresholdPercent);
     }
 
     // Script Commands
