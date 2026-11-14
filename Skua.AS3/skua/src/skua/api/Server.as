@@ -14,6 +14,7 @@ public class Server {
     private static var _connectionServerTimer:Timer = null;
     private static var _serverListHooked:Boolean = false;
     private static var _allowServerClick:Boolean = false;
+    private static var _pendingDirectServerData:Object = null;
 
     public function Server() {
         super();
@@ -167,6 +168,27 @@ public class Server {
         resetConnectionState();
 
         var serverData:Object = JSON.parse(server);
+        if (serverData != null && serverData.sName != null) {
+            _pendingDirectServerData = serverData;
+            Main.instance.external.call("requestDirectServerLatencyWarning", String(serverData.sName));
+            return true.toString();
+        }
+
+        return beginDirectServerConnection(serverData);
+    }
+
+    public static function confirmDirectServerConnection(serverName:String, accepted:Boolean):String {
+        var serverData:Object = _pendingDirectServerData;
+        _pendingDirectServerData = null;
+
+        if (!accepted || serverData == null) {
+            return false.toString();
+        }
+
+        return beginDirectServerConnection(serverData);
+    }
+
+    private static function beginDirectServerConnection(serverData:Object):String {
         if (serverData != null && serverData.sIP != null && serverData.iPort != null) {
             try {
                 Security.loadPolicyFile("xmlsocket://" + String(serverData.sIP) + ":" + int(serverData.iPort));
