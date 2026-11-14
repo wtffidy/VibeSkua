@@ -98,7 +98,7 @@ New-Item -ItemType Directory -Path $resolvedOutputDirectory -Force | Out-Null
     -optimize
 
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $outputPath)) {
-    throw "AS3 compilation failed with exit code $LASTEXITCODE: $outputPath"
+    throw "AS3 compilation failed with exit code ${LASTEXITCODE}: $outputPath"
 }
 
 $output = Get-Item -LiteralPath $outputPath
