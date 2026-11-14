@@ -1564,7 +1564,7 @@ public partial class OmniscopeWindow : Window
             Slot = index == 0 ? "Aa" : (index + 1).ToString(),
             Name = string.IsNullOrWhiteSpace(skill.Name) ? $"Skill {index + 1}" : skill.Name,
             Cooldown = $"Cd {(skill.Cooldown / 1000d):0.#}s",
-            Description = $"MP {skill.Mp:N0}  /  Range {skill.Range:N0}  /  {skill.Type}"
+            Description = $"MP {skill.MP:N0}  /  Range {skill.Range:N0}  /  {skill.Type}"
         }).ToArray();
 
         SkillMetric.Text = loggedIn
