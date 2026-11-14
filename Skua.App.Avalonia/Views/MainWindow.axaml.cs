@@ -481,7 +481,10 @@ public partial class MainWindow : Window
     {
         if (function == "requestServerLatencyWarning")
         {
-            string? serverName = args.FirstOrDefault()?.ToString();
+            object? callbackArgument = args.FirstOrDefault();
+            string? serverName = callbackArgument is object[] callbackValues
+                ? callbackValues.FirstOrDefault()?.ToString()
+                : callbackArgument?.ToString();
             if (!string.IsNullOrWhiteSpace(serverName))
                 Dispatcher.UIThread.Post(async () => await ConfirmServerSelectionAsync(serverName));
             return;
