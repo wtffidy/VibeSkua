@@ -398,10 +398,10 @@ public partial class TabbedHostWindow : Window
         PositionChanged += (s, e) => OnWindowPositionChanged(e.Point);
         SizeChanged += (s, e) =>
         {
-            // The embedded game HWND is separate from the Avalonia window. During a native
-            // resize drag, normal repositioning is paused, so refresh its bounds explicitly.
+            // During a native resize drag, wait until Avalonia has completed the layout pass
+            // before measuring HostContainer. Measuring synchronously here can reuse stale bounds.
             if (_isDraggingWindow)
-                RepositionWithFreshCache();
+                Dispatcher.UIThread.Post(RepositionWithFreshCache, DispatcherPriority.Render);
             else
                 ScheduleReposition();
 
