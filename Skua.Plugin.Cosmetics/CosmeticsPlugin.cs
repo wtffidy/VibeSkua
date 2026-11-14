@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Avalonia.Controls;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Skua.Core.Interfaces;
@@ -17,6 +18,7 @@ public class CosmeticsPlugin : ISkuaPlugin
 
     private IServiceProvider? _provider;
     private IPluginHelper? _helper;
+    private IScriptInterface? _bot;
     private CosmeticsService? _service;
     private CosmeticsWindow? _window;
 
@@ -25,7 +27,8 @@ public class CosmeticsPlugin : ISkuaPlugin
         _provider = provider;
         _helper = helper;
 
-        var bot = _provider.GetRequiredService<IScriptInterface>();
+        IScriptInterface bot = _provider.GetRequiredService<IScriptInterface>();
+        _bot = bot;
         _service = new CosmeticsService(bot);
 
         _helper.AddMenuButton("Cosmetics", ShowWindow);
