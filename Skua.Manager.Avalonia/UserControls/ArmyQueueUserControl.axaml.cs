@@ -13,6 +13,7 @@ public partial class ArmyQueueUserControl : UserControl
     private ArmyQueueViewModel? _currentVm;
     private ArmyQueueStepViewModel? _draggedStep;
     private Point _dragStartPoint;
+    private PointerPressedEventArgs? _dragStartEvent;
 
     public ArmyQueueUserControl()
     {
@@ -46,11 +47,12 @@ public partial class ArmyQueueUserControl : UserControl
 
         _draggedStep = step;
         _dragStartPoint = e.GetPosition(control);
+        _dragStartEvent = e;
     }
 
     private async void OnSquadTabPointerMoved(object? sender, PointerEventArgs e)
     {
-        if (_currentVm?.IsRunning == true || _draggedStep == null ||
+        if (_currentVm?.IsRunning == true || _draggedStep == null || _dragStartEvent == null ||
             sender is not Control control ||
             !e.GetCurrentPoint(control).Properties.IsLeftButtonPressed)
             return;
@@ -61,10 +63,26 @@ public partial class ArmyQueueUserControl : UserControl
             return;
 
         ArmyQueueStepViewModel step = _draggedStep;
+        PointerPressedEventArgs dragStartEvent = _dragStartEvent;
+        _dragStartEvent = null;
+
         DataTransfer data = new();
         data.Add(DataTransferItem.Create(ArmyQueueStepDataFormat, step));
-        await DragDrop.DoDragDropAsync(e, data, DragDropEffects.Move);
+
+        try
+        {
+            await DragDrop.DoDragDropAsync(dragStartEvent, data, DragDropEffects.Move);
+        }
+        finally
+        {
+            _draggedStep = null;
+        }
+    }
+
+    private void OnSquadTabPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
         _draggedStep = null;
+        _dragStartEvent = null;
     }
 
     private void OnSquadTabDragOver(object? sender, DragEventArgs e)
