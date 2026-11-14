@@ -303,11 +303,15 @@ public partial class CosmeticsWindow : Window
 
     private void WeaponSubcategoryCombo_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (WeaponSubcategoryCombo.SelectedItem is ComboBoxItem item)
-        {
-            _activeWeaponSubcategory = item.Content?.ToString() ?? "All Weapons";
+        if (sender is not ComboBox combo || combo.SelectedItem is not ComboBoxItem item)
+            return;
+
+        _activeWeaponSubcategory = item.Content?.ToString() ?? "All Weapons";
+
+        // Avalonia can raise this event while InitializeComponent is still populating controls.
+        // The Loaded handler performs the initial catalog filter once the window is ready.
+        if (IsVisible)
             FilterCatalog();
-        }
     }
 
     private void SortCombo_SelectionChanged(object? sender, SelectionChangedEventArgs e)
