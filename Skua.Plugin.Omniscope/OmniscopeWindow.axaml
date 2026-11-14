@@ -7,9 +7,8 @@
         Width="1400" Height="900"
         MinWidth="1080" MinHeight="700"
         Background="#090713"
-        SystemDecorations="BorderOnly"
+        WindowDecorations="BorderOnly"
         ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaChromeHints="NoChrome"
         ExtendClientAreaTitleBarHeightHint="32"
         WindowStartupLocation="CenterScreen">
     <Grid RowDefinitions="Auto,*">
