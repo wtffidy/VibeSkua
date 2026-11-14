@@ -21,10 +21,7 @@ if ($null -eq $flexHome) {
 if ($null -eq $flexHome) {
     $searchRoots = @(
         'C:\MoonshineSDKs',
-        'C:\ApacheFlex',
-        $env:ProgramFiles,
-        (Join-Path $env:SystemDrive 'Program Files (x86)'),
-        $env:LOCALAPPDATA
+        'C:\ApacheFlex'
     ) | Where-Object {
         -not [string]::IsNullOrWhiteSpace($_) -and (Test-Path -LiteralPath $_)
     } | Select-Object -Unique
