@@ -479,14 +479,17 @@ public partial class MainWindow : Window
 
     private void OnFlashCall(string function, params object[] args)
     {
-        if (function == "requestServerLatencyWarning")
+        if (function is "requestServerLatencyWarning" or "requestDirectServerLatencyWarning")
         {
             object? callbackArgument = args.FirstOrDefault();
             string? serverName = callbackArgument is object[] callbackValues
                 ? callbackValues.FirstOrDefault()?.ToString()
                 : callbackArgument?.ToString();
+            string confirmationFunction = function == "requestDirectServerLatencyWarning"
+                ? "confirmDirectServerConnection"
+                : "confirmServerSelection";
             if (!string.IsNullOrWhiteSpace(serverName))
-                Dispatcher.UIThread.Post(async () => await ConfirmServerSelectionAsync(serverName));
+                Dispatcher.UIThread.Post(async () => await ConfirmServerSelectionAsync(serverName, confirmationFunction));
             return;
         }
 
@@ -510,7 +513,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task ConfirmServerSelectionAsync(string serverName)
+    private async Task ConfirmServerSelectionAsync(string serverName, string confirmationFunction)
     {
         bool accepted = true;
         try
@@ -546,7 +549,7 @@ public partial class MainWindow : Window
             accepted = true;
         }
 
-        _flash.Call("confirmServerSelection", serverName, accepted);
+        _flash.Call(confirmationFunction, serverName, accepted);
     }
 
 #if IS_WINDOWS
