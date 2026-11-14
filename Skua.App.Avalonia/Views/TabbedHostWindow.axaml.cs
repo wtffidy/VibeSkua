@@ -396,17 +396,7 @@ public partial class TabbedHostWindow : Window
 
         Opened += TabbedHostWindow_Opened;
         PositionChanged += (s, e) => OnWindowPositionChanged(e.Point);
-        SizeChanged += (s, e) =>
-        {
-            // During a native resize drag, wait until Avalonia has completed the layout pass
-            // before measuring HostContainer. Measuring synchronously here can reuse stale bounds.
-            if (_isDraggingWindow)
-                Dispatcher.UIThread.Post(RepositionWithFreshCache, DispatcherPriority.Render);
-            else
-                ScheduleReposition();
-
-            UpdateTabScrollButtons();
-        };
+        SizeChanged += (s, e) => { ScheduleReposition(); UpdateTabScrollButtons(); };
         ScalingChanged += (s, e) => Dispatcher.UIThread.Post(RepositionWithFreshCache, DispatcherPriority.Loaded);
 
         PropertyChanged += (s, e) => { if (e.Property == WindowStateProperty || e.Property == IsVisibleProperty) ScheduleReposition(); };
