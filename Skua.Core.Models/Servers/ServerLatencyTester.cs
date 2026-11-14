@@ -39,7 +39,7 @@ public static class ServerLatencyTester
             try
             {
                 using TcpClient client = new();
-                await client.ConnectAsync(server.IP, server.Port, cancellationToken).WaitAsync(TimeSpan.FromMilliseconds(TimeoutMs), cancellationToken).ConfigureAwait(false);
+                await client.ConnectAsync(server.IP, server.Port).WaitAsync(TimeSpan.FromMilliseconds(TimeoutMs), cancellationToken).ConfigureAwait(false);
 
                 using NetworkStream stream = client.GetStream();
                 await stream.WriteAsync(VersionCheck.AsMemory(), cancellationToken).ConfigureAwait(false);
