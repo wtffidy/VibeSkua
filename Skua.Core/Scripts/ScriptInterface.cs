@@ -41,6 +41,7 @@ public class ScriptInterface : IScriptInterface, IScriptInterfaceManager, IDispo
     public IScriptSelfAuras Self { get; }
     public IScriptTargetAuras Target { get; }
     public IAuraMonitorService AuraMonitor { get; }
+    public IScriptWatchdogService Watchdog { get; }
     public IUltraBossHelper UltraBossHelper { get; }
     public IScriptCombat Combat { get; }
     public IScriptKill Kill { get; }
@@ -106,6 +107,7 @@ public class ScriptInterface : IScriptInterface, IScriptInterfaceManager, IDispo
         IDialogService dialogService,
         ISettingsService settingsService,
         IAuraMonitorService auraMonitorService,
+        IScriptWatchdogService watchdogService,
         IUltraBossHelper ultraBossHelper,
         IScriptAccounts accounts)
     {
@@ -144,6 +146,7 @@ public class ScriptInterface : IScriptInterface, IScriptInterfaceManager, IDispo
         Handlers = handlers;
         Flash = flash;
         AuraMonitor = auraMonitorService;
+        Watchdog = watchdogService;
         UltraBossHelper = ultraBossHelper;
         Accounts = accounts;
         _settingsService = settingsService;
