@@ -6,6 +6,7 @@ on:
       - main
       - feature/advanced-stats-metrics
       - feature/client-intelligence-suite
+      - feature/avalonia-12-modernization
   pull_request:
     branches:
       - main
