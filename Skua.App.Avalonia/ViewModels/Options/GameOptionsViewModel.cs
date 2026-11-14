@@ -28,14 +28,18 @@ public class GameOptionsViewModel : BotControlViewModelBase
 
     private readonly IScriptServers _servers;
     private readonly IScriptOption _options;
+    private readonly ISettingsService _settingsService;
+    private readonly IDialogService _dialogService;
     private readonly CBOChoiceOptionItemViewModel _reloginServerItem;
     private readonly List<string> _reloginServerNames;
 
-    public GameOptionsViewModel(List<DisplayOptionItemViewModelBase> gameOptions, IScriptServers servers, IScriptOption options)
+    public GameOptionsViewModel(List<DisplayOptionItemViewModelBase> gameOptions, IScriptServers servers, IScriptOption options, ISettingsService settingsService, IDialogService dialogService)
         : base("Game Options", 800, 720)
     {
         _servers = servers;
         _options = options;
+        _settingsService = settingsService;
+        _dialogService = dialogService;
         _selectedServer = !string.IsNullOrWhiteSpace(options.ReloginServer) ? options.ReloginServer : "Twilly";
         GameOptions = gameOptions;
         ResetOptionsCommand = new RelayCommand(_options.Reset);
@@ -171,7 +175,34 @@ public class GameOptionsViewModel : BotControlViewModelBase
         get => _selectedServer ?? _options.ReloginServer ?? "Twilly";
         set
         {
-            if (SetProperty(ref _selectedServer, value) && value is not null)
+            if (value is null || string.Equals(_selectedServer, value, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            Server? server = _servers.CachedServers.FirstOrDefault(s => string.Equals(s.Name, value, StringComparison.OrdinalIgnoreCase));
+            if (server is not null)
+            {
+                int thresholdMs = Math.Clamp(_settingsService.Get("ServerLatencyThresholdMs", ServerLatencyClassifier.DefaultThresholdMs), 50, 2000);
+                int nearThresholdPercent = Math.Clamp(_settingsService.Get("ServerLatencyNearThresholdPercent", ServerLatencyClassifier.DefaultNearThresholdPercent), 50, 95);
+                ServerLatencyStatus status = ServerLatencyClassifier.Classify(server.Ping, thresholdMs, nearThresholdPercent);
+
+                if (status is ServerLatencyStatus.High or ServerLatencyStatus.Unavailable
+                    && !_settingsService.Get("ServerLatencyWarningDismissed", false))
+                {
+                    ServerLatencyWarningResult result = _dialogService.ShowServerLatencyWarning(server.Name, server.Ping, thresholdMs);
+                    if (result.DontShowAgain)
+                        _settingsService.Set("ServerLatencyWarningDismissed", true);
+
+                    if (!result.Accepted)
+                    {
+                        int previousIndex = _reloginServerNames.FindIndex(n => string.Equals(n, _selectedServer, StringComparison.OrdinalIgnoreCase));
+                        if (previousIndex >= 0)
+                            _reloginServerItem.Value = previousIndex;
+                        return;
+                    }
+                }
+            }
+
+            if (SetProperty(ref _selectedServer, value))
             {
                 if (_options.ReloginServer != value)
                     _options.ReloginServer = value;
