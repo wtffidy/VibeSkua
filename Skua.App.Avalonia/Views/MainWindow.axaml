@@ -146,39 +146,41 @@
             </StackPanel>
         </Grid>
 
-        <!-- These transparent Avalonia grips sit in the gutters around the native Flash HWND. -->
-        <Border Width="14"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Stretch"
-                Background="Transparent"
-                Cursor="SizeWestEast"
-                PointerPressed="ResizeWestGrip_PointerPressed" />
-        <Border Width="14"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Stretch"
-                Background="Transparent"
-                Cursor="SizeWestEast"
-                PointerPressed="ResizeEastGrip_PointerPressed" />
-        <Border Height="14"
-                HorizontalAlignment="Stretch"
-                VerticalAlignment="Bottom"
-                Background="Transparent"
-                Cursor="SizeNorthSouth"
-                PointerPressed="ResizeSouthGrip_PointerPressed" />
-        <Border Width="14"
-                Height="14"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Bottom"
-                Background="Transparent"
-                Cursor="BottomLeftCorner"
-                PointerPressed="ResizeSouthWestGrip_PointerPressed" />
-        <Border Width="14"
-                Height="14"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Bottom"
-                Background="Transparent"
-                Cursor="BottomRightCorner"
-                PointerPressed="ResizeSouthEastGrip_PointerPressed" />
+        <!-- Resize grips are only for the standalone client. In tabbed mode the parent host owns resizing. -->
+        <Grid x:Name="ResizeGripOverlay">
+            <Border Width="14"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Stretch"
+                    Background="Transparent"
+                    Cursor="SizeWestEast"
+                    PointerPressed="ResizeWestGrip_PointerPressed" />
+            <Border Width="14"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Stretch"
+                    Background="Transparent"
+                    Cursor="SizeWestEast"
+                    PointerPressed="ResizeEastGrip_PointerPressed" />
+            <Border Height="14"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Bottom"
+                    Background="Transparent"
+                    Cursor="SizeNorthSouth"
+                    PointerPressed="ResizeSouthGrip_PointerPressed" />
+            <Border Width="14"
+                    Height="14"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Bottom"
+                    Background="Transparent"
+                    Cursor="BottomLeftCorner"
+                    PointerPressed="ResizeSouthWestGrip_PointerPressed" />
+            <Border Width="14"
+                    Height="14"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Bottom"
+                    Background="Transparent"
+                    Cursor="BottomRightCorner"
+                    PointerPressed="ResizeSouthEastGrip_PointerPressed" />
+        </Grid>
       </Grid>
     </Grid>
 
