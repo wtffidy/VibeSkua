@@ -181,7 +181,7 @@ public partial class OmniscopeWindow : Window
         try
         {
             DateTime now = DateTime.Now;
-            ClockText.Text = now.ToString("Hh:mm:ss");
+            ClockText.Text = now.ToString("HH:mm:ss");
 
             bool loggedIn = _bot.Player.LoggedIn;
             bool playing = _bot.Player.Playing;
@@ -560,7 +560,7 @@ public partial class OmniscopeWindow : Window
         {
             "Client Core" => query.Where(static record => record.Category == "CLIENT CORE"),
             "Network / API" => query.Where(static record => record.Category == "NETWORK / API"),
-            "Game Ui" => query.Where(static record => record.Category == "GAME UI"),
+            "Game UI" => query.Where(static record => record.Category == "GAME UI"),
             "World / Map" => query.Where(static record => record.Category == "WORLD / MAP"),
             "Player / Avatar" => query.Where(static record => record.Category == "PLAYER / AVATAR"),
             "Inventory / Items" => query.Where(static record => record.Category == "INVENTORY / ITEMS"),
@@ -1657,7 +1657,7 @@ public partial class OmniscopeWindow : Window
     {
         EventRow eventRow = new()
         {
-            Time = DateTime.Now.ToString("Hh:mm:ss.fff"),
+            Time = DateTime.Now.ToString("HH:mm:ss.fff"),
             Category = category,
             Detail = detail
         };
