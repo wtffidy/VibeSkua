@@ -490,7 +490,7 @@ public partial class MainWindow : Window
                 try
                 {
                     FlashHost?.SetScaleMode(false);
-                    _flash.Call("setGameObject", "stage.scaleMode", "noBorder");
+                    _flash.Call("setGameObject", "stage.scaleMode", "showAll");
                 }
                 catch { }
             });
