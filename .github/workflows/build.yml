@@ -6,6 +6,7 @@ on:
       - main
       - feature/advanced-stats-metrics
       - feature/client-intelligence-suite
+      - feature/avalonia-12-modernization
   pull_request:
     branches:
       - main
@@ -46,6 +47,14 @@ jobs:
         shell: pwsh
         run: |
           ./package-build.ps1
+          $appPath = Join-Path $PWD "Build/VibeSkua.exe"
+          $managerPath = Join-Path $PWD "Build/VibeSkua.Manager.exe"
+          $swfPath = Join-Path $PWD "Build/skua.swf"
+          foreach ($requiredPath in @($appPath, $managerPath, $swfPath)) {
+            if (-not (Test-Path $requiredPath)) {
+              throw "A required client package file is missing: $requiredPath"
+            }
+          }
           $pluginPath = Join-Path $PWD "Build/plugins/Skua.Plugin.Omniscope.dll"
           if (-not (Test-Path $pluginPath)) {
             throw "OMNISCOPE was not included in the packaged client: $pluginPath"
@@ -62,4 +71,13 @@ jobs:
             throw "The packaged FFDec Java runtime failed its startup check (exit code $($javaProcess.ExitCode)): $javaVersion"
           }
           Write-Host $javaVersion
-          Get-Item $pluginPath, $javaPath | Format-List FullName, Length, LastWriteTimeUtc
+          Get-Item $appPath, $managerPath, $swfPath, $pluginPath, $javaPath | Format-List FullName, Length, LastWriteTimeUtc
+
+      - name: Upload Windows test build
+        uses: actions/upload-artifact@v4
+        with:
+          name: VibeSkua-Avalonia12-Windows-x64-${{ github.sha }}
+          path: Build/**
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7

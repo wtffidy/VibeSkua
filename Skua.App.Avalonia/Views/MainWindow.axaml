@@ -18,9 +18,8 @@
         Title="{Binding Title}"
         Icon="avares://Skua.Shared.Avalonia/Assets/SkuaClientIcon.ico"
 
-        SystemDecorations="BorderOnly"
+        WindowDecorations="BorderOnly"
         ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaChromeHints="NoChrome"
         ExtendClientAreaTitleBarHeightHint="32"
         >
 
@@ -129,56 +128,32 @@
         </DockPanel>
       </Border>
 
-      <Grid Grid.Row="1">
-        <!-- Clip the complete game viewport, including its background, to the rounded bottom edge. -->
-        <Border Background="{DynamicResource SkuaPageBrush}"
-                CornerRadius="0,0,8,8"
-                ClipToBounds="True">
-          <Grid>
-            <!-- Rounded backing frame remains visible around the inset native game surface. -->
-            <Border Margin="0"
-                    CornerRadius="0,0,8,8"
-                    Background="#141414"
-                    BorderBrush="{DynamicResource SkuaBorderBrush}"
-                    BorderThickness="1" />
-            <!-- Keep the native resize gutters clear while preserving the rounded frame beneath them. -->
-            <controls:WinFormsFlashHost x:Name="FlashHost" Margin="8,0,8,8" IsVisible="False" />
-            <ProgressBar x:Name="LoadingBar"
-                         Width="150"
-                         Height="8"
-                         IsIndeterminate="True"
-                         HorizontalAlignment="Center"
-                         VerticalAlignment="Center" />
-            <Grid x:Name="HeadlessOverlay"
-                  Background="{DynamicResource SkuaPageBrush}"
-                  IsVisible="False">
-              <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
-                <materialIcons:MaterialIcon Kind="MonitorOff"
-                                            Width="36"
-                                            Height="36"
-                                            Foreground="{DynamicResource SkuaMutedTextBrush}"
-                                            HorizontalAlignment="Center" />
-                <TextBlock Foreground="{DynamicResource SkuaTextBrush}"
-                           HorizontalAlignment="Center"
-                           FontSize="18"
-                           FontWeight="SemiBold"
-                           Text="Headless Mode Active" />
-                <TextBlock Foreground="{DynamicResource SkuaMutedTextBrush}"
-                           HorizontalAlignment="Center"
-                           FontSize="12"
-                           Text="Viewport suspended to minimize CPU and GPU usage" />
-              </StackPanel>
-            </Grid>
-          </Grid>
-        </Border>
-        <!-- Keep resize grips outside the rounded clip so corner and edge resizing remain fully interactive. -->
-        <Border Width="16"
+      <Grid Grid.Row="1"
+            Background="#141414">
+        <!-- Keep a native resize gutter clear of the Flash child HWND on the left, right, and bottom edges. -->
+        <controls:WinFormsFlashHost x:Name="FlashHost" Margin="14,0,14,14" IsVisible="False" />
+        <ProgressBar x:Name="LoadingBar"
+                     Width="150"
+                     Height="8"
+                     IsIndeterminate="True"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center"/>
+        <Grid x:Name="HeadlessOverlay" Background="{DynamicResource SkuaPageBrush}" IsVisible="False">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                <materialIcons:MaterialIcon Kind="MonitorOff" Width="36" Height="36" Foreground="{DynamicResource SkuaMutedTextBrush}" HorizontalAlignment="Center" />
+                <TextBlock Foreground="{DynamicResource SkuaTextBrush}" HorizontalAlignment="Center" FontSize="18" FontWeight="SemiBold" Text="Headless Mode Active" />
+                <TextBlock Foreground="{DynamicResource SkuaMutedTextBrush}" HorizontalAlignment="Center" FontSize="12" Text="Viewport suspended to minimize CPU and GPU usage" />
+            </StackPanel>
+        </Grid>
+
+        <!-- These transparent Avalonia grips sit in the gutters around the native Flash HWND. -->
+        <Border Width="14"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Stretch"
                 Background="Transparent"
                 Cursor="SizeWestEast"
                 PointerPressed="ResizeWestGrip_PointerPressed" />
-        <Border Width="16"
+        <Border Width="14"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Stretch"
                 Background="Transparent"
@@ -190,14 +165,14 @@
                 Background="Transparent"
                 Cursor="SizeNorthSouth"
                 PointerPressed="ResizeSouthGrip_PointerPressed" />
-        <Border Width="16"
+        <Border Width="14"
                 Height="14"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Bottom"
                 Background="Transparent"
                 Cursor="BottomLeftCorner"
                 PointerPressed="ResizeSouthWestGrip_PointerPressed" />
-        <Border Width="16"
+        <Border Width="14"
                 Height="14"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Bottom"

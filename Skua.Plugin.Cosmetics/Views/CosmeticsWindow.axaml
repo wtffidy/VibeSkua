@@ -8,9 +8,8 @@
         Title="Cosmetics &amp; Outfits"
         Width="1020" Height="730"
         MinWidth="880" MinHeight="580"
-        SystemDecorations="BorderOnly"
+        WindowDecorations="BorderOnly"
         ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaChromeHints="NoChrome"
         ExtendClientAreaTitleBarHeightHint="32"
         WindowStartupLocation="CenterScreen">
 

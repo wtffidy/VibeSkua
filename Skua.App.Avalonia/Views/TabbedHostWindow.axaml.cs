@@ -34,6 +34,8 @@ namespace Skua.App.Avalonia.Views;
 
 public partial class TabbedHostWindow : Window
 {
+    private static readonly DataFormat<TabItem> TabItemDataFormat = DataFormat.CreateInProcessFormat<TabItem>("skua-tab-item");
+
     #region Win32 API
 
     public delegate IntPtr SubclassProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam, nuint uIdSubclass, IntPtr dwRefData);
@@ -2973,6 +2975,7 @@ public partial class TabbedHostWindow : Window
         newTab.ContextMenu = ctx;
 
         Point startPoint = new Point();
+        PointerPressedEventArgs? dragStartEvent = null;
         headerPanel.PointerPressed += (s, ev) =>
         {
             var prop = ev.GetCurrentPoint(headerPanel).Properties;
@@ -2986,6 +2989,7 @@ public partial class TabbedHostWindow : Window
                 return;
 
             startPoint = ev.GetPosition(null);
+            dragStartEvent = ev;
             InstancesTabControl.SelectedItem = newTab;
 
             if (_isGridViewEnabled)
@@ -3012,6 +3016,8 @@ public partial class TabbedHostWindow : Window
             }
         };
 
+        headerPanel.PointerReleased += (s, ev) => dragStartEvent = null;
+
         headerPanel.PointerMoved += async (s, ev) =>
         {
             if (editTitle.IsVisible) return;
@@ -3020,27 +3026,24 @@ public partial class TabbedHostWindow : Window
             {
                 Point mousePos = ev.GetPosition(null);
                 Vector diff = startPoint - mousePos;
-                if (Math.Abs(diff.X) > 4 || Math.Abs(diff.Y) > 4)
+                if ((Math.Abs(diff.X) > 4 || Math.Abs(diff.Y) > 4) && dragStartEvent is { } dragStart)
                 {
-                    var dragData = new global::Avalonia.Input.DataObject();
-                    dragData.Set("TabItem", newTab);
-                    await DragDrop.DoDragDrop(ev, dragData, DragDropEffects.Move);
+                    dragStartEvent = null;
+                    DataTransfer dragData = new();
+                    dragData.Add(DataTransferItem.Create(TabItemDataFormat, newTab));
+                    await DragDrop.DoDragDropAsync(dragStart, dragData, DragDropEffects.Move);
                 }
             }
         };
 
         newTab.AddHandler(DragDrop.DropEvent, (s, ev) =>
         {
-            if (ev.Data.Contains("TabItem"))
+            if (ev.DataTransfer.TryGetValue(TabItemDataFormat) is TabItem droppedTab && droppedTab != newTab)
             {
-                TabItem? droppedTab = ev.Data.Get("TabItem") as TabItem;
-                if (droppedTab != null && droppedTab != newTab)
-                {
-                    int targetIndex = InstancesTabControl.Items.IndexOf(newTab);
-                    InstancesTabControl.Items.Remove(droppedTab);
-                    InstancesTabControl.Items.Insert(targetIndex, droppedTab);
-                    InstancesTabControl.SelectedItem = droppedTab;
-                }
+                int targetIndex = InstancesTabControl.Items.IndexOf(newTab);
+                InstancesTabControl.Items.Remove(droppedTab);
+                InstancesTabControl.Items.Insert(targetIndex, droppedTab);
+                InstancesTabControl.SelectedItem = droppedTab;
             }
         });
 
