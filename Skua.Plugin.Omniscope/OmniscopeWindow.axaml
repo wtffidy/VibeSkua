@@ -210,7 +210,7 @@
                         <Border Grid.Row="1" MinWidth="0" ClipToBounds="True" Classes="panel" Background="{StaticResource GlassPanelBrush}" BorderBrush="#554174" BorderThickness="1" CornerRadius="12" Padding="10">
                             <Grid RowDefinitions="Auto,Auto,*,Auto">
                                 <Grid ColumnDefinitions="*,76,66,58" Margin="4,4,8,10"><TextBlock Text="ENTITY / CELL" Foreground="#9CB2D2" FontSize="9"/><TextBlock Grid.Column="1" Text="HP" Foreground="#9CB2D2" FontSize="9" HorizontalAlignment="Right"/><TextBlock Grid.Column="2" Text="STATE" Foreground="#9CB2D2" FontSize="9" HorizontalAlignment="Right"/><TextBlock Grid.Column="3" Text="ID" Foreground="#9CB2D2" FontSize="9" HorizontalAlignment="Right"/></Grid>
-                                <TextBox x:Name="EntitySearchBox" Grid.Row="1" Watermark="Filter entities by name, ID, or cell..." TextChanged="EntitySearchBox_TextChanged" Margin="2,0,2,8" Background="#2A2148" Foreground="#DFEFFF" BorderBrush="#604B89" FontSize="11"/><ListBox x:Name="EntityList" Grid.Row="2" Background="Transparent" BorderThickness="0" Foreground="#DFEFFF">
+                                <TextBox x:Name="EntitySearchBox" Grid.Row="1" PlaceholderText="Filter entities by name, ID, or cell..." TextChanged="EntitySearchBox_TextChanged" Margin="2,0,2,8" Background="#2A2148" Foreground="#DFEFFF" BorderBrush="#604B89" FontSize="11"/><ListBox x:Name="EntityList" Grid.Row="2" Background="Transparent" BorderThickness="0" Foreground="#DFEFFF">
                                     <ListBox.ItemTemplate><DataTemplate><Grid ColumnDefinitions="*,76,66,58" Margin="3,5"><StackPanel Spacing="2"><TextBlock Text="{Binding Name}" Foreground="#DFEFFF" FontSize="11" TextWrapping="Wrap"/><TextBlock Text="{Binding Cell}" Foreground="#9CB2D2" FontSize="9"/></StackPanel><TextBlock Grid.Column="1" Text="{Binding Health}" Foreground="#9AE8F4" FontSize="10" HorizontalAlignment="Right"/><TextBlock Grid.Column="2" Text="{Binding State}" Foreground="#9AE8F4" FontSize="9" HorizontalAlignment="Right"/><TextBlock Grid.Column="3" Text="{Binding Id}" Foreground="#809DBB" FontSize="9" HorizontalAlignment="Right"/></Grid></DataTemplate></ListBox.ItemTemplate>
                                 </ListBox>
                                 <Border Grid.Row="3" Margin="0,8,0,0" Padding="11" Background="#2A2148" BorderBrush="#604B89" BorderThickness="1" CornerRadius="10">
@@ -323,7 +323,7 @@
                                 </Grid>
 
                                 <Grid Grid.Row="1" RowDefinitions="Auto,Auto" RowSpacing="8">
-                                    <TextBox x:Name="DataSearchBox" Grid.Row="0" MinHeight="46" Watermark="Search classes, functions, packets, UI, maps, client systems, or IDs..." TextChanged="DataSearchBox_TextChanged" Background="#151328" Foreground="#E6F4FF" BorderBrush="#45D6F0" FontSize="14" Padding="13,10"/>
+                                    <TextBox x:Name="DataSearchBox" Grid.Row="0" MinHeight="46" PlaceholderText="Search classes, functions, packets, UI, maps, client systems, or IDs..." TextChanged="DataSearchBox_TextChanged" Background="#151328" Foreground="#E6F4FF" BorderBrush="#45D6F0" FontSize="14" Padding="13,10"/>
                                     <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,190" ColumnSpacing="10">
                                         <TextBlock Text="SHOW" Foreground="#B5D0E8" FontSize="9" FontWeight="Bold" VerticalAlignment="Center"/>
                                         <ComboBox x:Name="DataCategoryBox" Grid.Column="1" MinHeight="36" SelectedIndex="0" SelectionChanged="DataCategoryBox_SelectionChanged">
@@ -425,7 +425,7 @@
                                 </Grid>
 
                                 <Grid Grid.Row="2" RowDefinitions="Auto,Auto" RowSpacing="8">
-                                    <TextBox x:Name="MapSearchBox" Grid.Row="0" MinHeight="46" Watermark="Search maps, shop IDs, map items, quest IDs, or files..." TextChanged="MapSearchBox_TextChanged" Background="#151328" Foreground="#E6F4FF" BorderBrush="#45D6F0" FontSize="14" Padding="13,10"/>
+                                    <TextBox x:Name="MapSearchBox" Grid.Row="0" MinHeight="46" PlaceholderText="Search maps, shop IDs, map items, quest IDs, or files..." TextChanged="MapSearchBox_TextChanged" Background="#151328" Foreground="#E6F4FF" BorderBrush="#45D6F0" FontSize="14" Padding="13,10"/>
                                     <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,190" ColumnSpacing="10">
                                         <TextBlock Text="MAPS" Foreground="#B5D0E8" FontSize="9" FontWeight="Bold" VerticalAlignment="Center"/>
                                         <ComboBox x:Name="MapCategoryBox" Grid.Column="1" MinHeight="36" SelectedIndex="0" SelectionChanged="MapCategoryBox_SelectionChanged">
