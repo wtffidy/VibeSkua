@@ -22,5 +22,7 @@ public interface IDialogService
 
     DialogResult ShowMessageBox(string message, string caption, params string[] buttons);
 
+    ServerLatencyWarningResult ShowServerLatencyWarning(string serverName, long pingMs, int thresholdMs);
+
     IInputDialogViewModel CreateInputDialog(string title, string dialogHint);
 }
