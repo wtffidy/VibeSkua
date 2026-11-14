@@ -48,14 +48,56 @@ public class CosmeticsPlugin : ISkuaPlugin
     {
         Dispatcher.UIThread.Post(() =>
         {
-            if (_window == null || !_window.IsVisible)
+            try
             {
-                var bot = _provider!.GetRequiredService<IScriptInterface>();
-                _window = new CosmeticsWindow(bot, _service!);
-                _window.Closed += (s, e) => _window = null;
+                if (_provider is null || _service is null)
+                    throw new InvalidOperationException("Cosmetics has not finished initializing.");
+
+                if (_window is null || !_window.IsVisible)
+                {
+                    IScriptInterface bot = _provider.GetRequiredService<IScriptInterface>();
+                    _window = new CosmeticsWindow(bot, _service);
+                    _window.Closed += (_, _) => _window = null;
+                }
+
+                _window.Show();
+                _window.Activate();
             }
-            _window.Show();
-            _window.Activate();
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.WriteLine($"Cosmetics window launch failed: {ex}");
+                _bot?.Log($"[Cosmetics] Window launch failed: {ex}");
+
+                _window = null;
+
+                try
+                {
+                    Window errorWindow = new()
+                    {
+                        Title = "Cosmetics failed to open",
+                        Width = 760,
+                        Height = 420,
+                        MinWidth = 520,
+                        MinHeight = 280,
+                        WindowStartupLocation = WindowStartupLocation.CenterScreen,
+                        Content = new TextBox
+                        {
+                            Text = ex.ToString(),
+                            IsReadOnly = true,
+                            AcceptsReturn = true,
+                            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+                            Margin = new Avalonia.Thickness(12)
+                        }
+                    };
+
+                    errorWindow.Show();
+                }
+                catch (Exception dialogException)
+                {
+                    System.Diagnostics.Trace.WriteLine($"Cosmetics error window failed: {dialogException}");
+                    _bot?.Log($"[Cosmetics] Error window failed: {dialogException.Message}");
+                }
+            }
         });
     }
 }
