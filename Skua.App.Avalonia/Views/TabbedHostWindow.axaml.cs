@@ -396,7 +396,17 @@ public partial class TabbedHostWindow : Window
 
         Opened += TabbedHostWindow_Opened;
         PositionChanged += (s, e) => OnWindowPositionChanged(e.Point);
-        SizeChanged += (s, e) => { ScheduleReposition(); UpdateTabScrollButtons(); };
+        SizeChanged += (s, e) =>
+        {
+            // The embedded game HWND is separate from the Avalonia window. During a native
+            // resize drag, normal repositioning is paused, so refresh its bounds explicitly.
+            if (_isDraggingWindow)
+                RepositionWithFreshCache();
+            else
+                ScheduleReposition();
+
+            UpdateTabScrollButtons();
+        };
         ScalingChanged += (s, e) => Dispatcher.UIThread.Post(RepositionWithFreshCache, DispatcherPriority.Loaded);
 
         PropertyChanged += (s, e) => { if (e.Property == WindowStateProperty || e.Property == IsVisibleProperty) ScheduleReposition(); };
