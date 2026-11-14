@@ -86,7 +86,7 @@ internal class Options
             }
         }
 
-        return new GameOptionsViewModel(options, s.GetService<IScriptServers>()!, scriptOpt);
+        return new GameOptionsViewModel(options, s.GetService<IScriptServers>()!, scriptOpt, s.GetRequiredService<ISettingsService>(), s.GetRequiredService<IDialogService>());
 
         static RelayCommand<bool> CreateBoolCommand(Action<bool> action) => new(action);
         static BindingOptionItemViewModel<T, ScriptOption> CreateOptionItem<T>(IServiceProvider s, string binding, string tag, IRelayCommand command) => new(Label(s, binding), GetGameOptionDescription(binding), tag, binding, (ScriptOption)s.GetRequiredService<IScriptOption>(), command);
