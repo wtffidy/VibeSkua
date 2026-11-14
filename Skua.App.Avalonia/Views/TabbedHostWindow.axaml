@@ -10,9 +10,8 @@
         Title="VibeSkua" Icon="avares://Skua.Shared.Avalonia/Assets/SkuaClientIcon.ico" Height="700" Width="1100"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource SkuaPageBrush}"
-        SystemDecorations="BorderOnly"
+        WindowDecorations="BorderOnly"
         ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaChromeHints="NoChrome"
         ExtendClientAreaTitleBarHeightHint="32">
     <Grid RowDefinitions="32,Auto,*">
         <sharedShell:WindowTitleBar x:Name="MainTitleBar" Grid.Row="0" TitleText="VibeSkua" />
