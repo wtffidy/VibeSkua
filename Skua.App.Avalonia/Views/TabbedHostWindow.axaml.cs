@@ -3016,6 +3016,8 @@ public partial class TabbedHostWindow : Window
             }
         };
 
+        headerPanel.PointerReleased += (s, ev) => dragStartEvent = null;
+
         headerPanel.PointerMoved += async (s, ev) =>
         {
             if (editTitle.IsVisible) return;
@@ -3026,10 +3028,10 @@ public partial class TabbedHostWindow : Window
                 Vector diff = startPoint - mousePos;
                 if ((Math.Abs(diff.X) > 4 || Math.Abs(diff.Y) > 4) && dragStartEvent is { } dragStart)
                 {
+                    dragStartEvent = null;
                     DataTransfer dragData = new();
                     dragData.Add(DataTransferItem.Create(TabItemDataFormat, newTab));
                     await DragDrop.DoDragDropAsync(dragStart, dragData, DragDropEffects.Move);
-                    dragStartEvent = null;
                 }
             }
         };
