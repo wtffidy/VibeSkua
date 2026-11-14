@@ -79,7 +79,7 @@ public partial class ArmyQueueUserControl : UserControl
     private void OnSquadTabDrop(object? sender, DragEventArgs e)
     {
         if (_currentVm?.IsRunning != false ||
-            e.Data.Get("ArmyQueueStep") is not ArmyQueueStepViewModel draggedStep ||
+            e.DataTransfer.TryGetValue(ArmyQueueStepDataFormat) is not ArmyQueueStepViewModel draggedStep ||
             sender is not Control control ||
             control.DataContext is not ArmyQueueStepViewModel targetStep)
             return;
