@@ -9,6 +9,7 @@ namespace Skua.Manager.Avalonia.UserControls;
 
 public partial class ArmyQueueUserControl : UserControl
 {
+    private static readonly DataFormat<ArmyQueueStepViewModel> ArmyQueueStepDataFormat = DataFormat.CreateInProcessFormat<ArmyQueueStepViewModel>("army-queue-step");
     private ArmyQueueViewModel? _currentVm;
     private ArmyQueueStepViewModel? _draggedStep;
     private Point _dragStartPoint;
@@ -60,16 +61,16 @@ public partial class ArmyQueueUserControl : UserControl
             return;
 
         ArmyQueueStepViewModel step = _draggedStep;
-        DataObject data = new();
-        data.Set("ArmyQueueStep", step);
-        await DragDrop.DoDragDrop(e, data, DragDropEffects.Move);
+        DataTransfer data = new();
+        data.Add(DataTransferItem.Create(ArmyQueueStepDataFormat, step));
+        await DragDrop.DoDragDropAsync(e, data, DragDropEffects.Move);
         _draggedStep = null;
     }
 
     private void OnSquadTabDragOver(object? sender, DragEventArgs e)
     {
         e.DragEffects = _currentVm?.IsRunning == false &&
-                        e.Data.Get("ArmyQueueStep") is ArmyQueueStepViewModel
+                        e.DataTransfer.TryGetValue(ArmyQueueStepDataFormat) is ArmyQueueStepViewModel
             ? DragDropEffects.Move
             : DragDropEffects.None;
         e.Handled = true;
