@@ -32,6 +32,7 @@ public class GameOptionsViewModel : BotControlViewModelBase
     private readonly IDialogService _dialogService;
     private readonly CBOChoiceOptionItemViewModel _reloginServerItem;
     private readonly List<string> _reloginServerNames;
+    private readonly List<string> _reloginServerLabels;
 
     public GameOptionsViewModel(List<DisplayOptionItemViewModelBase> gameOptions, IScriptServers servers, IScriptOption options, ISettingsService settingsService, IDialogService dialogService)
         : base("Game Options", 800, 720)
@@ -47,8 +48,9 @@ public class GameOptionsViewModel : BotControlViewModelBase
         SaveOptionsCommand = new RelayCommand(_options.Save);
 
         _reloginServerNames = ServersList;
-        _reloginServerItem = new CBOChoiceOptionItemViewModel("Relogin Server", "Server to log back in to", "ReloginServer",
-            _reloginServerNames, Math.Max(0, _reloginServerNames.IndexOf(SelectedServer ?? string.Empty)));
+        _reloginServerLabels = BuildServerLabels();
+        _reloginServerItem = new CBOChoiceOptionItemViewModel("Relogin Server", "Server to log back in to. Indicators show measured server latency.", "ReloginServer",
+            _reloginServerLabels, Math.Max(0, _reloginServerNames.IndexOf(SelectedServer ?? string.Empty)));
         _reloginServerItem.PropertyChanged += ReloginServerItem_PropertyChanged;
 
         BuildGroups();
@@ -225,10 +227,39 @@ public class GameOptionsViewModel : BotControlViewModelBase
             SelectedServer = _reloginServerNames[index];
     }
 
+    private List<string> BuildServerLabels()
+    {
+        return _reloginServerNames.Select(name =>
+        {
+            Server? server = _servers.CachedServers.FirstOrDefault(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase));
+            return server is null ? name : $"{server.PingIndicator} {name}";
+        }).ToList();
+    }
+
+    private void RefreshServerOptions()
+    {
+        List<string> names = ServersList;
+        _reloginServerNames.Clear();
+        _reloginServerNames.AddRange(names);
+
+        _reloginServerLabels.Clear();
+        foreach (string name in _reloginServerNames)
+        {
+            Server? server = _servers.CachedServers.FirstOrDefault(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase));
+            _reloginServerLabels.Add(server is null ? name : $"{server.PingIndicator} {name}");
+        }
+
+        int selectedIndex = _reloginServerNames.FindIndex(name => string.Equals(name, SelectedServer, StringComparison.OrdinalIgnoreCase));
+        if (selectedIndex >= 0)
+            _reloginServerItem.Value = selectedIndex;
+
+        OnPropertyChanged(nameof(ServersList));
+    }
+
     private void ServersChanged(GameOptionsViewModel recipient, PropertyChangedMessage<List<Server>> message)
     {
         if (message.PropertyName == nameof(IScriptServers.CachedServers))
-            recipient.OnPropertyChanged(nameof(recipient.ServersList));
+            recipient.RefreshServerOptions();
     }
 
     private void OptionServerChanged(GameOptionsViewModel recipient, PropertyChangedMessage<string> message)
