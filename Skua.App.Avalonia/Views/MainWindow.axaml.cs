@@ -14,6 +14,7 @@ using Skua.Core.Models.Servers;
 using Skua.Core.Messaging;
 using System;
 using System.Collections.Specialized;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
