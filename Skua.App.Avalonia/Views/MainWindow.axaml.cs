@@ -10,6 +10,7 @@ using Skua.App.Avalonia.Services;
 using Skua.App.Avalonia.ViewModels;
 using Skua.App.Avalonia.ViewModels.MainMenu;
 using Skua.Core.Interfaces;
+using Skua.Core.Models.Servers;
 using Skua.Core.Messaging;
 using System;
 using System.Collections.Specialized;
@@ -478,6 +479,14 @@ public partial class MainWindow : Window
 
     private void OnFlashCall(string function, params object[] args)
     {
+        if (function == "requestServerLatencyWarning")
+        {
+            string? serverName = args.FirstOrDefault()?.ToString();
+            if (!string.IsNullOrWhiteSpace(serverName))
+                Dispatcher.UIThread.Post(async () => await ConfirmServerSelectionAsync(serverName));
+            return;
+        }
+
         if (function == "loaded" && !_isFlashLoaded)
         {
             _isFlashLoaded = true;
@@ -496,6 +505,45 @@ public partial class MainWindow : Window
                 catch { }
             });
         }
+    }
+
+    private async Task ConfirmServerSelectionAsync(string serverName)
+    {
+        bool accepted = true;
+        try
+        {
+            ISettingsService settings = Ioc.Default.GetRequiredService<ISettingsService>();
+            IScriptServers serversService = Ioc.Default.GetRequiredService<IScriptServers>();
+            List<Server> servers = await serversService.GetServers();
+            Server? server = servers.FirstOrDefault(s => string.Equals(s.Name, serverName, StringComparison.OrdinalIgnoreCase));
+
+            if (server is not null)
+            {
+                int thresholdMs = Math.Clamp(settings.Get("ServerLatencyThresholdMs", ServerLatencyClassifier.DefaultThresholdMs), 50, 2000);
+                int nearThresholdPercent = Math.Clamp(settings.Get("ServerLatencyNearThresholdPercent", ServerLatencyClassifier.DefaultNearThresholdPercent), 50, 95);
+
+                if (server.Ping < 0)
+                    await ServerLatencyTester.MeasureAsync(new[] { server }, thresholdMs, nearThresholdPercent);
+
+                ServerLatencyStatus status = ServerLatencyClassifier.Classify(server.Ping, thresholdMs, nearThresholdPercent);
+                if (status is ServerLatencyStatus.High or ServerLatencyStatus.Unavailable
+                    && !settings.Get("ServerLatencyWarningDismissed", false))
+                {
+                    ServerLatencyWarningResult result = Ioc.Default.GetRequiredService<IDialogService>()
+                        .ShowServerLatencyWarning(server.Name, server.Ping, thresholdMs);
+                    if (result.DontShowAgain)
+                        settings.Set("ServerLatencyWarningDismissed", true);
+                    accepted = result.Accepted;
+                }
+            }
+        }
+        catch
+        {
+            // Do not strand the game on the login screen if latency diagnostics or the warning dialog fails.
+            accepted = true;
+        }
+
+        _flash.Call("confirmServerSelection", serverName, accepted);
     }
 
 #if IS_WINDOWS
