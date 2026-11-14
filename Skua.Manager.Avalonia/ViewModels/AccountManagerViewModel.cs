@@ -841,12 +841,31 @@ public sealed partial class AccountManagerViewModel : BotControlViewModelBase
         try
         {
             _settingsService.ReloadSettings();
+            _RefreshServerLatencyIndicators();
             _GetSavedAccounts();
             _GetSavedGroups();
             RefreshTagFilters();
             ApplyTagFilter();
         }
         catch { }
+    }
+
+    private void _RefreshServerLatencyIndicators()
+    {
+        if (_cachedServers.Count == 0)
+            return;
+
+        int thresholdMs = Math.Clamp(_settingsService.Get("ServerLatencyThresholdMs", ServerLatencyClassifier.DefaultThresholdMs), 50, 2000);
+        int nearThresholdPercent = Math.Clamp(_settingsService.Get("ServerLatencyNearThresholdPercent", ServerLatencyClassifier.DefaultNearThresholdPercent), 50, 95);
+
+        foreach (Server server in _cachedServers)
+        {
+            ServerLatencyStatus status = ServerLatencyClassifier.Classify(server.Ping, thresholdMs, nearThresholdPercent);
+            server.PingIndicator = ServerLatencyClassifier.GetIndicator(status);
+        }
+
+        // Replacing the same server instances refreshes the selector without losing its selected object.
+        ServerList.ReplaceRange(_cachedServers);
     }
 
     private void _SaveAccounts()
