@@ -61,6 +61,7 @@ public class GameOptionsViewModel : BotControlViewModelBase
         Messenger.Register<GameOptionsViewModel, PropertyChangedMessage<List<Server>>>(this, ServersChanged);
         Messenger.Register<GameOptionsViewModel, PropertyChangedMessage<string>>(this, OptionServerChanged);
         OnPropertyChanged(nameof(ServersList));
+        _ = _servers.GetServers();
     }
 
     public List<DisplayOptionItemViewModelBase> GameOptions { get; }
