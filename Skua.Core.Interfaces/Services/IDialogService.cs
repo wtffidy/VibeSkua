@@ -1,5 +1,6 @@
 ﻿using Skua.Core.Interfaces.ViewModels;
 using Skua.Core.Models;
+using Skua.Core.Models.Servers;
 
 namespace Skua.Core.Interfaces;
 
